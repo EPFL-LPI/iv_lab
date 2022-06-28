@@ -1,5 +1,12 @@
-IVLab Accessories
 .DS_Store
+dist/
+build/
+__pycache__
+*.egg-info/
+app/.venv*
+app/target*
+
+IVLab Accessories
 
 IVLab/users.txt
 IVLab/__pycache__
