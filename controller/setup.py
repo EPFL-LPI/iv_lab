@@ -24,8 +24,12 @@ setuptools.setup(
     ],
     python_requires=">=3.6.12, <3.7",
     install_requires=[
-        "pyvisa",
-        "bric_analysis_libraries>=0.1.2.post1"
+        'PyQt5==5.9.2',  # version requirement for fbs, use Python 3.6
+        'pyee>=9.0.0',
+        'pyvisa',  # only required for lamps.oriel*
+        'pytrinamic',  # only required for lamps.trinamic*
+        'pymeasure',
+        'bric_analysis_libraries>=0.1.2.post1'
     ],
     package_data={
     }

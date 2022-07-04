@@ -29,7 +29,18 @@ def _get_cmdline_parser():
     :returns: argparse.ArgumentParser
     """
     parser = argparse.ArgumentParser(description='IV Lab')
-    parser.add_argument('--debug', action='store_true')
+    parser.add_argument(
+        '--debug',
+        action='store_true',
+        help='Log debug output.'
+    )
+
+    parser.add_argument(
+        '--emulate',
+        action='store_true',
+        help='Run hardware in emulation mode.'
+    )
+    
     return parser
 
 

@@ -3,6 +3,7 @@ Library to access the basic functionality of the Keithley SourceMeter 2600 serie
 
 written by: Peter Luidolt @ TUGraz
 last modified: 2016-12-21
+url: http://lampx.tugraz.at/~hadley/semi/ch9/instruments/Keithley26xx/KeithleyV15.py
 """
 
 import pyvisa

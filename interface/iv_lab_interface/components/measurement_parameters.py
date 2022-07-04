@@ -1,3 +1,4 @@
+from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtGui import QDoubleValidator
 
 from PyQt5.QtWidgets import (
@@ -15,28 +16,33 @@ from PyQt5.QtWidgets import (
 )
 
 class MeasurementGroupBox(QGroupBox):
+    signal_runIV = pyqtSignal(object)
+    signal_runConstantV = pyqtSignal(object)
+    signal_runConstantI = pyqtSignal(object)
+    signal_runMaxPP = pyqtSignal(object)
+    signal_runCalibration = pyqtSignal(object)
+    signal_saveCalibration = pyqtSignal(object)
+    signal_abortRun = pyqtSignal()
+
     def __init__(self):
         super().__init__("Measurement")
-
         self.init_ui()
 
     def init_ui(self):
-
-        #measurement group box
         measurementGroupBoxLayout = QVBoxLayout()
         
-        #combobox to select the measurement type
-        #self.labelMeasurementMenu = QLabel("Select Measurement Type")
+        # combobox to select the measurement type
+        # self.labelMeasurementMenu = QLabel("Select Measurement Type")
         self.menuSelectMeasurement = QComboBox()
         self.menuSelectMeasurement.setMaximumWidth(300)
         self.measurementList = ['J-V Scan','Constant Voltage, Measure J','Constant Current, Measure V','Maximum Power Point','Calibrate Reference Diode']
         for meas in self.measurementList:
             self.menuSelectMeasurement.addItem(meas)
         self.menuSelectMeasurement.currentIndexChanged.connect(self.selectMeasurement)
-        #self.labelMeasurementMenu.setEnabled(False)
-        #self.menuSelectMeasurement.setEnabled(False)
+        # self.labelMeasurementMenu.setEnabled(False)
+        # self.menuSelectMeasurement.setEnabled(False)
         
-        #one panel per measurement type
+        # one panel per measurement type
         self.panelIVScan = QWidget()
         self.panelIVScan.setMaximumWidth(300)
         self.panelConstantV = QWidget()
@@ -48,7 +54,7 @@ class MeasurementGroupBox(QGroupBox):
         self.panelCalibration = QWidget()
         self.panelCalibration.setMaximumWidth(300)
         
-        #IV Panel elements
+        # IV Panel elements
         self.CheckBoxAutomaticLimits = QCheckBox("Use Automatic Limits (0 - Fwd Limit)")
         self.CheckBoxAutomaticLimits.stateChanged.connect(self.toggleIVLimitsMode)
         self.fieldIVMinV = QLineEdit("0.00")
@@ -91,7 +97,7 @@ class MeasurementGroupBox(QGroupBox):
         self.ButtonAbortIV.clicked.connect(self.abortRun)
         self.ButtonAbortIV.setEnabled(False)
         
-        #JV panel layout
+        # JV panel layout
         IVScanFieldLayout = QGridLayout()
         IVScanFieldLayout.addWidget(self.labelIVMinV,0,0)
         IVScanFieldLayout.addWidget(self.fieldIVMinV,0,1)
@@ -118,7 +124,7 @@ class MeasurementGroupBox(QGroupBox):
         IVScanLayout.addWidget(self.ButtonAbortIV)
         self.panelIVScan.setLayout(IVScanLayout)
         
-        #ConstantV Panel elements
+        # ConstantV Panel elements
         self.fieldConstantVSetV = QLineEdit("0.00")
         self.ConstantVSetVValidator = QDoubleValidator()
         self.fieldConstantVSetV.setValidator(self.ConstantVSetVValidator)
@@ -146,7 +152,7 @@ class MeasurementGroupBox(QGroupBox):
         self.ButtonAbortConstantV.clicked.connect(self.abortRun)
         self.ButtonAbortConstantV.setEnabled(False)
         
-        #ConstantV panel layout
+        # ConstantV panel layout
         ConstantVFieldLayout = QGridLayout()
         ConstantVFieldLayout.addWidget(self.labelConstantVSetV,0,0)
         ConstantVFieldLayout.addWidget(self.fieldConstantVSetV,0,1)
@@ -167,7 +173,7 @@ class MeasurementGroupBox(QGroupBox):
         ConstantVLayout.addWidget(self.ButtonAbortConstantV)
         self.panelConstantV.setLayout(ConstantVLayout)
         
-        #ConstantI Panel elements
+        # ConstantI Panel elements
         self.fieldConstantISetI = QLineEdit("0.00")
         self.ConstantISetIValidator = QDoubleValidator()
         self.fieldConstantISetI.setValidator(self.ConstantISetIValidator)
@@ -195,7 +201,7 @@ class MeasurementGroupBox(QGroupBox):
         self.ButtonAbortConstantI.clicked.connect(self.abortRun)
         self.ButtonAbortConstantI.setEnabled(False)
         
-        #ConstantI panel layout
+        # ConstantI panel layout
         ConstantIFieldLayout = QGridLayout()
         ConstantIFieldLayout.addWidget(self.labelConstantISetI,0,0)
         ConstantIFieldLayout.addWidget(self.fieldConstantISetI,0,1)
@@ -216,7 +222,7 @@ class MeasurementGroupBox(QGroupBox):
         ConstantILayout.addWidget(self.ButtonAbortConstantI)
         self.panelConstantI.setLayout(ConstantILayout)
         
-        #MaxPP Panel elements
+        # MaxPP Panel elements
         self.CheckBoxAutomaticMpp = QCheckBox("Find Start Voltage Automatically")
         self.CheckBoxAutomaticMpp.stateChanged.connect(self.toggleMppStartMode)
         self.fieldMaxPPStartV = QLineEdit("1.00")
@@ -246,7 +252,7 @@ class MeasurementGroupBox(QGroupBox):
         self.ButtonAbortMaxPP.clicked.connect(self.abortRun)
         self.ButtonAbortMaxPP.setEnabled(False)
         
-        #MaxPP panel layout
+        # MaxPP panel layout
         MaxPPFieldLayout = QGridLayout()
         MaxPPFieldLayout.addWidget(self.labelMaxPPStartV,0,0)
         MaxPPFieldLayout.addWidget(self.fieldMaxPPStartV,0,1)
@@ -268,7 +274,7 @@ class MeasurementGroupBox(QGroupBox):
         MaxPPLayout.addWidget(self.ButtonAbortMaxPP)
         self.panelMaxPP.setLayout(MaxPPLayout)
         
-        #Calibration Panel elements
+        # Calibration Panel elements
         self.labelCalibrationDiodeReferenceCurrent = QLabel("Calibration Diode Iref")
         self.fieldCalibrationDiodeReferenceCurrent = QLineEdit("1.00")
         self.CalibrationDiodeReferenceCurrentValidator = QDoubleValidator()
@@ -310,7 +316,7 @@ class MeasurementGroupBox(QGroupBox):
         self.ButtonSaveCalibration.clicked.connect(self.saveCalibration)
         self.ButtonSaveCalibration.setEnabled(False)
         
-        #Calibration panel layout
+        # Calibration panel layout
         CalibrationFieldLayout = QGridLayout()
         CalibrationFieldLayout.addWidget(self.labelCalibrationDiodeReferenceCurrent,0,0)
         CalibrationFieldLayout.addWidget(self.fieldCalibrationDiodeReferenceCurrent,0,1)
@@ -341,7 +347,7 @@ class MeasurementGroupBox(QGroupBox):
         self.measurementStack.addWidget(self.panelConstantI)
         self.measurementStack.addWidget(self.panelMaxPP)
         self.measurementStack.addWidget(self.panelCalibration)
-        #self.measurementStack.setEnabled(False)
+        # self.measurementStack.setEnabled(False)
         
         measurementGroupBoxLayout.addWidget(self.menuSelectMeasurement)
         measurementGroupBoxLayout.addWidget(self.measurementStack)
@@ -357,13 +363,13 @@ class MeasurementGroupBox(QGroupBox):
     def toggleIVLimitsMode(self):
         if self.CheckBoxAutomaticLimits.isChecked():
             self.fieldIVMinV.setEnabled(False)
-            #self.fieldIVMaxV.setEnabled(False)
+            # self.fieldIVMaxV.setEnabled(False)
             self.fieldIVMaxV.setText(str(self.IVFwdLimitUser))
             self.labelIVMaxV.setText("Fwd Current Limit")
             self.labelIVMaxVUnits.setText("mA/cm^2")
         else:
             self.fieldIVMinV.setEnabled(True)
-            #self.fieldIVMaxV.setEnabled(True)
+            # self.fieldIVMaxV.setEnabled(True)
             self.fieldIVMaxV.setText(str(self.IVMaxVUser))
             self.labelIVMaxV.setText("Maximum Voltage")
             self.labelIVMaxVUnits.setText("V")
@@ -423,7 +429,7 @@ class MeasurementGroupBox(QGroupBox):
         self.showStatus("launching IV Scan")
         self.statusBar.show()
         IV_params = {}
-        #IV_param = dict(light_int = 100, start_V = 'Voc', stop_V = 0, dV = 0.01, sweep_rate = 0.010, Imax = 0.010)
+        # IV_param = dict(light_int = 100, start_V = 'Voc', stop_V = 0, dV = 0.01, sweep_rate = 0.010, Imax = 0.010)
         if self.lightLevelModeManual :
             IV_params['light_int'] = float(self.fieldManualLightLevel.text())
         else:
@@ -446,9 +452,9 @@ class MeasurementGroupBox(QGroupBox):
             cellName = ""
         IV_params['cell_name'] = self.sanitizeCellName(cellName)
         
-        #IV_params['Imax'] = 0.010
-        #self.graphWidget.setLabel('left','Current (A)')
-        #self.graphWidget.setLabel('bottom','Voltage (V)')
+        # IV_params['Imax'] = 0.010
+        # self.graphWidget.setLabel('left','Current (A)')
+        # self.graphWidget.setLabel('bottom','Voltage (V)')
         self.runStarted()
         self.signal_runIV.emit(IV_params)
 
@@ -469,7 +475,7 @@ class MeasurementGroupBox(QGroupBox):
         self.showStatus("launching Constant Voltage Measurement")
         self.statusBar.show()
         params = {}
-        #param: light_int, set_voltage, duration, interval
+        # param: light_int, set_voltage, duration, interval
         
         if self.lightLevelModeManual :
             params['light_int'] = float(self.fieldManualLightLevel.text())
@@ -502,7 +508,7 @@ class MeasurementGroupBox(QGroupBox):
         self.showStatus("launching Constant Current Measurement")
         self.statusBar.show()
         params = {}
-        #param: light_int, set_current, duration, interval
+        # param: light_int, set_current, duration, interval
         
         if self.lightLevelModeManual :
             params['light_int'] = float(self.fieldManualLightLevel.text())
@@ -535,7 +541,7 @@ class MeasurementGroupBox(QGroupBox):
         self.showStatus("launching Maximum Power Point Measurement")
         self.statusBar.show()
         params = {}
-        #param: light_int, start_voltage, duration, interval
+        # param: light_int, start_voltage, duration, interval
         
         if self.lightLevelModeManual :
             params['light_int'] = float(self.fieldManualLightLevel.text())

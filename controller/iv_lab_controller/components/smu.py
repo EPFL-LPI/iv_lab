@@ -1,13 +1,10 @@
-   
-class SMU:
-    def __init__(self, SMU_details, **kwargs):
-        self.app = None
-        self.win = None
-        for key, value in kwargs.items():
-            if key == 'app':
-                self.app = value
-            if key == 'gui':
-                self.win = value
+from ..base_classes.hardware_base import HardwareBase
+
+
+class SMU(HardwareBase):
+
+    def __init__(self, SMU_details):
+        super().__init__()
 
         self.brand = SMU_details['brand']
         self.model = SMU_details['model']
@@ -52,21 +49,7 @@ class SMU:
         self.sweep_rate = 1 #V/sec
         self.Imax = 0.01
         self.connected = False
-        
-    def show_status(self,msg):
-        if self.app != None:
-            self.win.showStatus(msg)
-            self.app.processEvents()
-        else:
-            print(msg)
-            
-    def abortRunFlag(self):
-        if self.win != None:
-            self.app.processEvents()
-            return self.win.flag_abortRun
-        else:
-            return False
-    
+
     def connect(self):
         if not self.emulate:
             # if we're already connected, treat this as a re-connect.
@@ -663,9 +646,7 @@ class SMU:
         self.enable_output("CHAN_B")
     
     def measure_IV_point_by_point(self, IV_param):
-        # self.flag_abortRun = False
-        if self.app != None:
-            self.app.processEvents()
+        self._should_abort = False
         
         #flag to indicate if the scan should be aborted when it reaches Voc
         #this is only to be used for positive-going scans.
@@ -675,9 +656,8 @@ class SMU:
             #automatic voltage limits now start at the positive current limit.
             #this has to be measured on-the-fly at the start of the scan to avoid
             #polarization effects in the solar cell.
-            if self.app != None:
-                self.app.processEvents()
             #IV_param['start_V'] = IV_param['Vmax'] #self.measureVFwd(IV_param,5)
+            pass
         elif IV_param['stop_V'] == 'Voc':
             stop_at_voc = True
             IV_param['stop_V'] = IV_param['Vmax']
@@ -687,11 +667,8 @@ class SMU:
             if abs(IV_param['stop_V']) > abs(IV_param['Vmax']):
                 raise ValueError("ERROR: measure_IVcurve stop voltage outside of compliance range")
         
-        if self.app != None:
-            self.win.showStatus("Running J-V Scan...")
-            self.app.processEvents()
-        else:
-            print("Running J-V Scan...")
+        self.emit('status_update', 'Running J-V Scan...')
+        logging.debug("Running J-V Scan...")
         
         #measurement interval
         interval = abs(IV_param['dV'])/IV_param['sweep_rate']
@@ -721,11 +698,7 @@ class SMU:
             #start the scan
             self.enable_output("CHAN_A")
             
-            if self.app != None:
-                self.win.showStatus("Stabilizing at initial operating point for " + str(IV_param['Dwell']) + " seconds")
-                self.app.processEvents()
-            else:
-                print("Stabilizing at initial operating point for " + str(IV_param['Dwell']) + " seconds")
+            self.show_status("Stabilizing at initial operating point for " + str(IV_param['Dwell']) + " seconds")
                 
             #grab the current timestamp as starting point for dwell period.
             now = datetime.datetime.now()
@@ -744,7 +717,7 @@ class SMU:
                 if self.app != None:
                     self.app.processEvents()
                 
-                if self.abortRunFlag():
+                if self.should_abort:
                     break
             
             #if the start voltage is 'Voc', measure the voltage at the current limit and then switch to voltage mode.
@@ -756,11 +729,8 @@ class SMU:
             #we finally know all the scan parameters, so generate the voltage list.
             v_smu = np.linspace(IV_param['start_V'], IV_param['stop_V'], int(abs((IV_param['stop_V']-IV_param['start_V'])/abs(IV_param['dV'])) + 1))
             
-            if self.app != None:
-                self.win.showStatus("Running J-V Scan...")
-                self.app.processEvents()
-            else:
-                print("Running J-V Scan...")
+            self.show_status("Running J-V Scan...")
+            
             #grab the current timestamp as starting point for sample timing.
             now = datetime.datetime.now()
             timeNow = datetime.datetime.timestamp(now)
@@ -773,7 +743,7 @@ class SMU:
                 timeNow = datetime.datetime.timestamp(now)
                 
                 while (timeNow < measTime):
-                    if self.abortRunFlag():
+                    if self.should_abort:
                         break
                         
                     if self.useReferenceDiode and self.referenceDiodeParallel:
@@ -813,7 +783,7 @@ class SMU:
                 if stop_at_voc and i > IV_param['Fwd_current_limit']:
                     break
                 
-                if self.abortRunFlag():
+                if self.should_abort():
                     break
                 
             self.turn_off()
@@ -834,7 +804,7 @@ class SMU:
         return (dataV, dataI, dataIref)
                                 
     def measure_V_time_dependent(self, param):
-        # self.flag_abortRun = False
+        self._should_abort = False
         if self.app != None:
             self.app.processEvents()
         dataX = []
@@ -862,7 +832,7 @@ class SMU:
                 now = datetime.datetime.now()
                 timeNow = datetime.datetime.timestamp(now)
                 
-                if self.abortRunFlag():
+                if self.should_abort():
                     break
             
             self.show_status("Running Constant Current Measurement...")
@@ -886,7 +856,7 @@ class SMU:
                 else:
                     v = self.measure_voltage("CHAN_A")
                 
-                if self.abortRunFlag():
+                if self.should_abort():
                     break
                         
                 now = datetime.datetime.now()
@@ -903,9 +873,8 @@ class SMU:
         return (dataX, dataV)
 
     def measure_I_time_dependent(self, param):
-        # self.flag_abortRun = False
-        if self.app != None:
-            self.app.processEvents()
+        self._should_abort = False
+
         dataX = []
         dataI = []
         dataIcorr = []
@@ -932,7 +901,7 @@ class SMU:
                 now = datetime.datetime.now()
                 timeNow = datetime.datetime.timestamp(now)
                 
-                if self.abortRunFlag():
+                if self.should_abort():
                     break
             
             self.show_status("Running Constant Voltage Measurement...")
@@ -964,7 +933,7 @@ class SMU:
                 else:
                     i = self.measure_current("CHAN_A")
                     
-                if self.abortRunFlag():
+                if self.should_abort():
                     break
                         
                 now = datetime.datetime.now()
@@ -982,9 +951,7 @@ class SMU:
         return (dataX, dataIcorr, dataI)
     
     def measure_MPP_time_dependent(self, param):
-        # self.flag_abortRun = False
-        if self.app != None:
-            self.app.processEvents()
+        self._should_abort = False
             
         dataX = []
         dataW = []
@@ -1059,7 +1026,7 @@ class SMU:
                 now = datetime.datetime.now()
                 timeNow = datetime.datetime.timestamp(now)
                 
-                if self.abortRunFlag():
+                if self.should_abort():
                     break
             
             #grab the current timestamp as starting point for sample timing.
@@ -1151,7 +1118,7 @@ class SMU:
                 else:
                     i = self.measure_current("CHAN_A") #to keep the keithley display current...
                 
-                if self.abortRunFlag():
+                if self.should_abort():
                     break
 
                 now = datetime.datetime.now()
@@ -1174,9 +1141,7 @@ class SMU:
         return (dataX, dataV, dataIcorr, dataI)
     
     def measure_reference_calibration(self, param):
-        # self.flag_abortRun = False
-        if self.app != None:
-            self.app.processEvents()
+        self._should_abort = False
             
         dataXMeas = []
         dataMeas = []
@@ -1214,7 +1179,7 @@ class SMU:
                     now = datetime.datetime.now()
                     timeNow = datetime.datetime.timestamp(now)
                     
-                    if self.abortRunFlag():
+                    if self.should_abort():
                         break
                 
                 self.show_status("Running Constant Voltage Measurement...")
@@ -1250,7 +1215,7 @@ class SMU:
                     else: #make a dummy measurement to keep the display active
                         i = self.measure_current(measurement_channel)
                     
-                    if self.abortRunFlag():
+                    if self.should_abort():
                         break
 
                     now = datetime.datetime.now()
@@ -1304,7 +1269,7 @@ class SMU:
             v = self.measure_voltage("CHAN_A")
             time.sleep(0.1)
             
-            if self.abortRunFlag():
+            if self.should_abort():
                 return -1.
 
             now = datetime.datetime.now()
@@ -1331,7 +1296,7 @@ class SMU:
             v = self.measure_voltage("CHAN_A")
             time.sleep(0.1)
             
-            if self.abortRunFlag():
+            if self.should_abort():
                 return -1.
 
             now = datetime.datetime.now()
@@ -1358,7 +1323,7 @@ class SMU:
             i_ref.append(self.measure_current("CHAN_B"))
             time.sleep(0.1)
             
-            if self.abortRunFlag():
+            if self.should_abort():
                 return -1.
 
             now = datetime.datetime.now()
