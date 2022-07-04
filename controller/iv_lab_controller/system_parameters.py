@@ -1,9 +1,32 @@
+from typing import Union
+import json
+
+from . import common
 
 
-class syst_param:
+class SystemParameters:
     """
     Contains all the system parameters, i.e. computer, operating system, lamp, SMU, filters, shutter...
     """
+
+    @staticmethod
+    def from_file(path: Union[str, None] = None) -> 'SystemParameters':
+        """
+        Loads SystemParameters from a file.
+
+        :param path: Path of file to load, or None to use default path.
+            [Default: None]
+        :returns: SystemParameters loaded from file.
+        """
+        if path is None:
+            path = common.default_system_parameters_file()
+
+        with open(path) as f:
+            settings = json.load(f)
+
+        return SystemParameters(**settings)
+
+
     def __init__(self, **kwargs):
     
         self.lamp = None

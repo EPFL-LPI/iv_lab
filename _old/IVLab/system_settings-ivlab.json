@@ -1,1 +1,27 @@
-{"computer": {"hardware": "PC", "os": "Windows 10", "basePath": "D:\\Data", "sdPath": "D:\\IVlab\\sd"}, "IVsys": {"sysName": "IVLab", "fullSunReferenceCurrent": 1.6, "calibrationDateTime": "Mon Jan 01 00:00:00 1900"}, "lamp": {"brand": "Wavelabs", "model": "Sinus70"}, "SMU": {"brand": "Keithley", "model": "2602", "visa_address": "GPIB0::24::INSTR", "visa_library": "C:\\Windows\\System32\\visa32.dll"}}
+{
+    "computer":
+    {
+        "hardware": "PC",
+        "os": "Windows 10",
+        "basePath": "D:\\Data",
+        "sdPath": "D:\\IVlab\\sd"
+    },
+    "IVsys":
+    {
+        "sysName": "IVLab",
+        "fullSunReferenceCurrent": 1.6,
+        "calibrationDateTime": "Mon Jan 01 00:00:00 1900"
+    },
+    "lamp":
+    {
+        "brand": "Wavelabs",
+        "model": "Sinus70"
+    },
+    "SMU":
+    {
+        "brand": "Keithley",
+        "model": "2602",
+        "visa_address": "GPIB0::24::INSTR",
+        "visa_library": "C:\\Windows\\System32\\visa32.dll"
+    }
+}

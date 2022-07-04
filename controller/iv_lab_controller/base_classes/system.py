@@ -2,9 +2,9 @@ import os
 import logging
 
 from .system_parameters import SystemParameters
-from .components.smu import SMU
-from .components import lamp
-from .components.lamp import Lamp
+from .smu import SMU
+from . import lamp
+from .lamp import Lamp
 
 
 class System:
@@ -16,7 +16,24 @@ class System:
         :param parameters: System parameters to use.
         :param emulate: Run in emulation mode. [Default: False]
         """
-        pass
+        smu = SMU(parameters.SMU)
+        smu.fullSunReferenceCurrent = parameters.IVsys['fullSunReferenceCurrent']
+        smu.calibrationDateTime = parameters.IVsys['calibrationDateTime']
+
+        lamp_params = parameters.lamp
+        lamp_type = lamp.type_from_model(lamp_params['brand'], lamp_params['model'])
+        lamp_ctrl = lamp.get_controller(lamp_type)
+
+        if lamp_type is Lamp.KeithleyFilterWheel:
+            self.lamp = lamp_ctrl(self.SMU, emulate=emulate)
+
+        elif lamp_type is Lamp.OrielLSS7120:
+            self.lamp = lamp_ctrl(lamp_params['visa_address'], emulate=emulate)
+
+        else:
+            self.lamp = lamp_ctrl(emulate=emulate)
+
+        return system(lamp, smu)
 
     @staticmethod
     def from_settings_file(path: str, emulate: bool = False) -> 'System':
@@ -28,9 +45,19 @@ class System:
         """
         pass
 
-    def __init__(self, parameters: SystemParameters, emulate: bool = False):
+    def __init__(
+        self,
+        computer,
+        iv_system,
+        lamp,
+        smu,
+        emulate: bool = False
+    ):
         """
-        :param parameters: System parameters.
+        :param computer:
+        :param iv_system:
+        :param lamp:
+        :param smu:
         :param emulate: Run in emulation mode. [Default: emulate]
         """
         self._emulate = emulate
@@ -54,29 +81,11 @@ class System:
         self.data_MPP = None
         self.MPP_Results = None
         
-        # instatiate the class instance. use smu.connect() to initialize the hardware
-        self.SMU = SMU(self.parameters.SMU)
-        self.SMU.fullSunReferenceCurrent = self.parameters.IVsys['fullSunReferenceCurrent']
-        self.SMU.calibrationDateTime = self.parameters.IVsys['calibrationDateTime']
-
-        lamp_params = self.parameters.lamp
-        lamp_type = lamp.type_from_model(lamp_params['brand'], lamp_params['model'])
-        lamp_ctrl = lamp.get_controller(lamp_type)
-
-        if lamp_type is Lamp.KeithleyFilterWheel:
-            self.lamp = lamp_ctrl(self.SMU, emulate=self.emulate)
-
-        elif lamp_type is Lamp.OrielLSS7120:
-            self.lamp = lamp_ctrl(lamp_params['visa_address'], emulate=self.emulate)
-
-        else:
-            self.lamp = lamp_ctrl(emulate=self.emulate)
-
         if self.parameters.IVsys['sysName'] == 'IV_Old':
             # arduino is not present in all systems.  
             # Check that its parameters have been loaded from the system settings file before trying to access
             if sp.arduino != None:
-                self.arduino = arduino(sp.arduino, app=app, gui=win)
+                self.arduino = arduino(sp.arduino)
             else:
                 raise ValueError("System name is set to 'IV_Old' but no arduino settings dictionary is present")
         

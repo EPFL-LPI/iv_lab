@@ -1,1 +1,29 @@
-{"computer": {"hardware": "oldIV MAC", "os": "macOS Mojave 10.14.6", "basePath": "/Users/felix/Documents/data", "sdPath": "/Users/felix/Documents/sd"}, "IVsys": {"sysName": "IVLab", "fullSunReferenceCurrent": 0.006318, "calibrationDateTime": "Wed Jun  8 16:07:18 2022"}, "lamp": {"brand": "keithley", "model": "filter wheel", "emulate": false}, "SMU": {"brand": "Keithley", "model": "2400", "visa_address": "GPIB0::24::INSTR", "visa_library": "/Library/Frameworks/VISA.framework/Versions/A/Headers/visa.h", "emulate": false}}
+{
+    "computer":
+    {
+        "hardware": "oldIV MAC",
+        "os": "macOS Mojave 10.14.6",
+        "basePath": "/Users/felix/Documents/data",
+        "sdPath": "/Users/felix/Documents/sd"
+    },
+    "IVsys":
+    {
+        "sysName": "IVLab",
+        "fullSunReferenceCurrent": 0.006318,
+        "calibrationDateTime": "Wed Jun  8 16:07:18 2022"
+    },
+    "lamp":
+    {
+        "brand": "keithley",
+        "model": "filter wheel",
+        "emulate": false
+    },
+    "SMU":
+    {
+        "brand": "Keithley",
+        "model": "2400",
+        "visa_address": "GPIB0::24::INSTR",
+        "visa_library": "/Library/Frameworks/VISA.framework/Versions/A/Headers/visa.h",
+        "emulate": false
+    }
+}

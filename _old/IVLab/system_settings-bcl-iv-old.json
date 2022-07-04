@@ -1,1 +1,36 @@
-{"computer": {"hardware": "PC", "os": "Windows 10", "basePath": "C:\\Users\\Public\\Documents\\IVLab", "sdPath": "C:\\Users\\Public\\Documents\\IVLab\\sd"}, "IVsys": {"sysName": "Old_IV", "fullSunReferenceCurrent": 0.000145, "calibrationDateTime": "Wed Feb 16 16:55:17 2022"}, "lamp": {"brand": "Trinamic", "model": "TMCM-3110", "visa_address": "ASRL1::INSTR", "visa_library": "C:\\Windows\\System32\\visa32.dll"}, "arduino": {"brand": "Arduino", "model": "Uno", "visa_address": "ASRL1::INSTR", "visa_library": "C:\\Windows\\System32\\visa32.dll"}, "SMU": {"brand": "Keithley", "model": "2602", "visa_address": "GPIB0::24::INSTR", "visa_library": "C:\\Windows\\System32\\visa32.dll"}}
+{
+    "computer":
+    {
+        "hardware": "PC",
+        "os": "Windows 10",
+        "basePath": "C:\\Users\\Public\\Documents\\IVLab",
+        "sdPath": "C:\\Users\\Public\\Documents\\IVLab\\sd"
+    },
+    "IVsys":
+    {
+        "sysName": "Old_IV",
+        "fullSunReferenceCurrent": 0.000145,
+        "calibrationDateTime": "Wed Feb 16 16:55:17 2022"
+    },
+    "lamp":
+    {
+        "brand": "Trinamic",
+        "model": "TMCM-3110",
+        "visa_address": "ASRL1::INSTR",
+        "visa_library": "C:\\Windows\\System32\\visa32.dll"
+    },
+    "arduino":
+    {
+        "brand": "Arduino",
+        "model": "Uno",
+        "visa_address": "ASRL1::INSTR",
+        "visa_library": "C:\\Windows\\System32\\visa32.dll"
+    },
+    "SMU":
+    {
+        "brand": "Keithley",
+        "model": "2602",
+        "visa_address": "GPIB0::24::INSTR",
+        "visa_library": "C:\\Windows\\System32\\visa32.dll"
+    }
+}

@@ -1,25 +1,28 @@
+from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtWidgets import (
     QVBoxLayout,
     QPushButton,
     QWidget
 )
 
+from iv_lab_controller.user import User, Permissions
+
+from .base_classes.UiToggle import UiToggleInterface
 from .components.light_level import LightLevelGroupBox
 from .components.measurement_parameters import MeasurementGroupBox
 from .components.cell_size import CellSizeWidget
 from .components.compliance import ComplianceGroupBox
 
 
-class MeasurementFrame(QWidget):
-    
+class MeasurementFrame(QWidget, UiToggleInterface):
+    signal_initialize_hardware = pyqtSignal()
+
     def __init__(self):
         super().__init__()
-
         self.init_ui()
         self.register_connections()
 
     def init_ui(self):
-
         # init button
         self.buttonInitialize = QPushButton("Initialize Hardware",self)
         self.buttonInitialize.setMaximumWidth(300)
@@ -105,3 +108,13 @@ class MeasurementFrame(QWidget):
         self.fieldCalibrationStabilizationTime.setText('5.0')
         self.fieldCalibrationInterval.setText('0.5')
         self.fieldCalibrationDuration.setText('60.0')
+
+    def enable_ui(self, enabled: bool = True):
+        """
+        Enable or diable UI elements.
+
+        :param enabled: Whether to enable or disable elements.
+            [Default: True]
+        """
+        self.buttonInitialize.setEnabled(enabled)
+
