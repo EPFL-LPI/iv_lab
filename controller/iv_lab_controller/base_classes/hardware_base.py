@@ -1,14 +1,29 @@
 import logging
+from abc import ABC, abstractmethod
 
 from pyee import EventEmitter
 
-class HardwareBase(EventEmitter):
+
+class HardwareBase(ABC, EventEmitter):
     """
     Base class for hardware devices.
+
+    :param emulate: Whether to emulate the lamp or not. [Default: False]
     """
-    def __init__(self):
+    def __init__(self, emulate: bool = False):
         super().__init__()
         self._should_abort = False
+        self._emulate = emulate
+        self._connected = False
+
+    @property
+    @abstractmethod
+    def name(self) -> str:
+        """
+        :returns: Name of the hardware.
+            The name should be a unique static string that references the particular class.
+        """
+        raise NotImplementedError()
 
     @property
     def should_abort(self) -> bool:
@@ -17,7 +32,54 @@ class HardwareBase(EventEmitter):
         """
         self._should_abort = True
 
-    def show_status(self, msg: str):
+    @property
+    def emulation_mode(self) -> bool:
+        """
+        :returns: Whetehr the lamp is running in emulation mode or not.
+        """
+        return self._emulate
+
+    @property
+    def connected(self) -> bool:
+        """
+        :returns: Whether or not the lamp is connected.
+        """
+        return self._connected
+
+    @abstractmethod
+    def _connect(self):
+        """
+        Connect to the hardware.
+        """
+        raise NotImplementedError()
+
+    @abstractmethod
+    def _disconnect(self):
+        """
+        Disconnect from the hardware.
+        """
+        raise NotImplementedError()
+
+    def connect(self):
+        """
+        Connects to the hardware.
+        """
+        if (not self.emulate) and (not self.connected):
+            self._connect()
+            
+        self._connected = True
+    
+    def disconnect(self):
+        """
+        Disconnects from the hardware.
+        """
+        if (not self.emulate) and self.connected:
+            self._disconnect()
+
+        self._connected = False
+
+
+    def update_status(self, msg: str):
         """
         Emits a `status_update` event with a message indicating the status.
         Logs a debug message with the message.
@@ -26,3 +88,4 @@ class HardwareBase(EventEmitter):
         """
         self.emit('status_update', msg)
         logging.debug(msg)
+

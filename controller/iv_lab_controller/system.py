@@ -2,9 +2,8 @@ import os
 import logging
 
 from .system_parameters import SystemParameters
-from .components.smu import SMU
-from .components import lamp
-from .components.lamp import Lamp
+from .base_classes.lamp import Lamp
+from .base_classes.smu import SMU
 
 
 class System:
@@ -87,11 +86,11 @@ class System:
         """
         return self._emulate
 
-    def hardware_init(self):
+    def initialize_hardware(self):
         self.SMU.connect()
         self.lamp.connect()
 
-        #optional arduino initialization
+        # optional arduino initialization
         if self.parameters.IVsys['sysName'] == 'IV_Old':
             self.arduino.connect()
 

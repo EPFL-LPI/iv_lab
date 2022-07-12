@@ -124,6 +124,7 @@ class IVLabInterface(QWidget):
 
         self.statusBar = QStatusBar()
         window.setStatusBar(self.statusBar)
+        common.StatusBar(self.statusBar)  # intialize status bar interface
 
     def init_ui(self):
         """
@@ -149,7 +150,8 @@ class IVLabInterface(QWidget):
         Register top level connections.
         """
         self.authentication.user_authenticated.connect(self.set_user)
-        self.measurementFrame.signal_initialize_hardware.connect(self.initializeHardware)
+        self.authentication.user_logged_out.connect(self.on_log_out)
+        self.measurementFrame.initialize_hardware.connect(self.initializeHardware)
 
     def __delete_controller(self):
         """
@@ -164,8 +166,8 @@ class IVLabInterface(QWidget):
     @user.setter
     def user(self, user: Union[User, None]):
         self._user = user
-        enable_ui = user is not None
-        self.enable_user_ui(enable_ui)
+        enable_ui = (user is not None)
+        self.toggle_user_ui(enable=enable_ui)
 
     def set_user(self, user: Union[User, None]):
         """
@@ -173,30 +175,37 @@ class IVLabInterface(QWidget):
         """
         self.user = user
 
-    def enable_user_ui(self, enabled: bool = True):
+    def on_log_out(self):
+        """
+        Set user to None.
+        """
+        self.user = None
+
+    def toggle_user_ui(self, enable: Union[bool, None] = None):
+        """
+        Toggles the user UI state.
+
+        :param enabled: Whether to enable or disable the UI.
+            None to toggle to current user state.
+            [Default: None]
+        """
+        if enable == None:
+            enable = (self.user is not None)
+
+        if enable:
+            self.enable_user_ui()
+
+        else:
+            self.disable_user_ui()
+
+    def enable_user_ui(self):
         """
         Enables UI elements for logged in users.
-
-        :param enabled: Whether to enable or disable the UI. [Default: True]
         """
-        username = 'guest' if self.user is None else self.user.username
+        username = 'guest' if (self.user is None) else self.user.username
 
         # subcomponents
-        self.authentication.set_username(username)
-        self.authentication.setCurrentIndex(0 if self.user is None else 1)
-        self.measurementFrame.enable_ui(enabled)
-
-        # status bar
-        status_msg = (
-            f'Logged in as {username}'
-            if enabled else
-            "Logged out"
-        )
-        self.statusBar.showMessage(status_msg)
-
-        # clean up
-        if not enabled:
-            self.clear_results()
+        self.measurementFrame.enable_ui()
 
         # user-specific configuration files should be located here:
         # configFilePath = os.path.join(self.sp.computer['basePath'] , self.username , 'IVLab_config.json')
@@ -204,6 +213,12 @@ class IVLabInterface(QWidget):
         # tell the gui to load the configuration file
         # self.win.loadSettingsFile(configFilePath)
 
+    def disable_user_ui(self):
+        """
+        Disables logged in user UI elements.
+        """
+        self.clear_results()
+        self.measurementFrame.disable_ui()
 
     def clear_results(self):
         """
@@ -235,12 +250,13 @@ class IVLabInterface(QWidget):
             # nothing to do here
             pass
 
-
     def initializeHardware(self):
         """
-        Create System contorller if not already.
+        Create System controller if not already.
         Initialize hardware.
         """
+        common.StatusBar().showMessage('Initializing hardware...')
+
         if self.system is None:
             try:
                 sys_params = SystemParameters.from_file()
@@ -248,7 +264,7 @@ class IVLabInterface(QWidget):
             except FileNotFoundError:
                 common.show_message_box(
                     'Missing system parameters file',
-                    'System parameters file could not be found. Please contact an administrator.',
+                    'System parameters file could not be found.\nPlease contact an administrator.',
                     icon=QMessageBox.Critical
                 )
                 return
@@ -257,13 +273,24 @@ class IVLabInterface(QWidget):
             except json.JSONDecodeError:
                 common.show_message_box(
                     'System parameters file corrupted',
-                    'System parameters file is corrupted. Please contact an administrator.',
+                    'System parameters file is corrupted.\nPlease contact an administrator.',
                     icon=QMessageBox.Critical
                 )
                 return
 
-            self.system = System(sys_params)
-            self.system.SMU.on('status_update', self.statusBar.showMessage)
-            self.system.lamp.on('status_update', self.statusBar.showMessage)
+            self.system = System(sys_params, emulate=self.emulate)
+            self.system.SMU.on('status_update', common.StatusBar().showMessage)
+            self.system.lamp.on('status_update', common.StatusBar().showMessage)
 
-        self.system.hardware_init()
+        try:
+            self.system.initialize_hardware()
+
+        except Exception as err:
+            common.show_message_box(
+                'Could not initialize hardware',
+                f'Could not initialize hardware due to the following error.\n{err}',
+                icon=QMessageBox.Critical
+            )
+
+        else:
+            common.StatusBar().showMessage('Hardware initialized')

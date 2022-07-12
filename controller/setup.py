@@ -22,12 +22,10 @@ setuptools.setup(
         "Operating System :: OS Independent",
         "Development Status :: 3 - Alpha"
     ],
-    python_requires=">=3.6.12, <3.7",
+    python_requires=">=3.6.8, <3.7",
     install_requires=[
         'PyQt5==5.9.2',  # version requirement for fbs, use Python 3.6
         'pyee>=9.0.0',
-        'pyvisa',  # only required for lamps.oriel*
-        'pytrinamic',  # only required for lamps.trinamic*
         'pymeasure',
         'bric_analysis_libraries>=0.1.2.post1'
     ],

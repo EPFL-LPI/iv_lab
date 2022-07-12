@@ -1,6 +1,10 @@
 from .wavelabs_base import WavelabsLamp
 
+
 class WavelabsSinus70(WavelabsLamp):
+    """
+    A Wavelabs Sinus 70 lamp.
+    """
     def __init__(self, emulate: bool = False):
         """
         :param emulate: Whether to emulate the lamp or not. [Default: False]
@@ -16,6 +20,12 @@ class WavelabsSinus70(WavelabsLamp):
             0: "dummy"
         }
 
+    @property
+    def name(self) -> str:
+        """
+        :returns: 'wavelabs sinus 70'
+        """
+        return 'wavelabs sinus 70'
 
     def _connect(self):
         super._connect(self.port)

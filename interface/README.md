@@ -1,1 +1,1 @@
-# IV Lab Interface
+# EPFL LPI | IV Lab Interface
