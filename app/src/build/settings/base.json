@@ -1,0 +1,6 @@
+{
+    "app_name": "iv_lab",
+    "author": "Benjamin Le Geyt, Felix Eickemeyer, Brian Carlsen",
+    "main_module": "src/main/python/main.py",
+    "version": "0.0.0"
+}
