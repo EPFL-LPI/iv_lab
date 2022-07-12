@@ -1,11 +1,12 @@
+from abc import ABC
 from typing import Tuple
 import socket
 import logging
 
-from ...base_classes.lamp import Lamp
+from iv_lab_controller.base_classes.lamp import Lamp
 
 
-class WavelabsLamp(Lamp):
+class WavelabsLamp(ABC, Lamp):
     """
     Wavelabs based lamps base class.
     """

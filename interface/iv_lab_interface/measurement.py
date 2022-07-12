@@ -15,13 +15,19 @@ from .components.compliance import ComplianceGroupBox
 
 
 class MeasurementFrame(QWidget, UiToggleInterface):
-    signal_initialize_hardware = pyqtSignal()
+    initialize_hardware = pyqtSignal()
 
     def __init__(self):
         super().__init__()
         self.init_ui()
         self.register_connections()
 
+        self._hardware_initialized = False
+
+    @property
+    def hardware_is_initialized(self):
+        return self._hardware_initialized
+    
     def init_ui(self):
         # init button
         self.buttonInitialize = QPushButton("Initialize Hardware",self)
@@ -52,14 +58,8 @@ class MeasurementFrame(QWidget, UiToggleInterface):
         self.setLayout(measurementLayout)  
     
     def register_connections(self):
-        self.buttonInitialize.clicked.connect(self.initializeHardware)
+        self.buttonInitialize.clicked.connect(self.initialize_hardware.emit)
         self.buttonResetToDefault.clicked.connect(self.setAllFieldsToDefault)
-
-    # tell the application logic to initialize the hardware.
-    # application logic should call setHardwareActive() if this is successful.
-    def initializeHardware(self):
-        self.signal_initialize_hardware.emit()
-        #self.setHardwareActive(True)
 
     def setAllFieldsToDefault(self):
         self.CheckBoxAutomaticLimits.setChecked(False)
@@ -109,12 +109,21 @@ class MeasurementFrame(QWidget, UiToggleInterface):
         self.fieldCalibrationInterval.setText('0.5')
         self.fieldCalibrationDuration.setText('60.0')
 
-    def enable_ui(self, enabled: bool = True):
+    def toggle_ui(self, enable: bool = True):
         """
-        Enable or diable UI elements.
+        Enable or disable UI elements.
 
-        :param enabled: Whether to enable or disable elements.
+        :param enable: Whether to enable or disable elements.
             [Default: True]
         """
-        self.buttonInitialize.setEnabled(enabled)
+        if enable:
+            self.enable_ui()
 
+        else:
+            self.disable_ui()
+
+    def enable_ui(self):
+        self.buttonInitialize.setEnabled(True)
+
+    def disable_ui(self):
+        self.buttonInitialize.setEnabled(False)

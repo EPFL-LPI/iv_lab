@@ -1,1 +1,1 @@
-# IV Lab Controller
+# EPFL LPI | IV Lab Controller

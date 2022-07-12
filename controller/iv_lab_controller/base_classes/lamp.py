@@ -1,41 +1,29 @@
 import logging
+from abc import abstractmethod
 
 from .hardware_base import HardwareBase
 
 
 class Lamp(HardwareBase):
+    """
+    Base class providing a common API for lamps.
+    """
+
     def __init__(self, emulate: bool = False):
         """
         :param emulate: Whether to emulate the lamp or not. [Default: False]
         """
-        super().__init__()
+        super().__init__(emulate=emulate)
 
-        self._connected = False
         self._light_is_on = False
-        self._emulate = emulate
-
         self._intensity: float = 100  # light intensity set point
             
-    @property
-    def connected(self) -> bool:
-        """
-        :returns: Whether or not the lamp is connected.
-        """
-        return self._connected
-
     @property
     def light_is_on(self) -> bool:
         """
         :returns: Whether or not the light is on.
         """
         return self._light_is_on
-
-    @property
-    def emulation_mode(self) -> bool:
-        """
-        :returns: Whetehr the lamp is running in emulation mode or not.
-        """
-        return self._emulate
 
     @property
     def intensity(self) -> float:
@@ -47,36 +35,6 @@ class Lamp(HardwareBase):
     @intensity.setter
     def intensity(self, intensity: float):
         self._intensity = intensity
-    
-    def _connect(self):
-        """
-        Connect to the lamp.
-        """
-        raise NotImplementedError()
-
-    def _disconnect(self):
-        """
-        Disconnect from the lamp.
-        """
-        raise NotImplementedError()
-
-    def connect(self):
-        """
-        Connects to the lamp.
-        """
-        if (not self.emulate) and (not self.connected):
-            self._connect()
-            
-        self._connected = True
-    
-    def disconnect(self):
-        """
-        Disconnects from the lamp.
-        """
-        if (not self.emulate) and self.connected:
-            self._disconnect()
-
-        self._connected = False
     
     def light_on(self):
         """
@@ -103,12 +61,14 @@ class Lamp(HardwareBase):
         if not self.emulate:
             self._turn_off()
 
+    @abstractmethod
     def _light_on(self):
         """
         Turn light on.
         """
         raise NotImplementedError()
 
+    @abstractmethod
     def _light_off(self):
         """
         Turn light off.

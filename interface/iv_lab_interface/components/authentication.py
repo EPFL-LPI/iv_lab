@@ -38,7 +38,7 @@ class AuthenticationWidget(QStackedWidget):
         self.fieldUserName.setMinimumWidth(100)
 
         self.fieldPassword = QLineEdit()
-        self.fieldPassword.setPlaceholderText("Sciper")
+        self.fieldPassword.setPlaceholderText("Password")
         self.fieldPassword.returnPressed.connect(self.logIn)
         self.fieldPassword.setMinimumWidth(100)
 
@@ -69,32 +69,11 @@ class AuthenticationWidget(QStackedWidget):
         #self.StackLogInOut.setMaximumHeight(40)
         self.setCurrentIndex(0) # 0 = login, 1 = logout
 
-    def logOut(self):
-        self.signal_log_out.emit()
-        self.setHardwareActive(False)
-        self.buttonInitialize.setEnabled(False)
-        self.fieldCellName.setEnabled(False)
-        self.checkBoxAutoSave.setEnabled(False)
-        self.buttonSaveData.setEnabled(False)
-        self.cellSizeWidget.setEnabled(False)
-        self.ButtonResetToDefault.setEnabled(False)
-        self.IVResultsWidget.setEnabled(False)
-        self.clearPlotIV()
-        self.clearPlotConstantV()
-        self.clearPlotConstantI()
-        self.clearPlotMPP()
-        self.clearPlotMPPIV()
-        self.clearPlotCalibration()
-        self.curve_valid = False
-        self.StackLogInOut.setCurrentIndex(0)
-        # should call set all fields to default from the application logic after receiving logout signal
-        # cannot call this here as we need to be sure the application is done saving the config file
-        # before clearing the current values from all the fields.
-        #self.setAllFieldsToDefault()
-    
-    # this function sends login details down to the application logic
-    # application logic should call logInValid() if the username/pwd combo is good.
     def logIn(self):
+        """
+        Attempt to log in a user.
+        If successful update controls, otherwise display error message.
+        """
         username = self.fieldUserName.text()
         password = self.fieldPassword.text()
 
@@ -124,9 +103,36 @@ class AuthenticationWidget(QStackedWidget):
                 'Invalid username or password.',
                 icon=QMessageBox.Critical
             )
+            return
 
-        else:
-            self.user_authenticated.emit(user)  
+        # successful log in
+        self.set_username(user.username)
+        self.show_log_out()
+
+        # clear credential fields
+        self.fieldUserName.setText('')
+        self.fieldPassword.setText('')
+
+        common.StatusBar().showMessage(f'Logged in as {user.username}')
+        self.user_authenticated.emit(user)
+
+    def logOut(self):
+        self.show_log_in()
+        common.StatusBar().showMessage('Logged out')
+        self.user_logged_out.emit()
 
     def set_username(self, username: str):
         self.labelUserName.setText(username)
+
+    def show_log_in(self):
+        """
+        Shows log in controls.
+        """
+        self.fieldUserName.setFocus()
+        self.setCurrentIndex(0)
+
+    def show_log_out(self):
+        """
+        Show log out controls.
+        """
+        self.setCurrentIndex(1)

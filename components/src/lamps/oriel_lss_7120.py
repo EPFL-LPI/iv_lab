@@ -1,6 +1,6 @@
 import pyvisa
 
-from ...base_classes.lamp import Lamp
+from iv_lab_controller.base_classes.lamp import Lamp
 
 
 class OrielLSS7120(Lamp):
@@ -15,6 +15,14 @@ class OrielLSS7120(Lamp):
         super().__init__(emulate=emulate)
 
         self._visa_address = visa_address
+
+    @property
+    def name(self) -> str:
+        """
+        :returns: 'oriel lss 7120'
+        """
+        return 'oriel lss 7120'
+    
 
     @property
     def visa_address(self) -> str:

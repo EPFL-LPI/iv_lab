@@ -1,7 +1,7 @@
 import time
 
+from iv_lab_controller.base_classes.lamp import Lamp
 from ..smu import SMU
-from ...base_classes.lamp import Lamp
 
 
 class KeithleyFilterWheel(Lamp):
@@ -23,6 +23,13 @@ class KeithleyFilterWheel(Lamp):
             10: 3,
             0: 2
         }
+
+    @property
+    def name(self) -> str:
+        """
+        :returns: 'keithley filter wheel'
+        """
+        return 'keithley filter wheel'
 
     def _connect(self):
         """

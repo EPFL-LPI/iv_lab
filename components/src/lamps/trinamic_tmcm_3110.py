@@ -21,6 +21,13 @@ class TrinamicTMCM3110(TrinamicLamp):
         """
         super().__init__(microstep_resolution, steps_per_revolution, **kwargs)
         self.interface = None
+    
+    @property
+    def name(self) -> str:
+        """
+        :returns: 'trinalic tmcm-3110'
+        """
+        return 'trinalic tmcm-3110'
 
     def _connect(self):
         connectionManager = ConnectionManager()
