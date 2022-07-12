@@ -10,13 +10,19 @@ from iv_lab_interface import IVLabInterface
 
 
 class AppContext(ApplicationContext):
-    def run(self, debug=False):
+    def run(self, debug: bool = False, emulate: bool = False):
         """
         :param debug: Run in debug mode. [Default: False]
+        :pram emulate: Run in emulation mode. [Default: False]
         :returns: Exit code.
         """
         window = QMainWindow()
-        interface = IVLabInterface(window, self.get_resource(), debug=debug)
+        interface = IVLabInterface(
+            window,
+            resources=self.get_resource(),
+            debug=debug,
+            emulate=emulate
+        )
 
         window.setCentralWidget(interface)
         window.show()
@@ -61,5 +67,5 @@ if __name__ == '__main__':
 
     args = _get_args()  # cli arguments
     app = AppContext()
-    exit_code = app.run(debug=args.debug)
+    exit_code = app.run(emulate=args.emulate, debug=args.debug)
     sys.exit(exit_code)
