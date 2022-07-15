@@ -35,7 +35,8 @@ from PyQt5.QtWidgets import (
     QFrame,
     QFileDialog,
     QStatusBar,
-    QMessageBox
+    QMessageBox,
+    QMenuBar
 )
 
 import numpy as np
@@ -43,8 +44,8 @@ import pyqtgraph as pg
 from pyqtgraph import PlotWidget, plot
 
 from iv_lab_controller import gui as GuiCtrl
-from iv_lab_controller.user import User
-from iv_lab_controller.system import System
+from iv_lab_controller import system as SystemCtrl
+from iv_lab_controller.user import User, Permission
 from iv_lab_controller.system_parameters import SystemParameters
 
 from . import common
@@ -87,6 +88,7 @@ class IVLabInterface(QWidget):
         self.clicksCount = 0
         self.flag_abortRun = False
         self.system = None
+        self._system_name = None
 
         # self.window = None
         self.settings = QSettings()
@@ -114,6 +116,13 @@ class IVLabInterface(QWidget):
         """
         return self._emulate
 
+    @property
+    def system_name(self) -> Union[str, None]:
+        """
+        :returns: Name of the loaded system or None if not loaded.
+        """
+        return self._system_name
+
     def init_window(self, window):
         """
         :param window: QWindow to initialize.
@@ -130,28 +139,31 @@ class IVLabInterface(QWidget):
         """
         Initialize UI.
         """
-        self.measurementFrame = MeasurementFrame()
-        self.plotFrame = PlotFrame()
-        self.authentication = self.plotFrame.authentication
+        self.measurement_frame = MeasurementFrame()
+        self.plot_frame = PlotFrame()
+        self.authentication = self.plot_frame.authentication
 
         splitter = QSplitter(Qt.Horizontal)
-        splitter.addWidget(self.measurementFrame)
-        splitter.addWidget(self.plotFrame)
+        splitter.addWidget(self.measurement_frame)
+        splitter.addWidget(self.plot_frame)
         splitter.setStretchFactor(1,10)
         
         layout = QHBoxLayout()
         layout.addWidget(splitter)
         layout.setContentsMargins(10,10,10,10)
-        
         self.setLayout(layout)
-        
+
+        # main menu bar
+        self.mb_main = QMenuBar()
+        self.window.setMenuBar(self.mb_main)
+
     def register_connections(self):
         """
         Register top level connections.
         """
         self.authentication.user_authenticated.connect(self.set_user)
         self.authentication.user_logged_out.connect(self.on_log_out)
-        self.measurementFrame.initialize_hardware.connect(self.initializeHardware)
+        self.measurement_frame.initialize_hardware.connect(self.initialize_system)
 
     def __delete_controller(self):
         """
@@ -166,8 +178,14 @@ class IVLabInterface(QWidget):
     @user.setter
     def user(self, user: Union[User, None]):
         self._user = user
-        enable_ui = (user is not None)
-        self.toggle_user_ui(enable=enable_ui)
+        enable_user_ui = (user is not None)
+        self.toggle_user_ui(enable=enable_user_ui)
+        
+        if user is None:
+            return
+
+        is_admin = (Permission.Admin in user.permissions)
+        self.toggle_admin_ui(is_admin)
 
     def set_user(self, user: Union[User, None]):
         """
@@ -205,7 +223,7 @@ class IVLabInterface(QWidget):
         username = 'guest' if (self.user is None) else self.user.username
 
         # subcomponents
-        self.measurementFrame.enable_ui()
+        self.measurement_frame.enable_ui()
 
         # user-specific configuration files should be located here:
         # configFilePath = os.path.join(self.sp.computer['basePath'] , self.username , 'IVLab_config.json')
@@ -218,8 +236,35 @@ class IVLabInterface(QWidget):
         Disables logged in user UI elements.
         """
         self.clear_results()
-        self.measurementFrame.disable_ui()
+        self.measurement_frame.disable_ui()
 
+    def toggle_admin_ui(self, enable: bool = False):
+        """
+        Initialize admin UI.
+
+        :param enable: Whether to enable or diable the UI.
+        """
+        if enable:
+            self.enable_admin_ui()
+
+        else:
+            self.disable_admin_ui
+
+    def enable_admin_ui(self):
+        """
+        Enable the admin UI.
+        """
+        # menu
+        self.mn_admin = self.mb_main.addMenu('Admin')
+        act_set_system = self.mn_admin.addAction('Set system')
+        act_set_system.triggered.connect(self.set_system)
+
+    def disable_admin_ui(self):
+        """
+        Disables the admin UI.
+        """
+        self.mb_main.clear()
+        
     def clear_results(self):
         """
         Disables UI elements that only logged in users can access.
@@ -250,9 +295,9 @@ class IVLabInterface(QWidget):
             # nothing to do here
             pass
 
-    def initializeHardware(self):
+    def initialize_system(self):
         """
-        Create System controller if not already.
+        Create system controller if not already.
         Initialize hardware.
         """
         common.StatusBar().showMessage('Initializing hardware...')
@@ -278,12 +323,25 @@ class IVLabInterface(QWidget):
                 )
                 return
 
-            self.system = System(sys_params, emulate=self.emulate)
-            self.system.SMU.on('status_update', common.StatusBar().showMessage)
-            self.system.lamp.on('status_update', common.StatusBar().showMessage)
+            try:
+                system_file = '/home/brian/Documents/lab/python_scripts/iv_lab/components/systems/mock_system.py'
+                self._system_name, system_cls = SystemCtrl.load_system(system_file, emulate=self.emulate)
+            
+            except RuntimeError as err:
+                common.show_message_box(
+                    'Could not load System',
+                    f'Could not load System due to the following error:\n{err}\nPlease contact an administrator.',
+                    icon=QMessageBox.Critical
+                )
+                return
+
+
+            self.system = system_cls(emulate=self.emulate)
+            self.system.smu.add_listener('status_update', common.StatusBar().showMessage)
+            self.system.lamp.add_listener('status_update', common.StatusBar().showMessage)
 
         try:
-            self.system.initialize_hardware()
+            self.system.connect()
 
         except Exception as err:
             common.show_message_box(
@@ -294,3 +352,11 @@ class IVLabInterface(QWidget):
 
         else:
             common.StatusBar().showMessage('Hardware initialized')
+            self.measurement_frame.enable_measurement_ui()
+
+
+    def set_system(self):
+        """
+
+        """
+        pass

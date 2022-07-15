@@ -8,7 +8,7 @@ class HardwareBase(ABC, EventEmitter):
     """
     Base class for hardware devices.
 
-    :param emulate: Whether to emulate the lamp or not. [Default: False]
+    :param emulate: Whether to emulate the hardware or not. [Default: False]
     """
     def __init__(self, emulate: bool = False):
         super().__init__()
@@ -33,16 +33,16 @@ class HardwareBase(ABC, EventEmitter):
         self._should_abort = True
 
     @property
-    def emulation_mode(self) -> bool:
+    def emulate(self) -> bool:
         """
-        :returns: Whetehr the lamp is running in emulation mode or not.
+        :returns: Whether the hardware is running in emulation mode or not.
         """
         return self._emulate
 
     @property
     def connected(self) -> bool:
         """
-        :returns: Whether or not the lamp is connected.
+        :returns: Whether or not the hardware is connected.
         """
         return self._connected
 

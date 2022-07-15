@@ -13,10 +13,11 @@ class SMU(HardwareBase):
 	"""
 	Base class providing a common API for source meter units (SMUs).
 	"""
-	def __init__(
-		self
-	):
-		super().__init__()
+	def __init__(self, emulate: bool = False):
+		"""
+		:param emualte: Run in emulation mode. [Default: False]
+		"""
+		super().__init__(emulate=emulate)
 
 		self._current_range = (None, None)
 		self._voltage_range = (None, None)
@@ -35,7 +36,7 @@ class SMU(HardwareBase):
 		"""
 		return self._voltage_range
 
-	@staticmethod
+	@abstractmethod
 	def set_voltage(
 		self,
 		voltage: float
@@ -47,7 +48,7 @@ class SMU(HardwareBase):
 		"""
 		raise NotImplementedError()
 
-	@staticmethod
+	@abstractmethod
 	def set_current(
 		self,
 		current: float
@@ -59,21 +60,21 @@ class SMU(HardwareBase):
 		"""
 		raise NotImplementedError()
 
-	@staticmethod
+	@abstractmethod
 	def enable_output(self):
 		"""
 		Enable output.
 		"""
 		raise NotImplementedError()
 
-	@staticmethod
+	@abstractmethod
 	def disable_output(self):
 		"""
 		Disable output.
 		"""
 		raise NotImplementedError()
 
-	@staticmethod
+	@abstractmethod
 	def measure_voltage(self) -> float:
 		"""
 		Measure the voltage.
@@ -82,7 +83,7 @@ class SMU(HardwareBase):
 		"""
 		raise NotImplementedError()
 
-	@staticmethod
+	@abstractmethod
 	def measure_current(self) -> float:
 		"""
 		Measure the current.
@@ -91,7 +92,7 @@ class SMU(HardwareBase):
 		"""
 		raise NotImplementedError()
 
-	@staticmethod
+	@abstractmethod
 	def measure_iv_curve(
 		self,
 		start: float,
@@ -106,11 +107,11 @@ class SMU(HardwareBase):
 		:param stop: Stop voltage.
 		:param step: Absolute voltage step size.
 		:param rate: Scan rate.
-		:returns: NumPy.array of measured values.  
+		:returns: numpy.array of measured values.  
 		"""
 		raise NotImplementedError()
 
-	@staticmethod
+	@abstractmethod
 	def measure_iv_point_by_point(
 		self,
 		start: float,
@@ -125,26 +126,26 @@ class SMU(HardwareBase):
 		:param stop: Stop voltage.
 		:param step: Absolute voltage step size.
 		:param rate: Scan rate.
-		:returns: NumPy.array of measured values.  
+		:returns: numpy.array of measured values.  
 		"""
 		raise NotImplementedError()
 
-	@staticmethod
-	def measure_chronovoltometry(
+	@abstractmethod
+	def measure_chronopotentiometry(
 		self,
 		current: float,
 		time: float
 	) -> np.array:
 		"""
-		Perform a chronovoltometry experiment.
+		Perform a chronopotentiometry experiment.
 
 		:param current: Set point current.
 		:param time: Run time.
-		:returns: NumPy.array of measured values.  
+		:returns: numpy.array of measured values.  
 		"""
 		raise NotImplementedError()
 
-	@staticmethod
+	@abstractmethod
 	def measure_chronoampometry(
 		self,
 		voltage: float,
@@ -155,19 +156,6 @@ class SMU(HardwareBase):
 
 		:param voltage: Set point voltage.
 		:param time: Run time.
-		:returns: NumPy.array of measured values.  
-		"""
-		raise NotImplementedError()
-
-	@staticmethod
-	def measure_chrono_mpp(
-		self,
-		time: float
-	) -> np.array:
-		"""
-		Measure MPP for a given amount of time.
-		
-		:param time: Run time.
-		:returns: NumPy.array of measured values.  
+		:returns: numpy.array of measured values.  
 		"""
 		raise NotImplementedError()

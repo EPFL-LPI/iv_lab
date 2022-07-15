@@ -5,7 +5,7 @@ from PyQt5.QtWidgets import (
     QWidget
 )
 
-from iv_lab_controller.user import User, Permissions
+from iv_lab_controller.user import User, Permission
 
 from .base_classes.UiToggle import UiToggleInterface
 from .components.light_level import LightLevelGroupBox
@@ -88,7 +88,7 @@ class MeasurementFrame(QWidget, UiToggleInterface):
         self.fieldMaxPPStabilizationTime.setText('5.0')
         self.fieldMaxPPInterval.setText('0.50')
         self.fieldMaxPPDuration.setText('60.0')
-        self.fieldCellActiveArea.setText('0.16')
+        self.fieldCellenableArea.setText('0.16')
         self.fieldVoltageLimit.setText('2.00')
         self.fieldCurrentLimit.setText('5.0')
         self.menuSelectLightLevel.setCurrentIndex(0)
@@ -127,3 +127,14 @@ class MeasurementFrame(QWidget, UiToggleInterface):
 
     def disable_ui(self):
         self.buttonInitialize.setEnabled(False)
+
+    def enable_measurement_ui(self):
+        enable = True
+        #self.labelLightLevelMenu.setEnabled(enable)
+        self.lightLevelGroupBox.setEnabled(enable)
+        #self.menuSelectLightLevel.setEnabled(enable)
+        #self.labelMeasurementMenu.setEnabled(enable)
+        self.measurementGroupBox.setEnabled(enable)
+        #self.menuSelectMeasurement.setEnabled(enable)
+        #self.Stack.setEnabled(enable)
+        self.complianceGroupBox.setEnabled(enable)

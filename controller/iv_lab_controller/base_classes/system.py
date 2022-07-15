@@ -1,7 +1,8 @@
 import os
 import logging
+from typing import Callable, Dict
 
-from .system_parameters import SystemParameters
+from .iv_system_parameters import IVSystemParameters
 from .lamp import Lamp
 from .smu import SMU
 from .computer_parameters import ComputerParameters
@@ -10,7 +11,7 @@ from .iv_system_parameters import IVSystemParameters
 
 class System:
     @staticmethod
-    def from_parameters(parameters: SystemParameters, emulate: bool = False) -> 'System':
+    def from_parameters(parameters: IVSystemParameters, emulate: bool = False) -> 'System':
         """
         Create System from SystemParameters
 
@@ -26,7 +27,7 @@ class System:
         lamp_ctrl = lamp.get_controller(lamp_type)
 
         if lamp_type is Lamp.KeithleyFilterWheel:
-            self.lamp = lamp_ctrl(self.SMU, emulate=emulate)
+            self.lamp = lamp_ctrl(self.smu, emulate=emulate)
 
         elif lamp_type is Lamp.OrielLSS7120:
             self.lamp = lamp_ctrl(lamp_params['visa_address'], emulate=emulate)
@@ -46,23 +47,29 @@ class System:
         """
         pass
 
-    def __init__(
-        self,
-        lamp: Lamp,
-        smu: SMU,
-        computer: ComputerParameters,
-        iv_system: IVSystemParameters,
-        emulate: bool = False
-    ):
+    def __init__(self, emulate: bool = False):
         """
-        :param computer:
-        :param iv_system:
-        :param lamp:
-        :param smu:
-        :param emulate: Run in emulation mode. [Default: emulate]
+        :param emulate: Run in emulation mode. [Default: False]
         """
         self._emulate = emulate
-        self.parameters = parameters
+        
+        # map of measurement name to methods
+        # available to users through the application interface
+        self._user_measurements = {
+            'IV curve': self.measure_iv_curve,
+            'Constant voltage': self.measure_chronoamperometry,
+            'Constant current': self.measure_chronopotentiometry,
+            'MPP': self.measure_mpp
+        }
+        
+        self._admin_measurements = {
+            'Calibrate': self.calibrate
+        }
+
+        self._lamp = None
+        self._smu = None
+        self._computer_parameters = None
+        self._iv_system_parameters = None
                 
         # Preferences, to be moved into separate GUI page at some point
         self.saveDataAutomatic = False
@@ -82,14 +89,6 @@ class System:
         self.data_MPP = None
         self.MPP_Results = None
         
-        if self.parameters.IVsys['sysName'] == 'IV_Old':
-            # arduino is not present in all systems.  
-            # Check that its parameters have been loaded from the system settings file before trying to access
-            if sp.arduino != None:
-                self.arduino = arduino(sp.arduino)
-            else:
-                raise ValueError("System name is set to 'IV_Old' but no arduino settings dictionary is present")
-        
     @property
     def emulate(self) -> bool:
         """
@@ -97,23 +96,81 @@ class System:
         """
         return self._emulate
 
-    def initialize_hardware(self):
+    @property
+    def user_measurements(self) -> Dict[str, Callable]:
         """
-        Initialize hardware.
+        :returns: Dictionary of name-method pairs available to users.
         """
-        self.SMU.connect()
+        return self._user_measurements
+
+    @property
+    def admin_measurements(self) -> Dict[str, Callable]:
+        """
+        :returns: Dictionary of name-method pairs available only to admins.
+        """
+        return self._admin_measurements
+
+    @property
+    def lamp(self) -> Lamp:
+        """
+        :returns: The System's lamp controller.
+        """
+        return self._lamp
+    
+    @property
+    def smu(self) -> SMU:
+        """
+        :returns: The System's SMU controller.
+        """
+        return self._smu
+    
+    @property
+    def computer_parameters(self) -> ComputerParameters:
+        """
+        :returns: The System's computer parameters.
+        """
+        return self._computer_parameters
+    
+    @property
+    def iv_system_parameters(self) -> IVSystemParameters:
+        """
+        :returns: The System's IV system parameters.
+        """
+        return self._iv_system_parameters
+
+    def connect(self):
+        """
+        Connect to and initialize hardware.
+        """
+        self.smu.connect()
         self.lamp.connect()
 
+    def disconnect(self):
+        """
+        Disconnect from hardware.
+        """
+        pass
+
     def lamp_on(self):
+        """
+        Turn lamp on.
+        """
         self.lamp.light_on()
     
-    def turn_lamp_off(self):
+    def lamp_off(self):
+        """
+        Turn lamp off..
+        """
         self.lamp.light_off()
     
     def measure_light_intensity(self):
         raise NotImplementedError()
     
     def measure_iv_curve(self, IV_param):
+        """
+        Runs a chrono-amperometry measurement.
+            Holds the current constant, and measures the potential.
+        """
         dateTimeString = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         
         self.IV_Results = {}
@@ -161,7 +218,7 @@ class System:
         if not lampError:
             while(True): #use while loop to be able to break out at any time if run aborted.
                 #measure light intensity on the reference diode if configured
-                if self.SMU.useReferenceDiode and (IV_param['light_int'] > 1.0):
+                if self.smu.useReferenceDiode and (IV_param['light_int'] > 1.0):
                     
                     lightIntensity = self.measure_light_intensity() #status messages set internally
                     
@@ -178,7 +235,7 @@ class System:
                 VocPolarityOK = True
                 if self.checkVOCBeforeScan and IV_param['light_int']  > 0: #check Voc polarity only when light is on
                     self.show_status("Checking Voc Polarity...")
-                    VocPolarityOK = self.SMU.checkVOCPolarity(IV_param)
+                    VocPolarityOK = self.smu.checkVOCPolarity(IV_param)
                 if self.abortRunFlag():
                     self.show_status("Run Aborted")
                     break
@@ -192,7 +249,7 @@ class System:
                 self.show_status("Running J-V Scan...")
                 
                 try:
-                    (v_smu, i_smu, i_ref) = self.SMU.measure_IV_point_by_point(IV_param) #measure_IVcurve(IV_param)
+                    (v_smu, i_smu, i_ref) = self.smu.measure_IV_point_by_point(IV_param) #measure_IVcurve(IV_param)
                 except ValueError as err:
                     self.error_window(str(err))
                     break
@@ -201,10 +258,10 @@ class System:
                     self.error_window("Execution Error in smu.measure_IVcurve().\nSee terminal for details.")
                     break
                 
-                if self.SMU.useReferenceDiode:
-                    if self.SMU.referenceDiodeParallel: #light level was measured real-time during scan
+                if self.smu.useReferenceDiode:
+                    if self.smu.referenceDiodeParallel: #light level was measured real-time during scan
                         avgRefCurrent = sum(i_ref)/len(i_ref)
-                        avgLightLevel = abs(100. * avgRefCurrent / self.SMU.fullSunReferenceCurrent)
+                        avgLightLevel = abs(100. * avgRefCurrent / self.smu.fullSunReferenceCurrent)
                         if self.app != None:
                             self.win.updateMeasuredLightIntensity(avgLightLevel)
                             self.app.processEvents()
@@ -221,7 +278,7 @@ class System:
                     self.IV_Results['active_area'] = IV_param['active_area']
                     self.IV_Results['cell_name'] = IV_param['cell_name']
                     self.IV_Results['light_int'] = IV_param['light_int']
-                    if self.SMU.useReferenceDiode:
+                    if self.smu.useReferenceDiode:
                         self.IV_Results['light_int_meas'] = IV_param['light_int']/lightLevelCorrectionFactor
                     self.IV_Results['Imax'] = IV_param['Imax']
                     self.IV_Results['Dwell'] = IV_param['Dwell']
@@ -299,7 +356,11 @@ class System:
         if self.win != None:
             self.win.runFinished() # also lowers abortRun flag
     
-    def measure_chronovoltometry(self, param):
+    def measure_chronopotentiometry(self, param):
+        """
+        Runs a chrono-potentiometry measurement.
+            Holds the potential constant, and measures the current.
+        """
         # self.flag_abortRun = False
         if self.app != None:
             self.app.processEvents()
@@ -324,7 +385,7 @@ class System:
         if not lampError:
             try:
                 while(True):
-                    if self.SMU.useReferenceDiode and (param['light_int'] > 1.0):
+                    if self.smu.useReferenceDiode and (param['light_int'] > 1.0):
                         lightIntensity = self.measure_light_intensity() #status messages set internally
                         
                         if self.abortRunFlag() :
@@ -337,7 +398,7 @@ class System:
                                 
                     self.show_status("Running Constant Current Measurement...")
                     
-                    t, v_smu = self.SMU.measure_V_time_dependent(param)
+                    t, v_smu = self.smu.measure_V_time_dependent(param)
                     
                     i_smu = []
                     for v in v_smu:
@@ -347,7 +408,7 @@ class System:
                     self.CC_Results['active_area'] = param['active_area']
                     self.CC_Results['cell_name'] = param['cell_name']
                     self.CC_Results['light_int'] = param['light_int']
-                    if self.SMU.useReferenceDiode:
+                    if self.smu.useReferenceDiode:
                         self.CC_Results['light_int_meas'] = lightIntensity
                     self.CC_Results['set_current'] = param['set_current']
                     self.CC_Results['interval'] = param['interval']
@@ -390,7 +451,7 @@ class System:
             self.win.runFinished() # also lowers abortRun flag
             #self.flag_abortRun = False  
     
-    def measure_chronoampometry(self, param):
+    def measure_chronoamperometry(self, param):
         # self.flag_abortRun = False
         if self.app != None:
             self.app.processEvents()
@@ -413,7 +474,7 @@ class System:
         if not lampError:
             try:
                 while(True):
-                    if self.SMU.useReferenceDiode and (param['light_int'] > 1.0):
+                    if self.smu.useReferenceDiode and (param['light_int'] > 1.0):
                         lightIntensity = self.measure_light_intensity() #status messages set internally
                         
                         param['light_int_meas'] = lightIntensity
@@ -429,7 +490,7 @@ class System:
                                 
                     self.show_status("Running Constant Voltage Measurement...")
                     
-                    t, i_smu_corrected, i_smu = self.SMU.measure_I_time_dependent(param)
+                    t, i_smu_corrected, i_smu = self.smu.measure_I_time_dependent(param)
                     
                     v_smu = []
                     for i in i_smu:
@@ -439,7 +500,7 @@ class System:
                     self.CV_Results['active_area'] = param['active_area']
                     self.CV_Results['cell_name'] = param['cell_name']
                     self.CV_Results['light_int'] = param['light_int']
-                    if self.SMU.useReferenceDiode:
+                    if self.smu.useReferenceDiode:
                         self.CV_Results['light_int_meas'] = lightIntensity
                     self.CV_Results['set_voltage'] = param['set_voltage']
                     self.CV_Results['interval'] = param['interval']
@@ -482,9 +543,11 @@ class System:
         if self.win != None:
             self.win.runFinished() # also lowers abortRun flag
             #self.flag_abortRun = False  
-        
     
-    def measure_chrono_mpp(self, param):
+    def measure_mpp(self, param):
+        """
+        Runs an MPP measurement.
+        """
         # self.flag_abortRun = False
         if self.app != None:
             self.app.processEvents()
@@ -515,7 +578,7 @@ class System:
             try:
                 while(True):
             
-                    if self.SMU.useReferenceDiode and (param['light_int'] > 1.0):
+                    if self.smu.useReferenceDiode and (param['light_int'] > 1.0):
                         lightIntensity = self.measure_light_intensity() #status messages set internally
                         
                         param['light_int_meas'] = lightIntensity
@@ -533,7 +596,7 @@ class System:
                     if self.checkVOCBeforeScan and param['light_int']  > 0: #check Voc polarity when light greater than zero
                         self.show_status("Checking Voc Polarity...")
                         
-                        VocPolarityOK = self.SMU.checkVOCPolarity(param)
+                        VocPolarityOK = self.smu.checkVOCPolarity(param)
                         
                         if self.abortRunFlag() :
                             #break out directly if run aborted during Voc check
@@ -549,13 +612,13 @@ class System:
                     #if we get this far then the setup was all ok and we can start the measurement
                     self.show_status("Running MPP Measurement...")
                     
-                    t, v_smu, i_smu_corrected, i_smu = self.SMU.measure_MPP_time_dependent(param)
+                    t, v_smu, i_smu_corrected, i_smu = self.smu.measure_MPP_time_dependent(param)
                 
                     self.MPP_Results = {}
                     self.MPP_Results['active_area'] = param['active_area']
                     self.MPP_Results['cell_name'] = param['cell_name']
                     self.MPP_Results['light_int'] = param['light_int']
-                    if self.SMU.useReferenceDiode:
+                    if self.smu.useReferenceDiode:
                         self.MPP_Results['light_int_meas'] = lightIntensity
                     if param['start_voltage'] == 'auto' and len(v_smu) > 0:
                         self.MPP_Results['start_voltage'] = v_smu[0]
@@ -607,6 +670,11 @@ class System:
             self.win.runFinished() # also lowers abortRun flag
             #self.flag_abortRun = False  
          
+    def calibrate(self):
+        """
+        """
+        pass
+
     def run_reference_diode_calibration(self, param):
         # self.flag_abortRun = False
         if self.app != None:
@@ -637,7 +705,7 @@ class System:
                     self.win.menuSelectMeasurement.setCurrentIndex(1) #set gui to display CV
                     self.app.processEvents()
                 
-                t_ref, i_corr_ref, i_ref = self.SMU.measure_I_time_dependent(param)
+                t_ref, i_corr_ref, i_ref = self.smu.measure_I_time_dependent(param)
                 
                 if len(t_ref) == 0:
                     t_ref.append(1)
@@ -647,7 +715,7 @@ class System:
                     self.show_status("Moving Control Diode Into Measurement Position...")
                     self.arduino.select_test_cell()        
                     
-                    t, i_corr, i_smu = self.SMU.measure_I_time_dependent(param)
+                    t, i_corr, i_smu = self.smu.measure_I_time_dependent(param)
                 else: 
                     t = []
                     i_smu = []
@@ -672,7 +740,7 @@ class System:
             else:
                 self.show_status("Running Reference Diode Calibration...")
                 
-                t, i_smu, i_ref = self.SMU.measure_reference_calibration(param)
+                t, i_smu, i_ref = self.smu.measure_reference_calibration(param)
                 
             self.show_status("Turning lamp off...")
             
@@ -717,9 +785,9 @@ class System:
     def save_calibration_to_system_settings(self, calibration_params):
         dateTimeString = datetime.datetime.now().strftime("%c") #"%Y%m%d_%H%M%S")
         self.parameters.IVsys['fullSunReferenceCurrent'] = calibration_params['reference_current']
-        self.SMU.fullSunReferenceCurrent = calibration_params['reference_current']
+        self.smu.fullSunReferenceCurrent = calibration_params['reference_current']
         self.parameters.IVsys['calibrationDateTime'] = dateTimeString
-        self.SMU.calibrationDateTime = dateTimeString
+        self.smu.calibrationDateTime = dateTimeString
         settingsFilePath = os.path.join(os.getcwd() , "system_settings.json")
         sys_params = {}
         sys_params['computer'] = self.parameters.computer
@@ -728,45 +796,9 @@ class System:
         sys_params['SMU'] = self.parameters.SMU
         with open(settingsFilePath, 'w') as outfile:
             json.dump(sys_params, outfile)                        
-    
-    def scramble_string(self,name_to_scramble):
-        bytename = bytearray(name_to_scramble.encode())
-        #use single random byte to scramble the numeric filename.
-        random.seed()
-        randbyte = random.getrandbits(8)
-        hashedBytes = []
-        hashedBytes.append(randbyte)
-        for i, b in enumerate(bytename):
-            hashedBytes.append((hashedBytes[i] + b) % 256)
 
-        numericHash = ''
-        for b in hashedBytes:
-            numericHash = numericHash + '{:02x}'.format(b)
-        
-        return numericHash
-    
-    def unscramble_string(self,string_to_unscramble):   
-        #un-scramble the numeric string
-        hashedBytesExtracted = []
-        for i in range(int(len(string_to_unscramble)/2)):
-            hashedBytesExtracted.append(int(string_to_unscramble[i*2:(i+1)*2],16))
-            
-        #loop through the reversed array and un-do the random convolution, starting from the end and working back.
-        HBElen = len(hashedBytesExtracted)
-        unHashedBytesReversed = []
-        for i, b in enumerate(hashedBytesExtracted):
-            if i < HBElen-1:
-                unHashedBytesReversed.append((hashedBytesExtracted[HBElen-1-i] - hashedBytesExtracted[HBElen-1-(i+1)]) % 256)
-            else:
-                pass #The last (first) byte is the random seed.  throw it out.
-        
-        #this is the string in byte form
-        unHashedBytes = bytearray(list(reversed(unHashedBytesReversed)))
-    
-        return unHashedBytes.decode()
-    
     def turn_off(self):
-        self.SMU.turn_off()
+        self.smu.turn_off()
         self.lamp.turn_off()
         
     def abort_run(self):

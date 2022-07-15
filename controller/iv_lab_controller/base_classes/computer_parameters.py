@@ -1,18 +1,27 @@
-class ComputerParameters():
+from abc import ABC
+
+
+class ComputerParameters(ABC):
 	"""
 	Parameters describing the computer system.
 	"""
-	def __init__(
-		self,
-		name: str,
-		os: str,
-		data_path: str
-	):
+	@property
+	def name(self) -> str:
 		"""
-		:param name: Computer name.
-		:param os: Operating system.
-		:param data_path: Path to default data folder.
+		:returns: Name of the computer system.
 		"""
-		self.name = name
-		self.os = os
-		self.data_path = data_path
+		return self._name
+	
+	@property
+	def os(self) -> str:
+		"""
+		:returns: Name of the computer's operating system.
+		"""
+		return self._os
+	
+	@property
+	def data_path(self) -> str:
+		"""
+		:returns: Path of the data folder.
+		"""
+		return self._data_path
