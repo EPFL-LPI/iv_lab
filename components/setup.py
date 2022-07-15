@@ -16,7 +16,7 @@ setuptools.setup(
     keywords=['epfl', 'lpi'],
     url="https://github.com/EPFL-LPI/iv_lab",
     packages=setuptools.find_packages(),
-    package_dir={'': 'src'},
+    # package_dir={'': 'src'},
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)"
@@ -29,5 +29,6 @@ setuptools.setup(
         'pytrinamic',  # only required for lamps.trinamic*
     ],
     package_data={
+        'iv_lab_components.systems': 'systems'
     }
 )

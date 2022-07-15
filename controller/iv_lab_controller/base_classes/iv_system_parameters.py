@@ -1,21 +1,28 @@
+from abc import ABC
 from datetime import datetime
 
 
-class IVSystemParameters():
+class IVSystemParameters(ABC):
 	"""
 	Parameters describing the IV system.
 	"""
-	def __init__(
-		self,
-		name: str,
-		reference_current: float,
-		calibration_date: datetime
-	):
+	@property
+	def name(self) -> str:
 		"""
-		:param name: System name.
-		:param reference current: 1 sun reference current.
-		:param calibration_date: Date time of last calibration.
+		:returns: IV system's name.
 		"""
-		self.name = name
-		self.reference_current = reference_current
-		self.calibration_date = calibration_date
+		return self._name
+	
+	@property
+	def reference_current(self) -> float:
+		"""
+		:returns: 1 sun reference current.
+		"""
+		return self._reference_current
+	
+	@property
+	def calibration_date(self) -> datetime:
+		"""
+		:returns: Date time of last calibration.
+		"""
+		return self._calibration_date

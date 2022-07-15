@@ -1,13 +1,13 @@
 """
 User functionality.
 """
-from typing import Union, Iterable
+from typing import Union, Iterable, List
 from enum import Enum
 
 
-class Permissions(Enum):
-	Basic = 0
-	Admin = 1
+class Permission(Enum):
+	Basic = 'basic'
+	Admin = 'admin'
 
 
 class User:
@@ -18,13 +18,27 @@ class User:
 		self,
 		username: str,
 		password: Union[str, None] = None,
-		permissions: Iterable[Permissions] = {Permissions.Basic}
+		permissions: Iterable[Permission] = {Permission.Basic}
 	):
 		"""
 		:param username: Username.
 		:param password: Password. [Default: None]
-		:param  permissions: Iterable of Permissions. [Default: {Permissions.Basic}]
+		:param  permissions: Set of Permissions. [Default: {Permission.Basic}]
 		"""
 		self.username = username
 		self.password = password
+
+		permissions = set(map(Permission, permissions))
 		self.permissions = permissions
+
+	def __repr__(self) -> str:
+		"""
+		:returns: String representation of the user.
+		"""
+		u = {
+			'username': self.username,
+			'password': self.password,
+			'permissions': self.permissions
+		}
+
+		return str(u)

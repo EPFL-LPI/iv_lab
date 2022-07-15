@@ -17,7 +17,7 @@ def user_list() -> List[User]:
 
     # ensure file exists
     if not os.path.exists(app_dir):
-        Path(users_path).mkdir(parents = True)
+        Path(app_dir).mkdir(parents = True)
     
     if not os.path.exists(users_path):
         with open(users_path, 'w') as f:
@@ -29,6 +29,7 @@ def user_list() -> List[User]:
 
     users = list(map(lambda u: User(**u), users))
     return users
+
 
 def get_user_by_name(username: str, users: list) -> Union[User, None]:
     """
