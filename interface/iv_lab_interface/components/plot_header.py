@@ -15,51 +15,49 @@ from PyQt5.QtWidgets import (
 )
         
 class PlotHeaderWidget(QWidget):
-    signal_saveScanData = pyqtSignal(str, str)
-    signal_toggleAutoSave = pyqtSignal(bool)
+    signal_save_data = pyqtSignal(str)
+    signal_toggle_auto_save = pyqtSignal(bool)
 
     def __init__(self):
         super().__init__()
         self.init_ui()
 
     def init_ui(self):
-        #buttons and fields above the plot
-        self.fieldCellName = QLineEdit("Enter Cell Name Here...")
-        self.fieldCellName.setMinimumWidth(500)
-        self.fieldCellName.setEnabled(False)
-        #self.fieldCellName.mousePressEvent = self.clearCellName
-        self.fieldCellName.cursorPositionChanged.connect(self.clearCellName)
+        self.in_cell_name = QLineEdit()
+        self.in_cell_name.setPlaceholderText('Enter Cell Name Here...')
+        self.in_cell_name.setMinimumWidth(500)
+        self.in_cell_name.setEnabled(False)
         
-        self.checkBoxAutoSave = QCheckBox("Auto-save")
-        self.checkBoxAutoSave.setEnabled(False)
-        self.checkBoxAutoSave.stateChanged.connect(self.toggleAutoSaveMode)
+        self.cb_auto_save = QCheckBox("Autosave")
+        self.cb_auto_save.setEnabled(False)
+        self.cb_auto_save.stateChanged.connect(self.toggle_auto_save)
         
-        self.buttonSaveData = QPushButton("Save Data",self)
-        self.buttonSaveData.clicked.connect(self.saveScanData)
-        self.buttonSaveData.setEnabled(False)
+        self.btn_save = QPushButton("Save Data",self)
+        self.btn_save.clicked.connect(self.save_data)
+        self.btn_save.setEnabled(False)
         
         # Set the plot header layout
-        headerLayout = QHBoxLayout()
-        headerLayout.addWidget(self.fieldCellName)
-        headerLayout.addWidget(self.checkBoxAutoSave)
-        headerLayout.addWidget(self.buttonSaveData)
-        self.setLayout(headerLayout)
+        lo_main = QHBoxLayout()
+        lo_main.addWidget(self.in_cell_name)
+        lo_main.addWidget(self.cb_auto_save)
+        lo_main.addWidget(self.btn_save)
+        self.setLayout(lo_main)
     
-    #argument 'e' is of type QMouseEvent.
-    def clearCellName(self, e):
-        cellName = self.fieldCellName.text()
-        if cellName == "Enter Cell Name Here...":
-            self.fieldCellName.setText("")
+    @property
+    def cell_name(self) -> str:
+        """
+        :returns: Entered cell name.
+        """
+        return self.in_cell_name.text()
 
-    def toggleAutoSaveMode(self):
-        if self.checkBoxAutoSave.isChecked():
-            self.signal_toggleAutoSave.emit(True)
+    def toggle_auto_save(self):
+        if self.cb_auto_save.isChecked():
+            self.signal_toggle_auto_save.emit(True)
+
         else:
-            self.signal_toggleAutoSave.emit(False)
+            self.signal_toggle_auto_save.emit(False)
 
-    def saveScanData(self):
-        scanType = str(self.menuSelectMeasurement.currentText())
-        cellName = self.fieldCellName.text()
-        if cellName == "Enter Cell Name Here...":
-            cellName = ""
-        self.signal_saveScanData.emit(scanType, cellName)
+    def save_data(self):
+        cell_name = self.in_cell_name.text()
+        
+        self.signal_save_data.emit(cell_name)

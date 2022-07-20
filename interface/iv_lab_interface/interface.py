@@ -1,56 +1,33 @@
-import sys
-from time import sleep
-import os
 import json
-import unicodedata
-import re
 from typing import Union
 
 from PyQt5.QtCore import (
     Qt,
     QSettings,
-    QObject,
-    QThread,
-    pyqtSignal,
-    QRectF
+    pyqtSignal
 )
 
-from PyQt5.QtGui import QIntValidator, QDoubleValidator
 from PyQt5.QtWidgets import (
-    QApplication,
-    QLabel,
     QMainWindow,
-    QPushButton,
-    QComboBox,
-    QLineEdit,
-    QCheckBox,
-    QVBoxLayout,
     QHBoxLayout,
-    QGridLayout,
-    QGroupBox,
-    QFrame,
     QSplitter,
-    QStackedWidget,
     QWidget,
-    QFrame,
-    QFileDialog,
     QStatusBar,
     QMessageBox,
     QMenuBar
 )
 
-import numpy as np
-import pyqtgraph as pg
-from pyqtgraph import PlotWidget, plot
-
 from iv_lab_controller import gui as GuiCtrl
 from iv_lab_controller import system as SystemCtrl
 from iv_lab_controller.user import User, Permission
 from iv_lab_controller.system_parameters import SystemParameters
+from iv_lab_controller.measurements.types import MeasurementType
 
 from . import common
 from .measurement import MeasurementFrame
 from .plot import PlotFrame
+from .admin.locations import ApplicationLocationsDialog
+from .admin.users import UsersDialog
 
 
 class IVLabInterface(QWidget):
@@ -164,6 +141,7 @@ class IVLabInterface(QWidget):
         self.authentication.user_authenticated.connect(self.set_user)
         self.authentication.user_logged_out.connect(self.on_log_out)
         self.measurement_frame.initialize_hardware.connect(self.initialize_system)
+        self.measurement_frame.run_measurement.connect(self.run_measurement)
 
     def __delete_controller(self):
         """
@@ -181,15 +159,16 @@ class IVLabInterface(QWidget):
         enable_user_ui = (user is not None)
         self.toggle_user_ui(enable=enable_user_ui)
         
-        if user is None:
-            return
+        is_admin = (
+            (user is not None) and
+            (Permission.Admin in user.permissions)
+        )
 
-        is_admin = (Permission.Admin in user.permissions)
-        self.toggle_admin_ui(is_admin)
+        self.toggle_admin_ui(enable=is_admin)
 
     def set_user(self, user: Union[User, None]):
         """
-        Delegator for self.user = user
+        Delegator for `self.user = user`
         """
         self.user = user
 
@@ -248,16 +227,22 @@ class IVLabInterface(QWidget):
             self.enable_admin_ui()
 
         else:
-            self.disable_admin_ui
+            self.disable_admin_ui()
 
     def enable_admin_ui(self):
         """
         Enable the admin UI.
         """
-        # menu
         self.mn_admin = self.mb_main.addMenu('Admin')
+        
         act_set_system = self.mn_admin.addAction('Set system')
-        act_set_system.triggered.connect(self.set_system)
+        act_set_system.triggered.connect(self.admin_set_system)
+
+        act_locations = self.mn_admin.addAction('Application locations')
+        act_locations.triggered.connect(self.admin_locations)
+
+        act_users = self.mn_admin.addAction('Users')
+        act_users.triggered.connect(self.admin_users)
 
     def disable_admin_ui(self):
         """
@@ -335,7 +320,6 @@ class IVLabInterface(QWidget):
                 )
                 return
 
-
             self.system = system_cls(emulate=self.emulate)
             self.system.smu.add_listener('status_update', common.StatusBar().showMessage)
             self.system.lamp.add_listener('status_update', common.StatusBar().showMessage)
@@ -354,9 +338,32 @@ class IVLabInterface(QWidget):
             common.StatusBar().showMessage('Hardware initialized')
             self.measurement_frame.enable_measurement_ui()
 
+    def run_measurement(self, kind: MeasurementType, params: dict):
+        cell_name = self.plot_frame.plotHeader.cell_name
+        params['cell_name'] = GuiCtrl.sanitize_cell_name(cell_name)
 
-    def set_system(self):
+
+
+    # ---------------------
+    # --- admin actions ---
+    # ---------------------
+
+    def admin_set_system(self):
         """
 
         """
         pass
+
+    def admin_locations(self):
+        """
+
+        """
+        dlg_locations = ApplicationLocationsDialog()
+        dlg_locations.exec()
+
+    def admin_users(self):
+        """
+
+        """
+        dlg_users = UsersDialog()
+        dlg_users.exec()

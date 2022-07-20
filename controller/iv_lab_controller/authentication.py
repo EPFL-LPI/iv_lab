@@ -3,9 +3,18 @@ from pathlib import Path
 from typing import Union, List
 import json
 
-from iv_lab_controller.user import User
+from iv_lab_controller.user import User, UserJSONEncoder
 
 from . import common
+
+
+def users_file_path() -> str:
+    """
+    :returns: Path to the users file.
+    """
+    app_dir = common.app_data_folder()
+    users_path = os.path.join(app_dir, 'users.json')
+    return users_path
 
 
 def user_list() -> List[User]:
@@ -13,7 +22,7 @@ def user_list() -> List[User]:
     :return: List of user objects.
     """
     app_dir = common.app_data_folder()
-    users_path = os.path.join(app_dir, 'users.json')
+    users_path = users_file_path()
 
     # ensure file exists
     if not os.path.exists(app_dir):
@@ -29,6 +38,23 @@ def user_list() -> List[User]:
 
     users = list(map(lambda u: User(**u), users))
     return users
+
+
+def save_users(users: List[User]):
+    """
+    Save the users list.
+
+    :param users: List of users.
+    """
+    users_path = users_file_path()
+
+    with open(users_path, 'w') as f:
+        json.dump(
+            users,
+            f,
+            indent=4,
+            cls=UserJSONEncoder
+        )
 
 
 def get_user_by_name(username: str, users: list) -> Union[User, None]:

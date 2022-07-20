@@ -1,6 +1,7 @@
 """
 User functionality.
 """
+import json
 from typing import Union, Iterable, List
 from enum import Enum
 
@@ -35,10 +36,28 @@ class User:
 		"""
 		:returns: String representation of the user.
 		"""
-		u = {
+		u = self.todict()
+		return str(u)
+
+	def todict(self) -> dict:
+		"""
+		:returns: Dictionary represetnation of the user.
+		"""
+		return {
 			'username': self.username,
 			'password': self.password,
 			'permissions': self.permissions
 		}
 
-		return str(u)
+
+class UserJSONEncoder(json.JSONEncoder):
+	def default(self, o):
+		"""
+		:returns: Dictionary representation of the User for serialization.
+		"""
+		if isinstance(o, User):
+			user = o.todict()
+			user['permissions'] = list(map(lambda p: p.value, o.permissions))
+			return user
+
+		return super().default(o)

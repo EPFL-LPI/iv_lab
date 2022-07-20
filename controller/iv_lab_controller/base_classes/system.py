@@ -7,6 +7,10 @@ from .lamp import Lamp
 from .smu import SMU
 from .computer_parameters import ComputerParameters
 from .iv_system_parameters import IVSystemParameters
+from ..measurements.iv_curve_result import IVCurveResult
+from ..measurements.chronoamperometry_result import ChronoamperometryResult
+from ..measurements.chronopotentiometry_result import ChronopotentiometryResult
+from ..measurements.mpp_result import MPPResult
 
 
 class System:
@@ -166,7 +170,7 @@ class System:
     def measure_light_intensity(self):
         raise NotImplementedError()
     
-    def measure_iv_curve(self, IV_param):
+    def measure_iv_curve(self, IV_param) -> IVCurveResult:
         """
         Runs a chrono-amperometry measurement.
             Holds the current constant, and measures the potential.
@@ -356,7 +360,7 @@ class System:
         if self.win != None:
             self.win.runFinished() # also lowers abortRun flag
     
-    def measure_chronopotentiometry(self, param):
+    def measure_chronopotentiometry(self, param) -> ChronopotentiometryResult:
         """
         Runs a chrono-potentiometry measurement.
             Holds the potential constant, and measures the current.
@@ -451,7 +455,7 @@ class System:
             self.win.runFinished() # also lowers abortRun flag
             #self.flag_abortRun = False  
     
-    def measure_chronoamperometry(self, param):
+    def measure_chronoamperometry(self, param) -> ChronoamperometryResult:
         # self.flag_abortRun = False
         if self.app != None:
             self.app.processEvents()
@@ -544,7 +548,7 @@ class System:
             self.win.runFinished() # also lowers abortRun flag
             #self.flag_abortRun = False  
     
-    def measure_mpp(self, param):
+    def measure_mpp(self, param) -> MPPResult:
         """
         Runs an MPP measurement.
         """

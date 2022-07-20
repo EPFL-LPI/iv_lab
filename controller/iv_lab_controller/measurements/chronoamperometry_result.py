@@ -3,7 +3,7 @@ from typing import List
 from ..base_classes.result import Result
 
 
-class ChronoampometryResult(Result):
+class ChronoamperometryResult(Result):
     """
     Results from a chronoampometry experiment.
     """
@@ -13,9 +13,9 @@ class ChronoampometryResult(Result):
         """
         header = self._default_header()
         header += [
-            f'Set Voltage,{IV_Results['set_voltage']},V',
-            f'Measurement Interval,{IV_Results['interval']},sec',
-            f'Measurement Duration,{IV_Results['duration'] },sec',
+            f'Set Voltage,{IV_Results["set_voltage"]},V',
+            f'Measurement Interval,{IV_Results["interval"]},sec',
+            f'Measurement Duration,{IV_Results["duration"] },sec',
             'Constant Voltage Results'
         ]
 

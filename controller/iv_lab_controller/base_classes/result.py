@@ -1,75 +1,80 @@
 import datetime as dt
 from typing import Dict, List, Union
 
+import numpy as np
+from pymeasure.experiment.results import Results as PyMeasureResult
+
+from ..user import User
 from .computer_parameters import ComputerParameters
 
 
-class Result():
-	"""
-	Results from an experiment.
-	"""
-	def __init__(
-		self,
-		data: np.array,
-		computer_parameters: ComputerParameters,
-		user: Union[User, None] = None,
-		scan_parameters: Union[Dict, None] = None,
-		cell_parameters: Union[Dict, None] = None,
-		system_parameters: Union[Dict, None] = None
-	):
-		"""
-		:param data: Data from the IV scan.
-		:param computer_parameters: ComputerParameters.
-		:param user: User. [Default: None]
-		:param scan_parameters: Scan parameters. [Default: None]
-		:param cell_parameters: Cell parameters. [Default: None]
-		:param system_parameters: System parameters. [Default: None]
-		"""
-		self.data = data
-		self.computer_parameters = computer_parameters
-		self.scan_parameters = scan_parameters
-		self.cell_parameters = cell_parameters
-		self.system_parameters = system_parameters
+class Result(PyMeasureResult):
+    """
+    Results from an experiment.
+    """
+    def __init__(
+        self,
+        data: np.array,
+        computer_parameters: ComputerParameters,
+        user: Union[User, None] = None,
+        scan_parameters: Union[Dict, None] = None,
+        cell_parameters: Union[Dict, None] = None,
+        system_parameters: Union[Dict, None] = None
+    ):
+        """
+        :param data: Data from the IV scan.
+        :param computer_parameters: ComputerParameters.
+        :param user: User. [Default: None]
+        :param scan_parameters: Scan parameters. [Default: None]
+        :param cell_parameters: Cell parameters. [Default: None]
+        :param system_parameters: System parameters. [Default: None]
+        """
+        super.__init__()
+        self.data = data
+        self.computer_parameters = computer_parameters
+        self.scan_parameters = scan_parameters
+        self.cell_parameters = cell_parameters
+        self.system_parameters = system_parameters
 
-	@parameter
-	def time_string(self) -> str:
-		"""
-		:returns: Time string if provided by the scan parameteres, or the current time.
-		"""
-		return (
-        	self.scan_parameters['start_time']
-        	if ('start_time' in self.scan_parameters) else
-	        dt.datetime.now().strftime("%Y%m%d_%H%M%S")
-		)
+    @property
+    def time_string(self) -> str:
+        """
+        :returns: Time string if provided by the scan parameteres, or the current time.
+        """
+        return (
+            self.scan_parameters['start_time']
+            if ('start_time' in self.scan_parameters) else
+            dt.datetime.now().strftime("%Y%m%d_%H%M%S")
+        )
 
-	@parameter
-	def username(self) -> str:
-		"""
-		:returns: User's name if user is available, otherwise `anonymous`.
-		"""
-		return (
-	    	user.username
-	    	if (self.user is not None) else
-	    	'anonymous'
-	    )
+    @property
+    def username(self) -> str:
+        """
+        :returns: User's name if user is available, otherwise `anonymous`.
+        """
+        return (
+            user.username
+            if (self.user is not None) else
+            'anonymous'
+        )
 
-	def header(self) -> List[str]:
-		"""
-		:returns: List of header lines.
-		"""
-		return sef._default_header()
+    def header(self) -> List[str]:
+        """
+        :returns: List of header lines.
+        """
+        return sef._default_header()
 
     def save_csv(self, file: Union[str, None]):
-    	"""
-		Save result data to the given path.
+        """
+        Save result data to the given path.
 
-		:param file: File path to save data to, or None to use default.
-			[Default: None]
-    	"""
-    	if file is None:
-	    	file = self._default_filename() 
+        :param file: File path to save data to, or None to use default.
+            [Default: None]
+        """
+        if file is None:
+            file = self._default_filename() 
         
-		header = self.header()        
+        header = self.header()        
         header.append(f'nHeader,{len(header) + 1}')
 
         out = header
@@ -134,44 +139,44 @@ class Result():
             os.makedirs(basePath)
             
         with open(data_path, "w") as f:
-        	f.write(out)
+            f.write(out)
 
- 	def _default_filename(self) -> str:
- 		"""
-		:returns: Default file name for the data.
-			Default path is <cell name>_<scan_type>_<date_time>
- 		"""
- 		cell_name = self.cell_parameters['cell_name']
+    def _default_filename(self) -> str:
+        """
+        :returns: Default file name for the data.
+            Default path is <cell name>_<scan_type>_<date_time>
+        """
+        cell_name = self.cell_parameters['cell_name']
 
- 		scan_type = (
- 			self.scan_parameters['scan_type']
- 			if ('scan_type' in self.scan_parameters) else
- 			'scan'
- 		)
-	        
+        scan_type = (
+            self.scan_parameters['scan_type']
+            if ('scan_type' in self.scan_parameters) else
+            'scan'
+        )
+            
         filename = f'{cell_name}_{scan_type}_{self.time_string}'
 
     def _default_header(self) -> List[str]:
-    	"""
-		:returns: List of header lines describing the system.
-    	"""
-    	header = [
-			f'Measurement System,{self.parameters.IVsys['sysName']}',
-			f'Scan Start Time,{data['start_time']}',
-			f'Sourcemeter Brand,{self.parameters.SMU['brand']}',
-			f'Sourcemeter Model,{self.parameters.SMU['model']}',
-			f'Lamp Brand,{self.parameters.lamp['brand']}',
-			f'Lamp Model,{self.parameters.lamp['model']}',
-			f'Requested Light Intensity,{IV_Results['light_int']},mW/cm^2'
-		]
+        """
+        :returns: List of header lines describing the system.
+        """
+        header = [
+            f'Measurement System,{self.parameters.IVsys["sysName"]}',
+            f'Scan Start Time,{data["start_time"]}',
+            f'Sourcemeter Brand,{self.parameters.SMU["brand"]}',
+            f'Sourcemeter Model,{self.parameters.SMU["model"]}',
+            f'Lamp Brand,{self.parameters.lamp["brand"]}',
+            f'Lamp Model,{self.parameters.lamp["model"]}',
+            f'Requested Light Intensity,{IV_Results["light_int"]},mW/cm^2'
+        ]
 
-		if self.SMU.useReferenceDiode:
+        if self.SMU.useReferenceDiode:
             header += [
-            	f'Measured Light Intensity,{IV_Results['light_int_meas']},mW/cm^2',
-            	f'Reference Diode 1sun Current,{self.SMU.fullSunReferenceCurrent*1000},mA',
-            	f'Reference Diode calibration date,{self.SMU.calibrationDateTime}'
+                f'Measured Light Intensity,{IV_Results["light_int_meas"]},mW/cm^2',
+                f'Reference Diode 1sun Current,{self.SMU.fullSunReferenceCurrent*1000},mA',
+                f'Reference Diode calibration date,{self.SMU.calibrationDateTime}'
             ]
         
-        header.append(f'Cell Active Area,{self.cell_parameters['active_area']},cm^2')
+        header.append(f'Cell Active Area,{self.cell_parameters["active_area"]},cm^2')
 
         return header
