@@ -26,6 +26,7 @@ setuptools.setup(
     python_requires=">=3.6.8, <3.7",
     install_requires=[
         'pyvisa',  # only required for lamps.oriel*
+        'pymeasure',
         'pytrinamic',  # only required for lamps.trinamic*
     ],
     package_data={

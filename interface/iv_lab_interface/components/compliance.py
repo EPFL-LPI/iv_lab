@@ -1,45 +1,58 @@
-from PyQt5.QtGui import QDoubleValidator
-
 from PyQt5.QtWidgets import (
     QLabel,
-    QLineEdit,
-    QHBoxLayout,
-    QVBoxLayout,
+    QDoubleSpinBox,
     QGridLayout,
-    QGroupBox,
+    QGroupBox
 )
 
-class ComplianceGroupBox(QGroupBox):
+from iv_lab_controller.measurements.compliance_parameters import ComplianceParameters
+
+
+class ComplianceWidget(QGroupBox):
     def __init__(self):
         super().__init__("Compliance")
 
         self.init_ui()
 
     def init_ui(self):
+        lbl_voltage_limit = QLabel("Voltage Limit")
+        lbl_voltage_limit_units = QLabel("V")
+        self.sb_voltage_limit = QDoubleSpinBox()
+        self.sb_voltage_limit.setDecimals(2)
+        self.sb_voltage_limit.setSingleStep(0.01)
+        self.sb_voltage_limit.setMinimum(0)
+        self.sb_voltage_limit.setValue(2)
+        self.sb_voltage_limit.setMaximumWidth(75)
 
-        #Compliance Voltage and current
-        complianceLayout = QGridLayout()
+        lbl_current_limit = QLabel("Current Limit")
+        lbl_current_limit_units = QLabel("mA")
+        self.sb_current_limit = QDoubleSpinBox()
+        self.sb_current_limit.setDecimals(2)
+        self.sb_current_limit.setSingleStep(1)
+        self.sb_current_limit.setMinimum(0)
+        self.sb_current_limit.setValue(5)
+        self.sb_current_limit.setMaximumWidth(75)
         
-        self.labelVoltageLimit = QLabel("Voltage Limit")
-        self.fieldVoltageLimit = QLineEdit("2.00")
-        self.voltageLimitValidator = QDoubleValidator()
-        self.fieldVoltageLimit.setValidator(self.voltageLimitValidator)
-        self.fieldVoltageLimit.setMaximumWidth(75)
-        self.labelVoltageLimitUnits = QLabel("V")
-        self.labelCurrentLimit = QLabel("Current Limit")
-        self.fieldCurrentLimit = QLineEdit("5.00")
-        self.currentLimitValidator = QDoubleValidator()
-        self.fieldCurrentLimit.setValidator(self.currentLimitValidator)
-        self.fieldCurrentLimit.setMaximumWidth(75)
-        self.labelCurrentLimitUnits = QLabel("mA")
+        lo_main = QGridLayout()
+        lo_main.addWidget(lbl_voltage_limit, 0, 0)
+        lo_main.addWidget(self.sb_voltage_limit, 0, 1)
+        lo_main.addWidget(lbl_voltage_limit_units, 0, 2)
+
+        lo_main.addWidget(lbl_current_limit, 1, 0)
+        lo_main.addWidget(self.sb_current_limit, 1, 1)
+        lo_main.addWidget(lbl_current_limit_units, 1, 2)
         
-        complianceLayout.addWidget(self.labelVoltageLimit,0,0)
-        complianceLayout.addWidget(self.fieldVoltageLimit,0,1)
-        complianceLayout.addWidget(self.labelVoltageLimitUnits,0,2)
-        complianceLayout.addWidget(self.labelCurrentLimit,1,0)
-        complianceLayout.addWidget(self.fieldCurrentLimit,1,1)
-        complianceLayout.addWidget(self.labelCurrentLimitUnits,1,2)
-        
-        self.setLayout(complianceLayout)
+        self.setLayout(lo_main)
         self.setMaximumWidth(300)
         self.setEnabled(False)
+
+    @property
+    def value(self) -> ComplianceParameters:
+        """
+        :returns: Compliance parameters.
+        """
+        params = ComplianceParameters()
+        params.voltage_limit = self.sb_voltage_limit.value()
+        params.current_limit = self.sb_current_limit.value() / 1000
+
+        return params

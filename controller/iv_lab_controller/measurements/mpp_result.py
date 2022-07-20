@@ -13,9 +13,9 @@ class MPPResult(Result):
         """
         header = self._default_header()
         header += [
-            f'Start Voltage,{IV_Results['start_voltage']},V',
-            f'Measurement Interval,{IV_Results['interval']},sec',
-            f'Measurement Duration,{IV_Results['duration'] },sec',
+            f'Start Voltage,{IV_Results["start_voltage"]},V',
+            f'Measurement Interval,{IV_Results["interval"]},sec',
+            f'Measurement Duration,{IV_Results["duration"] },sec',
             'Maximum Power Point Results'
         ]
 
