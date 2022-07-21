@@ -12,7 +12,6 @@ from PyQt5.QtWidgets import (
 	QMessageBox,
 	QListWidget,
 	QFileDialog,
-	QWidget
 )
 
 from iv_lab_controller import common as ctrl
@@ -42,7 +41,7 @@ class SystemsDialog(QDialog):
 
 		# sytems
 		self.wgt_systems = QListWidget()
-		self._create_systems_list()
+		self.update_systems_list()
 
 		# main
 		lo_main = QVBoxLayout()
@@ -54,11 +53,9 @@ class SystemsDialog(QDialog):
 		self.btn_set_dir.clicked.connect(self.set_systems_directory)
 		self.wgt_systems.itemSelectionChanged.connect(self.set_system_file)
 
-	def _create_systems_list(self) -> QWidget:
+	def update_systems_list(self):
 		"""
-		Create list of the systems in the systems directory.
-
-		:returns: Widget of the systems.
+		Update list of the systems in the systems directory.
 		"""
 		if not os.path.isdir(self.systems_dir):
 			common.show_message_box(
@@ -114,7 +111,7 @@ class SystemsDialog(QDialog):
 			return
 
 		self.lbl_systems_dir.setText(self.systems_dir)
-		self._create_systems_list()
+		self.update_systems_list()
 
 	def set_system_file(self):
 		"""

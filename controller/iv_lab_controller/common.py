@@ -54,3 +54,19 @@ def set_system_path(path: str):
 	"""
 	settings = QSettings()
 	settings.setValue('system_file', path)
+
+def data_directory() -> str:
+	"""
+	:returns: Path to the default measurement data folder.
+	"""
+	settings = QSettings()
+	default = QStandardPaths.writableLocation(QStandardPaths.DocumentsLocation)
+	default = os.path.join(default, 'data')
+	return settings.value('data_directory', default, type=str)
+
+def set_data_directory(path: str):
+	"""
+	Set the default path for measurement data.
+	"""
+	settings = QSettings()
+	settings.setValue('data_directory', path)
