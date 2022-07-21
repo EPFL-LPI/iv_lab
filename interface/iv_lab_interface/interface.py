@@ -26,6 +26,7 @@ from iv_lab_controller.measurements.types import MeasurementType
 from . import common
 from .measurement import MeasurementFrame
 from .plot import PlotFrame
+from.admin.systems import SystemsDialog
 from .admin.locations import ApplicationLocationsDialog
 from .admin.users import UsersDialog
 
@@ -343,27 +344,27 @@ class IVLabInterface(QWidget):
         params['cell_name'] = GuiCtrl.sanitize_cell_name(cell_name)
 
 
-
     # ---------------------
     # --- admin actions ---
     # ---------------------
 
     def admin_set_system(self):
         """
-
+        Open the system setup dialog.
         """
-        pass
+        dlg_system = SystemsDialog()
+        dlg_system.exec()
 
     def admin_locations(self):
         """
-
+        Open the application location dialog.
         """
         dlg_locations = ApplicationLocationsDialog()
         dlg_locations.exec()
 
     def admin_users(self):
         """
-
+        Open the user editing dialog.
         """
         dlg_users = UsersDialog()
         dlg_users.exec()

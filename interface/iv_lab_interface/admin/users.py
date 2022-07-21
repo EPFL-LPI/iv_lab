@@ -40,8 +40,9 @@ class UsersDialog(QDialog):
 
 		# ctrls
 		self.btn_add = QPushButton('Add')
-		self.btn_accept = QPushButton('Save')
 		self.btn_reject = QPushButton('Cancel')
+		self.btn_accept = QPushButton('Save')
+		self.btn_accept.setDefault(True)
 
 		lo_ctrls = QHBoxLayout()
 		lo_ctrls.addWidget(self.btn_add)
@@ -200,8 +201,9 @@ class AddUserDialog(QDialog):
 		lo_form.addRow('Permissions', self.cb_permissions)
 
 		# ctrls
-		self.btn_accept = QPushButton('Save')
 		self.btn_reject = QPushButton('Cancel')
+		self.btn_accept = QPushButton('Save')
+		self.btn_accept.setDefault(True)
 
 		lo_ctrls = QHBoxLayout()
 		lo_ctrls.addWidget(self.btn_reject)
@@ -247,8 +249,9 @@ class PasswordResetDialog(QDialog):
 		lo_form.addRow('New password', self.in_password)
 
 		# ctrls
-		self.btn_accept = QPushButton('Save')
 		self.btn_reject = QPushButton('Cancel')
+		self.btn_accept = QPushButton('Save')
+		self.btn_accept.setDefault(True)
 
 		lo_ctrls = QHBoxLayout()
 		lo_ctrls.addWidget(self.btn_reject)
