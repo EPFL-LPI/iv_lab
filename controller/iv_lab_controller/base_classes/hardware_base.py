@@ -78,7 +78,6 @@ class HardwareBase(ABC, EventEmitter):
 
         self._connected = False
 
-
     def update_status(self, msg: str):
         """
         Emits a `status_update` event with a message indicating the status.

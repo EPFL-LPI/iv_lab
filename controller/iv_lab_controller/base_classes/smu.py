@@ -19,22 +19,21 @@ class SMU(HardwareBase):
 		"""
 		super().__init__(emulate=emulate)
 
-		self._current_range = (None, None)
-		self._voltage_range = (None, None)
-
 	@property
+	@abstractmethod
 	def current_range(self) -> Tuple[RangeValue, RangeValue]:
 		"""
 		:returns: Min and max current values.
 		"""
-		return self._current_range
+		raise NotImplementedError()
 
 	@property
+	@abstractmethod
 	def voltage_range(self) -> Tuple[RangeValue, RangeValue]:
 		"""
 		:returns: Min and max voltage values.
 		"""
-		return self._voltage_range
+		raise NotImplementedError()
 
 	@abstractmethod
 	def set_voltage(

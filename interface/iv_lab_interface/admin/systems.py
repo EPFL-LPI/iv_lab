@@ -11,7 +11,7 @@ from PyQt5.QtWidgets import (
 	QHBoxLayout,
 	QMessageBox,
 	QListWidget,
-	QFileDialog,
+	QFileDialog
 )
 
 from iv_lab_controller import common as ctrl
