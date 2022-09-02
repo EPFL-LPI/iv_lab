@@ -1724,7 +1724,7 @@ class lamp:
         if self.brand == 'keithley' and self.model == 'filter wheel':
             angle_code = self.filterWheelDict[light_int]
             self.smu.set_TTL_level(angle_code)
-            time.sleep(8.0) #wait 8 seconds for filter wheel to reach position
+            time.sleep(12.0) #wait 8 seconds for filter wheel to reach position
         
         if self.brand == 'Trinamic' and self.model == 'TMCM-3110':
             if not self.emulate:
@@ -2308,7 +2308,7 @@ class system:
                         df.drop( 'voltage', level = 'metrics', axis = 1, inplace = True )
                         df.columns = df.columns.droplevel( 'metrics' )
 
-                        jv_metrics = bric_jv.get_metrics(df, generator=False)
+                        jv_metrics = bric_jv.get_metrics(df, generator=False, fit_window=4)
                         #print(jv_metrics)
                         
                         self.IV_Results['Voc'] = float(jv_metrics['voc'])
@@ -3186,9 +3186,9 @@ if __name__ == "__main__":
     s.saveDataAutomatic = False #automatically save every scan upon completion
     s.checkVOCBeforeScan = True #check Voc polarity before each run and warn user if incorrect
     s.firstPointDwellTime = 5.0 #allow the cell to stabilize at the initial setting for this many seconds before starting a scan
-    s.MPPVoltageStep = 0.002    #initial step size for MPP algorithm
-    s.MPPVoltageStepMax = 0.016 #maximum step size for MPP algorithm
-    s.MPPVoltageStepMin = 0.000125 #minimum step size for MPP algorithm
+    s.MPPVoltageStep = 0.005    #initial step size for MPP algorithm
+    s.MPPVoltageStepMax = 0.01 #maximum step size for MPP algorithm
+    s.MPPVoltageStepMin = 0.001 #minimum step size for MPP algorithm
     s.MPPStepGain = 10 #gain factor which determines MPP voltage step size.  change this to modify convergence time for MPP algo
     s.SMU.sense_mode = '2wire'
     s.SMU.autorange = True #False
