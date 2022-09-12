@@ -9,19 +9,31 @@
     "IVsys":
     {
         "sysName": "IVLab",
-        "fullSunReferenceCurrent": 1.6,
-        "calibrationDateTime": "Mon Jan 01 00:00:00 1900"
+        "fullSunReferenceCurrent": 0.0016,
+        "calibrationDateTime": "Mon Jan 01 00:00:00 1900",
+		"referenceDiodeImax" : 0.005,
+		"saveDataAutomatic" : false,
+		"checkVOCBeforeScan" : true,
+		"firstPointDwellTime" : 5.0,
+		"MPPVoltageStepInitial" : 0.002,
+		"MPPVoltageStepMax" : 0.002,
+		"MPPVoltageStepMin" : 0.001
     },
     "lamp":
     {
         "brand": "Wavelabs",
-        "model": "Sinus70"
+        "model": "Sinus70",
+		"emulate": true
     },
     "SMU":
     {
         "brand": "Keithley",
         "model": "2602",
         "visa_address": "GPIB0::24::INSTR",
-        "visa_library": "C:\\Windows\\System32\\visa32.dll"
+        "visa_library": "C:\\Windows\\System32\\visa32.dll",
+		"emulate": true,
+		"senseMode" : "2wire",
+		"autorange" : true,
+		"useReferenceDiode" : true
     }
 }

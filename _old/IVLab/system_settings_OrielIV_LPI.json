@@ -10,7 +10,14 @@
     {
         "sysName": "IVLab",
         "fullSunReferenceCurrent": 0.006318,
-        "calibrationDateTime": "Wed Jun  8 16:07:18 2022"
+        "calibrationDateTime": "Wed Jun  8 16:07:18 2022",
+		"referenceDiodeImax" : 0.010,
+		"saveDataAutomatic" : false,
+		"checkVOCBeforeScan" : true,
+		"firstPointDwellTime" : 5.0,
+		"MPPVoltageStepInitial" : 0.002,
+		"MPPVoltageStepMax" : 0.002,
+		"MPPVoltageStepMin" : 0.001
     },
     "lamp":
     {
@@ -24,6 +31,9 @@
         "model": "2400",
         "visa_address": "GPIB0::24::INSTR",
         "visa_library": "/Library/Frameworks/VISA.framework/Versions/A/Headers/visa.h",
-        "emulate": false
+        "emulate": false,
+		"senseMode" : "2wire",
+		"autorange" : true,
+		"useReferenceDiode" : true
     }
 }

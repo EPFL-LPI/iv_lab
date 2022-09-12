@@ -32,13 +32,13 @@ class syst_param:
                 self.IVsys = value
             elif key == 'lamp':
                 self.lamp = value
-                self.lamp['emulate'] = False
+                #self.lamp['emulate'] = False
             elif key == 'arduino':
                 self.arduino = value
-                self.arduino['emulate'] = False
+                #self.arduino['emulate'] = False
             elif key == 'SMU':
                 self.SMU = value
-                self.SMU['emulate'] = False
+                #self.SMU['emulate'] = False
                 
     def emulate_lamp_on(self):
         self.lamp['emulate'] = True
@@ -178,9 +178,21 @@ class SMU:
         #These should all be overwritten during initialization.
         self.autorange = True 
         self.senseMode = '2wire'
+        self.measSpeed = "normal"
+        self.useReferenceDiode = True
+        # these three are overwritten from config file values in the 'system' initialization 
         self.fullSunReferenceCurrent = 1.0
         self.referenceDiodeImax = 0.005
         self.calibrationDateTime = 'Mon, Jan 01 00:00:00 1900'
+
+        if "senseMode" in SMU_details:
+            self.senseMode = SMU_details["senseMode"]
+        if "autorange" in SMU_details:
+            self.autorange = SMU_details["autorange"]
+        if "measSpeed" in SMU_details:
+            self.measSpeed = SMU_details["measSpeed"]
+        if "useReferenceDiode" in SMU_details:
+            self.useReferenceDiode = SMU_details["useReferenceDiode"]
         
         #data structure to save all current settings for both channels.
         #this is particularly important for the 2400 series sourcemeter which does
@@ -252,9 +264,25 @@ class SMU:
                 else:
                     self.k.set_sense_2wire()
                 
-                self.k.set_measurement_speed_normal() #1 50Hz period - 50 measurements/sec
-                self.kb.set_measurement_speed_normal() #1 50Hz period - 50 measurements/sec
+                if self.measSpeed == 'fast':
+                    self.k.set_measurement_speed_fast() # 200µs integration time
+                    self.kb.set_measurement_speed_fast() # 200µs integration time
+                    self.meas_period_min = 1/65 # measured value
+                elif self.measSpeed == 'medium':
+                    self.k.set_measurement_speed_med() # 2ms integration time
+                    self.kb.set_measurement_speed_med() # 2ms integration time
+                    self.meas_period_min = 1/50 # measured value
+                else : # self.measSpeed == 'normal':
+                    self.k.set_measurement_speed_normal() # 20ms integration time
+                    self.kb.set_measurement_speed_normal() # 20ms integration time
+                    self.meas_period_min = 1/16 # measured value
+                
                 #self.set_measurement_speed_hi_accuracy() #10 50Hz periods - 5 measurements/sec
+                
+                #these are all in the programming manual for the 2600 series but all give errors on the 2602 used for testing.
+                #self.smu.write_lua("smua.source.delay = smua.DELAY_OFF")
+                #self.smu.write_lua("smua.measure.delay = smua.DELAY_OFF")
+                #self.smu.write_lua("trigger.timer[1].delay = 0.0")
             
             if (self.brand == 'Keithley') and (self.model == '2400' or self.model == '2401'):
                 from pymeasure.instruments.keithley import Keithley2400
@@ -275,13 +303,32 @@ class SMU:
                 else:
                     self.smu.wires = 2
                 
-                self.smu.voltage_nplc = 1 #average voltage measurements over 1 power line cycle
-                self.smu.current_nplc = 1 #average current measurements over 1 power line cycle
+                if self.measSpeed == 'fast':
+                    self.smu.voltage_nplc = 0.01 #average voltage measurements over 0.01 power line cycle
+                    self.smu.current_nplc = 0.01 #average current measurements over 0.01 power line cycle
+                elif self.measSpeed == 'medium':
+                    self.smu.voltage_nplc = 0.1 #average voltage measurements over 0.1 power line cycle
+                    self.smu.current_nplc = 0.1 #average current measurements over 0.1 power line cycle
+                else : # self.measSpeed == 'normal':
+                    self.smu.voltage_nplc = 1 #average voltage measurements over 1 power line cycle
+                    self.smu.current_nplc = 1 #average current measurements over 1 power line cycle
+                
+                #measurement speed is limited by the interface for keithley 2400.
+                #all 3 speeds were measured for the 2 interfaces and gave the same max rate.
+                if self.visa_address[0:4] == 'ASRL':
+                    self.meas_period_min = 1/6 # measured value
+                else:
+                    self.meas_period_min = 1/8.5 # measured value
                 
                 self.smu.source_current_range = 0.01
                 self.smu.compliance_current = 0.01
                 self.smu.source_voltage_range = 2.0
                 self.smu.compliance_voltage = 2.0
+                self.smu.trigger_delay = 0.0
+                self.smu.source_delay = 0.0
+                
+                #disable beep sound when output enabled
+                self.smu.write(":SYST:BEEP:STAT OFF")
                 
                 
         self.connected = True
@@ -318,42 +365,7 @@ class SMU:
         self.sweep_rate = IV_param['sweep_rate']
         self.Imax = IV_param['Imax']
 
-    
-    def measure_IVcurve(self, IV_param):
-        #IV_param = dict(light_int: float, in mW/cm2, start_V: float, starting voltage or 'Voc', stop_V: float, stop voltage, dV: float, delta V in V, sweep_rate: float in V/s, Imax: float in A)
-                
-        if (self.brand == 'Keithley') and (self.model == '2602'):
-
-            points = int(abs(((IV_param['stop_V']+IV_param['dV'])-IV_param['start_V'])/IV_param['dV']))
-            #Settling time in s
-            settling_time = abs(IV_param['dV'])/IV_param['sweep_rate'] - 0.02
-
-            #From the IV parameters, determin a sweep list with Voltages
-            #v_smu = np.linspace(self.start_V, self.stop_V, int(abs(((self.stop_V+self.dV)-self.start_V)/self.dV)))
-            #smu_sweeplist = np.arange(start_V, stop_V+dV, dV) # np.linspace is better
-
-            #Integration time per data point. Must be between 0.001 to 25 times the power line frequency (50Hz or 60Hz), Switzerland: 50 Hz
-            #t_int = 0.1 #s = 5 * 1/(50 Hz)
-           
-            if not self.emulate:
-                
-                # Set the current compliance limit
-                #self.k.smua.source.limiti = self.Imax
-                self.k.set_current_limit(IV_param['Imax'])
-                
-                #self.k.set_measurement_speed_normal() #1 50Hz period - 50 measurements/sec
-                #self.set_measurement_speed_hi_accuracy() #10 50Hz periods - 5 measurements/sec
-
-                (i_smu, v_smu) = self.k.measure_voltage_sweep(IV_param['start_V'], IV_param['stop_V'], settling_time, points)
-                
-                self.k.disable_output()
-                
-            else:
-                v_smu = np.linspace(IV_param['start_V'], IV_param['stop_V'], int(abs(((IV_param['stop_V']+IV_param['dV'])-IV_param['start_V'])/IV_param['dV'])))
-                i_smu = v_smu * 0.1 # This should be a sample curve
-
-            return (v_smu, i_smu)
-    
+  
     def set_TTL_level(self,angle_code):
         if not self.emulate:
             if (self.brand == 'Keithley') and (self.model == '2400' or self.model == '2401'):
@@ -667,7 +679,7 @@ class SMU:
             self.smu.wires = 2 #rear terminal always uses 2-wire
         
         #set the current channel to the new one so that the following
-        #function calls will no re-call this function.
+        #function calls will not re-call this function.
         self.smu_current_channel = channel
                 
         self.set_voltage_limit(channel,self.smu_v_limit[channel])
@@ -676,12 +688,12 @@ class SMU:
         if self.smu_curr_autorange_mode[channel]:
             self.enable_current_autorange(channel)
         else:
-            self.smu.set_current_range(self.smu_i_range[channel]) #disables autorange
+            self.set_current_range(channel,self.smu_i_range[channel]) #disables autorange
         
         if self.smu_volt_autorange_mode[channel]:
             self.enable_voltage_autorange(channel)
         else:
-            self.smu.set_voltage_range(self.smu_v_range[channel]) #disables autorange
+            self.set_voltage_range(channel,self.smu_v_range[channel]) #disables autorange
         
         self.set_current(channel,self.smu_i_set[channel])
         self.set_voltage(channel,self.smu_v_set[channel])
@@ -707,7 +719,7 @@ class SMU:
             channelList = ["CHAN_A","CHAN_B"]
             outval = []
             for ch in channelList:
-                if self.emulate_source_mode[channel] == 'voltage':
+                if self.emulate_source_mode[ch] == 'voltage':
                     outval.append(self.emulate_v_set[ch])
                 else:
                     v_out = (np.log((self.emulate_i_set[ch] - Isc) / K) + 1) / tau
@@ -841,149 +853,116 @@ class SMU:
             if abs(IV_param['stop_V']) > abs(IV_param['Vmax']):
                 raise ValueError("ERROR: measure_IVcurve stop voltage outside of compliance range")
         
-        if self.app != None:
-            self.win.showStatus("Running J-V Scan...")
-            self.app.processEvents()
-        else:
-            print("Running J-V Scan...")
-        
         #measurement interval
         interval = abs(IV_param['dV'])/IV_param['sweep_rate']
         
-        #if not self.emulate:
-        if True:
-            dataV = []
-            dataI = []
-            dataIref = []
-            dataJ = []
+        self.show_status("Running J-V Scan...")
+        
+        dataV = []
+        dataI = []
+        dataIref = []
+        dataJ = []
+        
+        if self.useReferenceDiode and self.referenceDiodeParallel:
+            self.setup_reference_diode() #This will probably have already been called before during the 
+                                     #light level check but we don't lose anything by calling it again.
+        
+        if IV_param['start_V'] == 'Voc':
+            self.setup_current_output("CHAN_A",IV_param['Vmax'])
+            self.set_current("CHAN_A",IV_param['Fwd_current_limit'])
             
-            if self.useReferenceDiode and self.referenceDiodeParallel:
-                self.setup_reference_diode() #This will probably have already been called before during the 
-                                         #light level check but we don't lose anything by calling it again.
+            #need minimum Dwell time to measure starting point
+            if IV_param['Dwell'] < 1.0:
+                IV_param['Dwell'] = 1.0    
+        else:
+            self.setup_voltage_output("CHAN_A",IV_param['Imax'])
+            self.set_voltage("CHAN_A",IV_param['start_V'])
             
+        #start the scan
+        self.enable_output("CHAN_A")
+        
+        self.show_status("Stabilizing at initial operating point for " + str(IV_param['Dwell']) + " seconds")
+            
+        #grab the current timestamp as starting point for dwell period.
+        now = datetime.datetime.now()
+        timeNow = datetime.datetime.timestamp(now)
+        measTime = timeNow + IV_param["Dwell"]
+        
+        while (timeNow < measTime):
             if IV_param['start_V'] == 'Voc':
-                self.setup_current_output("CHAN_A",IV_param['Vmax'])
-                self.set_current("CHAN_A",IV_param['Fwd_current_limit'])
-                
-                #need minimum Dwell time to measure starting point
-                if IV_param['Dwell'] < 1.0:
-                    IV_param['Dwell'] = 1.0    
+                v = self.measure_voltage("CHAN_A")
             else:
-                self.setup_voltage_output("CHAN_A",IV_param['Imax'])
-                self.set_voltage("CHAN_A",IV_param['start_V'])
-                
-            #start the scan
-            self.enable_output("CHAN_A")
-            
-            if self.app != None:
-                self.win.showStatus("Stabilizing at initial operating point for " + str(IV_param['Dwell']) + " seconds")
-                self.app.processEvents()
-            else:
-                print("Stabilizing at initial operating point for " + str(IV_param['Dwell']) + " seconds")
-                
-            #grab the current timestamp as starting point for dwell period.
+                i = self.measure_current("CHAN_A")
+            if self.useReferenceDiode and self.referenceDiodeParallel:
+                iref = self.measure_current("CHAN_B") #not strictly necessary.  only useful to be sure the current value appears on the potentiostat's screen.
             now = datetime.datetime.now()
             timeNow = datetime.datetime.timestamp(now)
-            measTime = timeNow + IV_param["Dwell"]
+            if self.app != None:
+                self.app.processEvents()
+            
+            if self.abortRunFlag():
+                break
+        
+        #if the start voltage is 'Voc', measure the voltage at the current limit and then switch to voltage mode.
+        if IV_param['start_V'] == 'Voc':
+            IV_param['start_V'] = self.measure_voltage("CHAN_A")
+            self.set_voltage("CHAN_A",IV_param['start_V'])
+            self.setup_voltage_output("CHAN_A",IV_param['Imax'])
+            
+        #we finally know all the scan parameters, so generate the voltage list.
+        v_smu = np.linspace(IV_param['start_V'], IV_param['stop_V'], int(abs((IV_param['stop_V']-IV_param['start_V'])/abs(IV_param['dV'])) + 1))
+        
+        self.show_status("Running J-V Scan...")
+        
+        #grab the current timestamp as starting point for sample timing.
+        now = datetime.datetime.now()
+        timeNow = datetime.datetime.timestamp(now)
+        startTime = datetime.datetime.timestamp(now)
+        measTime = startTime #first measurement at time zero
+        
+        for v in v_smu:
+            self.set_voltage("CHAN_A",v)
+            now = datetime.datetime.now()
+            timeNow = datetime.datetime.timestamp(now)
             
             while (timeNow < measTime):
-                if IV_param['start_V'] == 'Voc':
-                    v = self.measure_voltage("CHAN_A")
-                else:
-                    i = self.measure_current("CHAN_A")
-                if self.useReferenceDiode and self.referenceDiodeParallel:
-                    iref = self.measure_current("CHAN_B") #not strictly necessary.  only useful to be sure the current value appears on the potentiostat's screen.
-                now = datetime.datetime.now()
-                timeNow = datetime.datetime.timestamp(now)
-                if self.app != None:
-                    self.app.processEvents()
-                
                 if self.abortRunFlag():
                     break
-            
-            #if the start voltage is 'Voc', measure the voltage at the current limit and then switch to voltage mode.
-            if IV_param['start_V'] == 'Voc':
-                IV_param['start_V'] = self.measure_voltage("CHAN_A")
-                self.set_voltage("CHAN_A",IV_param['start_V'])
-                self.setup_voltage_output("CHAN_A",IV_param['Imax'])
-                
-            #we finally know all the scan parameters, so generate the voltage list.
-            v_smu = np.linspace(IV_param['start_V'], IV_param['stop_V'], int(abs((IV_param['stop_V']-IV_param['start_V'])/abs(IV_param['dV'])) + 1))
-            
-            if self.app != None:
-                self.win.showStatus("Running J-V Scan...")
-                self.app.processEvents()
-            else:
-                print("Running J-V Scan...")
-            #grab the current timestamp as starting point for sample timing.
-            now = datetime.datetime.now()
-            timeNow = datetime.datetime.timestamp(now)
-            startTime = datetime.datetime.timestamp(now)
-            measTime = startTime #first measurement at time zero
-            
-            for v in v_smu:
-                self.set_voltage("CHAN_A",v)
-                now = datetime.datetime.now()
-                timeNow = datetime.datetime.timestamp(now)
-                
-                while (timeNow < measTime):
-                    if self.abortRunFlag():
-                        break
-                        
-                    if self.useReferenceDiode and self.referenceDiodeParallel:
-                        i, iref = self.measure_current("CHAN_BOTH")
-                    else:
-                        i = self.measure_current("CHAN_A")
-                        
-                    now = datetime.datetime.now()
-                    timeNow = datetime.datetime.timestamp(now)
-
+                    
                 if self.useReferenceDiode and self.referenceDiodeParallel:
                     i, iref = self.measure_current("CHAN_BOTH")
-                    if self.win != None:
-                        self.win.updateMeasuredLightIntensity(abs(iref*100./self.fullSunReferenceCurrent))
                 else:
                     i = self.measure_current("CHAN_A")
                     
-                dataI.append(i)
-                if self.useReferenceDiode and self.referenceDiodeParallel:
-                    dataIref.append(iref)
-                    if IV_param['light_int'] > 1.0: #don't correct measurements made in dark or very low light levels
-                        lightLevelFactor = abs((iref / self.fullSunReferenceCurrent) * (100.0 / IV_param['light_int']))
-                    else:
-                        lightLevelFactor = 1.0
-                else:
-                    dataIref.append(0.)
-                    lightLevelFactor = 1.0
-                dataJ.append(i*1000./(IV_param['active_area']*lightLevelFactor))
-                dataV.append(v)
-                
+                now = datetime.datetime.now()
+                timeNow = datetime.datetime.timestamp(now)
+
+            if self.useReferenceDiode and self.referenceDiodeParallel:
+                i, iref = self.measure_current("CHAN_BOTH")
+                dataIref.append(iref)
                 if self.win != None:
-                    self.win.updatePlotIV(dataV, dataJ)
-                    
-                measTime = measTime + interval
+                    self.win.updateMeasuredLightIntensity(abs(iref*100./self.fullSunReferenceCurrent))
+            else:
+                i = self.measure_current("CHAN_A")
+                dataIref.append(0.)
                 
-                #if we're doing a positive scan to the Fwd current limit and the current is greater, end the scan.
-                if stop_at_voc and i > IV_param['Fwd_current_limit']:
-                    break
-                
-                if self.abortRunFlag():
-                    break
-                
-            self.turn_off()
-            
-        else: #old code for emulate smu mode.  makes a linear curve.
-            if IV_param['stop_V'] == 'Voc':
-                IV_param['stop_V'] = 0.6
-            if IV_param['start_V'] == 'Voc':
-                IV_param['start_V'] = 0.6
-            v_smu = np.linspace(IV_param['start_V'], IV_param['stop_V'], int(abs((IV_param['stop_V']-IV_param['start_V'])/abs(IV_param['dV'])) + 1))
-            dataI = v_smu * 0.1 # This should be a sample curve
-            dataIref = v_smu * 0.1 # This should be a sample curve
-            dataV = v_smu
+            dataI.append(i)
+            dataJ.append(i*1000./IV_param['active_area'])
+            dataV.append(v)
             
             if self.win != None:
-                self.win.updatePlotIV(v_smu, dataI)
+                self.win.updatePlotIV(dataV, dataJ)
+                
+            measTime = measTime + interval
+            
+            #if we're doing a positive scan to the Fwd current limit and the current is greater, end the scan.
+            if stop_at_voc and i > IV_param['Fwd_current_limit']:
+                break
+            
+            if self.abortRunFlag():
+                break
+            
+        self.turn_off()
         
         return (dataV, dataI, dataIref)
                                 
@@ -995,64 +974,56 @@ class SMU:
         dataV = []
         #param: light int, set current, time, interval
         
-        #if not self.emulate:
-        if True:
-            if abs(param['set_current']) > abs(param['Imax']):
-                raise ValueError("ERROR: measure_V_time_dependent set voltage outside of compliance range")
-                
-            self.setup_current_output("CHAN_A",param['Vmax'])
-            self.set_current("CHAN_A",param['set_current'])
-            self.enable_output("CHAN_A")
+        if abs(param['set_current']) > abs(param['Imax']):
+            raise ValueError("ERROR: measure_V_time_dependent set voltage outside of compliance range")
             
-            self.show_status("Stabilizing at initial operating point for " + str(param['Dwell']) + " seconds")
-                
-            #grab the current timestamp as starting point for dwell period.
+        self.setup_current_output("CHAN_A",param['Vmax'])
+        self.set_current("CHAN_A",param['set_current'])
+        self.enable_output("CHAN_A")
+        
+        self.show_status("Stabilizing at initial operating point for " + str(param['Dwell']) + " seconds")
+            
+        #grab the current timestamp as starting point for dwell period.
+        now = datetime.datetime.now()
+        timeNow = datetime.datetime.timestamp(now)
+        measTime = timeNow + param["Dwell"]
+        
+        while (timeNow < measTime):
+            v = self.measure_voltage("CHAN_A")
             now = datetime.datetime.now()
             timeNow = datetime.datetime.timestamp(now)
-            measTime = timeNow + param["Dwell"]
             
-            while (timeNow < measTime):
+            if self.abortRunFlag():
+                break
+        
+        self.show_status("Running Constant Current Measurement...")
+            
+        #grab the current timestamp as starting point for sample timing.
+        now = datetime.datetime.now()
+        timeNow = datetime.datetime.timestamp(now)
+        startTime = datetime.datetime.timestamp(now)
+        measTime = startTime #first measurement at time zero
+        #run for the prescribed duration, or until abort is pressed.
+        while (timeNow - startTime) < param['duration']:
+            if timeNow >= measTime:
                 v = self.measure_voltage("CHAN_A")
-                now = datetime.datetime.now()
-                timeNow = datetime.datetime.timestamp(now)
+                dataV.append(v)
+                dataX.append(timeNow - startTime)
                 
-                if self.abortRunFlag():
-                    break
+                if self.win != None:
+                    self.win.updatePlotConstantI(dataX, dataV)
+                    
+                measTime = measTime + param['interval']
+            else:
+                v = self.measure_voltage("CHAN_A")
             
-            self.show_status("Running Constant Current Measurement...")
-                
-            #grab the current timestamp as starting point for sample timing.
+            if self.abortRunFlag():
+                break
+                    
             now = datetime.datetime.now()
             timeNow = datetime.datetime.timestamp(now)
-            startTime = datetime.datetime.timestamp(now)
-            measTime = startTime #first measurement at time zero
-            #run for the prescribed duration, or until abort is pressed.
-            while (timeNow - startTime) < param['duration']:
-                if timeNow >= measTime:
-                    v = self.measure_voltage("CHAN_A")
-                    dataV.append(v)
-                    dataX.append(timeNow - startTime)
-                    
-                    if self.win != None:
-                        self.win.updatePlotConstantI(dataX, dataV)
-                        
-                    measTime = measTime + param['interval']
-                else:
-                    v = self.measure_voltage("CHAN_A")
-                
-                if self.abortRunFlag():
-                    break
-                        
-                now = datetime.datetime.now()
-                timeNow = datetime.datetime.timestamp(now)
-                
-            self.turn_off()
-        else:
-            dataX = np.linspace(0, param['duration'], int((param['duration']/param['interval']) + 1))
-            dataV = dataX * 0.1 # This should be a sample curve
             
-            if self.win != None:
-                self.win.updatePlotConstantI(dataX, dataV)
+        self.turn_off()
                 
         return (dataX, dataV)
 
@@ -1062,78 +1033,81 @@ class SMU:
             self.app.processEvents()
         dataX = []
         dataI = []
-        dataIcorr = []
+        dataIref = []
         dataJ = []
         #param: light int, set voltage, time, interval
-        #if not self.emulate:
-        if True:
-            if abs(param['set_voltage']) > abs(param['Vmax']):
-                raise ValueError("ERROR: measure_I_time_dependent set voltage outside of compliance range")
-                
-            self.setup_voltage_output("CHAN_A",param['Imax'])
-            self.set_voltage("CHAN_A",param['set_voltage'])
-            self.enable_output("CHAN_A")
+        
+        if abs(param['set_voltage']) > abs(param['Vmax']):
+            raise ValueError("ERROR: measure_I_time_dependent set voltage outside of compliance range")
             
-            self.show_status("Stabilizing at initial operating point for " + str(param['Dwell']) + " seconds")
-                
-            #grab the current timestamp as starting point for dwell period.
-            now = datetime.datetime.now()
-            timeNow = datetime.datetime.timestamp(now)
-            measTime = timeNow + param["Dwell"]
+        self.setup_voltage_output("CHAN_A",param['Imax'])
+        self.set_voltage("CHAN_A",param['set_voltage'])
+        self.enable_output("CHAN_A")
+        
+        self.show_status("Stabilizing at initial operating point for " + str(param['Dwell']) + " seconds")
             
-            while (timeNow < measTime):
+        #grab the current timestamp as starting point for dwell period.
+        now = datetime.datetime.now()
+        timeNow = datetime.datetime.timestamp(now)
+        measTime = timeNow + param["Dwell"]
+        
+        while (timeNow < measTime):
+            if self.useReferenceDiode and self.referenceDiodeParallel:
+                i, iref = self.measure_current("CHAN_BOTH")
+                if self.win != None:
+                    self.win.updateMeasuredLightIntensity(abs(iref*100./self.fullSunReferenceCurrent))
+            else:
                 i = self.measure_current("CHAN_A")
-                now = datetime.datetime.now()
-                timeNow = datetime.datetime.timestamp(now)
                 
-                if self.abortRunFlag():
-                    break
-            
-            self.show_status("Running Constant Voltage Measurement...")
-            
-            #grab the current timestamp as starting point for sample timing.
             now = datetime.datetime.now()
             timeNow = datetime.datetime.timestamp(now)
-            startTime = datetime.datetime.timestamp(now)
-            measTime = startTime #first measurement at time zero
-            #run for the prescribed duration, or until abort is pressed.
-            while (timeNow - startTime) < param['duration']:
-                if timeNow >= measTime:
-                    i = self.measure_current("CHAN_A")
-                    dataI.append(i)
-                    if self.useReferenceDiode and self.referenceDiodeParallel:
-                        i_corr = i * param['light_int'] / param['light_int_meas']
-                        dataIcorr.append(i_corr)
-                        dataJ.append(i_corr*1000./param['active_area'])
-                    else:
-                        dataIcorr.append(0.0)
-                        dataJ.append(i*1000./param['active_area'])
-                    
-                    dataX.append(timeNow - startTime)
-                    
+            
+            if self.abortRunFlag():
+                break
+        
+        self.show_status("Running Constant Voltage Measurement...")
+        
+        #grab the current timestamp as starting point for sample timing.
+        now = datetime.datetime.now()
+        timeNow = datetime.datetime.timestamp(now)
+        startTime = datetime.datetime.timestamp(now)
+        measTime = startTime #first measurement at time zero
+        #run for the prescribed duration, or until abort is pressed.
+        while (timeNow - startTime) < param['duration']:
+            if timeNow >= measTime:
+                
+                if self.useReferenceDiode and self.referenceDiodeParallel:
+                    i, iref = self.measure_current("CHAN_BOTH")
+                    dataIref.append(iref)
                     if self.win != None:
-                        self.win.updatePlotConstantV(dataX, dataJ)
-                        
-                    measTime = measTime + param['interval']
+                        self.win.updateMeasuredLightIntensity(abs(iref*100./self.fullSunReferenceCurrent))
                 else:
                     i = self.measure_current("CHAN_A")
+                    dataIref.append(0.)
                     
-                if self.abortRunFlag():
-                    break
-                        
-                now = datetime.datetime.now()
-                timeNow = datetime.datetime.timestamp(now)
-            
-            self.turn_off()
-        else:
-            dataX = np.linspace(0, param['duration'], int((param['duration']/param['interval']) + 1))
-            dataI = dataX * 0.1 # This should be a sample curve
-            dataIcorr = dataX * 0.1 # This should be a sample curve
-            
-            if self.win != None:
-                self.win.updatePlotConstantV(dataX, dataI)
+                dataI.append(i)
+                dataJ.append(i*1000./param['active_area'])
+                dataX.append(timeNow - startTime)
+                
+                if self.win != None:
+                    self.win.updatePlotConstantV(dataX, dataJ)
+                    
+                measTime = measTime + param['interval']
+            else:
+                if self.useReferenceDiode and self.referenceDiodeParallel:
+                    i, iref = self.measure_current("CHAN_BOTH")
+                else:
+                    i = self.measure_current("CHAN_A")
+                
+            if self.abortRunFlag():
+                break
+                    
+            now = datetime.datetime.now()
+            timeNow = datetime.datetime.timestamp(now)
         
-        return (dataX, dataIcorr, dataI)
+        self.turn_off()
+        
+        return (dataX, dataI, dataIref)
     
     def measure_MPP_time_dependent(self, param):
         # self.flag_abortRun = False
@@ -1143,189 +1117,180 @@ class SMU:
         dataX = []
         dataW = []
         dataI = []
-        dataIcorr = []
+        dataIref = []
         dataJ = []
         dataV = []
         
-        #if not self.emulate:    
-        if True:
-            #if start voltage is auto, run a JV scan first to determine Vmpp
-            if param['start_voltage'] == 'auto':
-                
-                self.show_status("Running reverse JV to find MPP starting voltage...")
-                
-                time.sleep(1)
-                IV_params = {}
-                IV_params['light_int'] = param['light_int']
-                IV_params['start_V'] = 'Voc'
-                IV_params['Fwd_current_limit'] = param['Imax']/10.
-                IV_params['stop_V'] = 0
-                IV_params['dV'] = 0.02
-                IV_params['sweep_rate'] = 0.1
-                IV_params["Dwell"] = param['Dwell']
-                IV_params['Imax'] = param['Imax']
-                IV_params['Vmax'] = param['Vmax']
-                IV_params['active_area'] = param['active_area']
-                IV_params['cell_name'] = param['cell_name']
-                
-                if self.win != None:
-                    self.win.menuSelectMeasurement.setCurrentIndex(0) #set gui to display JV
-                    
-                (v_smu, i_smu, i_ref) = self.measure_IV_point_by_point(IV_params)
-                
-                if self.win != None:
-                    self.win.menuSelectMeasurement.setCurrentIndex(3) #set gui to display MPP
-                    
-                p_smu = []
-                for v, i in zip(v_smu, i_smu):
-                    p_smu.append(v*i*-1)
-                max_power = max(p_smu)
-                max_power_index = p_smu.index(max_power)
-                V_MPP = v_smu[max_power_index]
-            else:    #manual start voltage
-                V_MPP = param['start_voltage']
-                if abs(param['start_voltage']) > abs(param['Vmax']):
-                    raise ValueError("ERROR: measure_MPP_time_dependent start voltage outside of compliance range")
-                    
-            v_step = param['voltage_step']
-            step_direction = 1
-            v_step_max = param['voltage_step_max']
-            v_step_min = param['voltage_step_min']
-            MPPStepGain = param['MPP_step_gain']
-            steps = []
-            last_power = 0.0
-            #param: light int, start voltage, time, interval
-        
-            self.setup_voltage_output("CHAN_A",param['Imax'])
-            self.set_voltage("CHAN_A",V_MPP)
-            self.enable_output("CHAN_A")
+        #if start voltage is auto, run a JV scan first to determine Vmpp
+        if param['start_voltage'] == 'auto':
             
-            self.show_status("Stabilizing at initial operating point for " + str(param['Dwell']) + " seconds")
+            self.show_status("Running reverse JV to find MPP starting voltage...")
             
-            #grab the current timestamp as starting point for dwell period.
-            now = datetime.datetime.now()
-            timeNow = datetime.datetime.timestamp(now)
-            measTime = timeNow + param["Dwell"]
-            
-            #stay on the initial setpoint for the specified time
-            while (timeNow < measTime):
-                i = self.measure_current("CHAN_A")
-                now = datetime.datetime.now()
-                timeNow = datetime.datetime.timestamp(now)
-                
-                if self.abortRunFlag():
-                    break
-            
-            #grab the current timestamp as starting point for sample timing.
-            now = datetime.datetime.now()
-            timeNow = datetime.datetime.timestamp(now)
-            startTime = datetime.datetime.timestamp(now)
-            measTime = startTime #first measurement at time zero
-            #run for the prescribed duration, or until abort is pressed.
-            while (timeNow - startTime) < param['duration']:
-                if timeNow >= measTime:
-                    #measure power
-                    (i, v) = self.measure_current_and_voltage("CHAN_A")
-                    if self.useReferenceDiode and self.referenceDiodeParallel: #correct measured current for actual light level
-                        i_corr = i * param['light_int'] / param['light_int_meas']
-                        w = i_corr * v * -1000./param['active_area'] #cell voltage is positive, current is negative.
-                        dataIcorr.append(i_corr)
-                        dataJ.append(i_corr*1000./param['active_area'])
-                    else:
-                        w = i * v * -1000./param['active_area'] #cell voltage is positive, current is negative.
-                        dataIcorr.append(0)
-                        dataJ.append(i*1000./param['active_area'])
-                    #append data and plot
-                    dataW.append(w)
-                    dataX.append(timeNow - startTime)
-                    dataI.append(i)
-                    dataV.append(v)
-                    
-                    if self.win != None:
-                        self.win.updatePlotMPP(dataX, dataW)
-                        self.win.updatePlotMPPIV(dataX, dataV, dataJ)
-                        
-                    #increment the next measurement time
-                    measTime = measTime + param['interval']
-                    
-                    #MPP Algorithm (perturb-and-observe)
-                    #a simple MPP algoithm that constantly moves the voltage by a certain step size
-                    #and observes if the power increases of decreases.  Here we use
-                    #adaptive voltage stepping based on the trend of the last 6 steps.
-                    #the sum of the trend can be either +/-6, +/-4, +/-2, or 0.
-                    #in steady-state the sum of the trend should be 0. 
-                    #if we are off the peak the trend will be going strongly in one direction
-                    #and the algorithm will increase the step size to get there more quickly.
-                    #once the tracking settles the step size will be decreased until it reaches
-                    #the noise level.  Noise events will cause the step size to momentarily increase
-                    #which is desireable as the algorithm is not reactive enough with a very small
-                    #step size which is lost in the noise.
-                    
-                    if w < last_power:
-                        #if the power is less than the last time then we're going the wrong way
-                        step_direction *= -1
-                    
-                    
-                    #adaptive step-size algorithm
-                    steps.append(step_direction)
-                    if len(steps) >= 6:
-                        trend = sum(steps[len(steps)-6:])
-                        #increase the step size if there is a noticeable trend to get there faster.
-                        if abs(trend) >= 3:
-                            v_step *= 2
-                            steps = [] #reset steps history when changing scale
-                            if v_step > v_step_max:
-                                v_step = v_step_max
-                        #if there is no trend and we are not yet at the minimum, decrease the step size.
-                        elif v_step > v_step_min:
-                            v_step /= 2
-                            steps = [] #reset steps history when changing scale
-                            if v_step < v_step_min:
-                                v_step = v_step_min
-                    
-                    next_step = v_step * step_direction
-                    
-                    #step the MPP voltage by v_step and repeat
-                    V_MPP = V_MPP + next_step
-                    
-                    #force V_MPP to stay within voltage compliance range§
-                    if V_MPP > abs(param['Vmax']):
-                        V_MPP = abs(param['Vmax'])
-                    if V_MPP < -1*abs(param['Vmax']):
-                        V_MPP = -1*abs(param['Vmax'])
-                        
-                    self.set_voltage("CHAN_A",V_MPP)
-                    last_power = w
-                    
-                    self.show_status("Running MPP Measurement. v_step: " + str(v_step))
-                        
-                    dI = i - dataI[len(dataI)-1]
-                    
-                    
-                else:
-                    i = self.measure_current("CHAN_A") #to keep the keithley display current...
-                
-                if self.abortRunFlag():
-                    break
-
-                now = datetime.datetime.now()
-                timeNow = datetime.datetime.timestamp(now)
-                
-            self.turn_off()
-        else:
-            dataX = np.linspace(0, param['duration'], int((param['duration']/param['interval']) + 1))
-            dataV = dataX * 0.1 # This should be a sample curve
-            dataI = dataX * -0.1 # This should be a sample curve
-            dataIcorr = dataX * -0.1 # This should be a sample curve
-            dataW = []
-            for v, i in zip(dataV, dataI):
-                dataW.append(v*i)
+            time.sleep(1)
+            IV_params = {}
+            IV_params['light_int'] = param['light_int']
+            IV_params['start_V'] = 'Voc'
+            IV_params['Fwd_current_limit'] = param['Imax']/10.
+            IV_params['stop_V'] = 0
+            IV_params['dV'] = 0.005
+            IV_params['sweep_rate'] = 0.02
+            IV_params["Dwell"] = param['Dwell']
+            IV_params['Imax'] = param['Imax']
+            IV_params['Vmax'] = param['Vmax']
+            IV_params['active_area'] = param['active_area']
+            IV_params['cell_name'] = param['cell_name']
             
             if self.win != None:
-                self.win.updatePlotMPP(dataX, dataW)
-                self.win.updatePlotMPPIV(dataX, dataV, dataI)
+                self.win.menuSelectMeasurement.setCurrentIndex(0) #set gui to display JV
+                
+            (v_smu, i_smu, i_ref) = self.measure_IV_point_by_point(IV_params)
+            
+            if self.win != None:
+                self.win.menuSelectMeasurement.setCurrentIndex(3) #set gui to display MPP
+                
+            p_smu = []
+            for v, i in zip(v_smu, i_smu):
+                p_smu.append(v*i*-1)
+            max_power = max(p_smu)
+            max_power_index = p_smu.index(max_power)
+            V_MPP = v_smu[max_power_index]
+        else:    #manual start voltage
+            V_MPP = param['start_voltage']
+            if abs(param['start_voltage']) > abs(param['Vmax']):
+                raise ValueError("ERROR: measure_MPP_time_dependent start voltage outside of compliance range")
+                
+        v_step = param['voltage_step']
+        step_direction = 1
+        v_step_max = param['voltage_step_max']
+        v_step_min = param['voltage_step_min']
+        steps = []
+        last_power = 0.0
+        #param: light int, start voltage, time, interval
+    
+        self.setup_voltage_output("CHAN_A",param['Imax'])
+        self.set_voltage("CHAN_A",V_MPP)
+        self.enable_output("CHAN_A")
+        
+        self.show_status("Stabilizing at initial operating point for " + str(param['Dwell']) + " seconds")
+        
+        #grab the current timestamp as starting point for dwell period.
+        now = datetime.datetime.now()
+        timeNow = datetime.datetime.timestamp(now)
+        measTime = timeNow + param["Dwell"]
+        
+        #stay on the initial setpoint for the specified time
+        while (timeNow < measTime):
+            i = self.measure_current("CHAN_A")
+            now = datetime.datetime.now()
+            timeNow = datetime.datetime.timestamp(now)
+            
+            if self.abortRunFlag():
+                break
+        
+        #grab the current timestamp as starting point for sample timing.
+        now = datetime.datetime.now()
+        timeNow = datetime.datetime.timestamp(now)
+        startTime = datetime.datetime.timestamp(now)
+        measTime = startTime #first measurement at time zero
+        #run for the prescribed duration, or until abort is pressed.
+        while (timeNow - startTime) < param['duration']:
+            if timeNow >= measTime:
+                #measure power
+                (i, v) = self.measure_current_and_voltage("CHAN_A")
+                if self.useReferenceDiode and self.referenceDiodeParallel:
+                    (i, v, i_ref, v_ref) = self.measure_current_and_voltage("CHAN_BOTH")
+                    if self.win != None:
+                        self.win.updateMeasuredLightIntensity(abs(i_ref*100./self.fullSunReferenceCurrent))
+                    dataIref.append(i_ref)
+                else:
+                    (i, v) = self.measure_current_and_voltage("CHAN_A")
+                    dataIref.append(0)
+                
+                w = i * v * -1000./param['active_area'] #cell voltage is positive, current is negative.
+                    
+                #append data and plot
+                dataW.append(w)
+                dataX.append(timeNow - startTime)
+                dataI.append(i)
+                dataJ.append(i*1000./param['active_area'])
+                dataV.append(v)
+                
+                if self.win != None:
+                    self.win.updatePlotMPP(dataX, dataW)
+                    self.win.updatePlotMPPIV(dataX, dataV, dataJ)
+                    
+                #increment the next measurement time
+                measTime = measTime + param['interval']
+                
+                #MPP Algorithm (perturb-and-observe)
+                #a simple MPP algoithm that constantly moves the voltage by a certain step size
+                #and observes if the power increases or decreases.  Here we use
+                #adaptive voltage stepping based on the trend of the last 8 steps.
+                #the sum of the trend can be either +/-8, +/-6, +/-4, +/-2, or 0.
+                #in steady-state the sum of the trend should be 0. 
+                #if we are off the peak the trend will be going strongly in one direction
+                #and the algorithm will increase the step size to get there more quickly.
+                #once the tracking settles the step size will be decreased until it reaches
+                #the noise level.  Noise events will cause the step size to momentarily increase
+                #which is desireable as the algorithm is not reactive enough with a very small
+                #step size which is lost in the noise.
+                
+                if w < last_power:
+                    #if the power is less than the last time then we're going the wrong way
+                    step_direction *= -1
+                
+                
+                #adaptive step-size algorithm
+                steps.append(step_direction)
+                if len(steps) >= 8:
+                    trend = sum(steps[len(steps)-8:])
+                    #increase the step size if there is a noticeable trend to get there faster.
+                    if abs(trend) >= 3:
+                        v_step *= 2
+                        steps = [] #reset steps history when changing scale
+                        if v_step > v_step_max:
+                            v_step = v_step_max
+                    #if there is no trend and we are not yet at the minimum, decrease the step size.
+                    elif abs(trend) == 0 and v_step > v_step_min:
+                        v_step /= 2
+                        steps = [] #reset steps history when changing scale
+                        if v_step < v_step_min:
+                            v_step = v_step_min
+                
+                next_step = v_step * step_direction
+                
+                #step the MPP voltage by v_step and repeat
+                V_MPP = V_MPP + next_step
+                
+                #force V_MPP to stay within voltage compliance range§
+                if V_MPP > abs(param['Vmax']):
+                    V_MPP = abs(param['Vmax'])
+                if V_MPP < -1*abs(param['Vmax']):
+                    V_MPP = -1*abs(param['Vmax'])
+                    
+                self.set_voltage("CHAN_A",V_MPP)
+                last_power = w
+                
+                self.show_status("Running MPP Measurement. v_step: " + str(v_step))
+                    
+                dI = i - dataI[len(dataI)-1]
+                
+                
+            else:
+                if self.useReferenceDiode and self.referenceDiodeParallel:
+                    (i, v, i_ref, v_ref) = self.measure_current_and_voltage("CHAN_BOTH")
+                else:
+                    i = self.measure_current("CHAN_A") #to keep the keithley display current...
+            
+            if self.abortRunFlag():
+                break
 
-        return (dataX, dataV, dataIcorr, dataI)
+            now = datetime.datetime.now()
+            timeNow = datetime.datetime.timestamp(now)
+            
+        self.turn_off()
+
+        return (dataX, dataV, dataI, dataIref)
     
     def measure_reference_calibration(self, param):
         # self.flag_abortRun = False
@@ -1952,14 +1917,26 @@ class system:
             if key == 'gui':
                 self.win = value
                 
-        #Preferences, to be moved into separate GUI page at some point
-        self.saveDataAutomatic = False
-        self.checkVOCBeforeScan = True
-        self.firstPointDwellTime = 5.0
-        self.MPPVoltageStep = 0.002
-        self.MPPVoltageStepMax = 0.016
-        self.MPPVoltageStepMin = 0.000125
-        self.MPPStepGain = 10 #change this to modify convergence time for MPP algo
+        #Default Preferences.  Can be overridden by entries in the system parameters file.
+        self.saveDataAutomatic = False #automatically save every scan upon completion
+        self.checkVOCBeforeScan = True #check Voc polarity before each run and warn user if incorrect
+        self.firstPointDwellTime = 5.0 #allow the cell to stabilize at the initial setting for this many seconds before starting a scan
+        self.MPPVoltageStepInitial = 0.002 #initial step size for MPP algorithm
+        self.MPPVoltageStepMax = 0.002 #maximum step size for MPP algorithm
+        self.MPPVoltageStepMin = 0.001 #minimum step size for MPP algorithm
+        
+        if "saveDataAutomatic" in self.sp.IVsys:
+            self.saveDataAutomatic = self.sp.IVsys["saveDataAutomatic"]
+        if "checkVOCBeforeScan" in self.sp.IVsys:
+            self.checkVOCBeforeScan = self.sp.IVsys["checkVOCBeforeScan"]
+        if "firstPointDwellTime" in self.sp.IVsys:
+            self.firstPointDwellTime = self.sp.IVsys["firstPointDwellTime"]
+        if "MPPVoltageStepInitial" in self.sp.IVsys:
+            self.MPPVoltageStepInitial = self.sp.IVsys["MPPVoltageStepInitial"]
+        if "MPPVoltageStepMax" in self.sp.IVsys:
+            self.MPPVoltageStepMax = self.sp.IVsys["MPPVoltageStepMax"]
+        if "MPPVoltageStepMin" in self.sp.IVsys:
+            self.MPPVoltageStepMin = self.sp.IVsys["MPPVoltageStepMin"]
         
         #read in user table from scrambled users json file.  read the scrambled string,
         #unscramble the contents and load the table.
@@ -1994,11 +1971,22 @@ class system:
         self.SMU = SMU(sp.SMU, app=app, gui=win)
         self.SMU.fullSunReferenceCurrent = self.sp.IVsys['fullSunReferenceCurrent']
         self.SMU.calibrationDateTime = self.sp.IVsys['calibrationDateTime']
+        self.SMU.referenceDiodeImax = self.sp.IVsys['referenceDiodeImax']
+        
+        #if the SMU can read both channels in parallel, set referenceDiodeParallel to True
+        #However, if the system name is IV_Old we must do it in series because the reference diode is
+        #mounted on a stage in that setup and is not in the light at the same time as the sample.
+        if (self.sp.SMU['model'] == '2600' or self.sp.SMU['model'] == '2602') and self.sp.IVsys['sysName'] != 'IV_Old':
+            self.SMU.referenceDiodeParallel = True
+        else:
+            self.SMU.referenceDiodeParallel = False
+                
         self.lamp = lamp(sp.lamp, app=app, gui=win, smu=self.SMU)
-        if sp.IVsys['sysName'] == 'IV_Old':
+        
+        if self.sp.IVsys['sysName'] == 'IV_Old':
             #arduino is not present in all systems.  
             #Check that its parameters have been loaded from the system settings file before trying to access
-            if sp.arduino != None:
+            if self.sp.arduino != None:
                 self.arduino = arduino(sp.arduino, app=app, gui=win)
             else:
                 raise ValueError("ERROR: System name is set to 'IV_Old' but no arduino settings dictionary is present")
@@ -2214,134 +2202,140 @@ class system:
                     
                 raise ValueError("ERROR: measure_IVcurve stop voltage outside of compliance range")
         
+        #check that the SMU can handle the requested measurement interval
+        interval = abs(IV_param['dV'])/IV_param['sweep_rate']
+        if interval < self.SMU.meas_period_min:
+            IV_param['dV'] = self.SMU.meas_period_min * IV_param['sweep_rate']
+            errorMsg = "WARNING: the SMU is unable to provide the requested measurement rate.\n"
+            errorMsg += "The voltage step size has been adjusted to assure the requested sweep rate is respected."
+            self.error_window(errorMsg)
+            if self.win != None:
+                win.fieldIVVStep.setText("{:5.2f}".format(IV_param['dV']*1000.))
+            
         #turn the lamp on
         self.show_status("Turning lamp on...")
             
         lampError = self.turn_lamp_on(IV_param['light_int']) #True
         
         if not lampError:
-            while(True): #use while loop to be able to break out at any time if run aborted.
-                #measure light intensity on the reference diode if configured
-                if self.SMU.useReferenceDiode and (IV_param['light_int'] > 1.0):
-                    
-                    lightIntensity = self.measure_light_intensity() #status messages set internally
-                    
-                    if self.abortRunFlag() :
+            try:
+                while(True): #use while loop to be able to break out at any time if run aborted.
+                    #measure light intensity on the reference diode if configured
+                    if self.SMU.useReferenceDiode:
+                        
+                        lightIntensity = self.measure_light_intensity() #status messages set internally
+                        
+                        if self.abortRunFlag() :
+                            self.show_status("Run Aborted")
+                            break
+                        if (IV_param['light_int'] > 1.0) and abs((lightIntensity - IV_param['light_int'])/IV_param['light_int']) > 0.1 :
+                            self.error_window("WARNING: Light level measured by reference diode is more than 10% off from requested level")
+                            
+                    VocPolarityOK = True
+                    if self.checkVOCBeforeScan and IV_param['light_int']  > 0: #check Voc polarity only when light is on
+                        self.show_status("Checking Voc Polarity...")
+                        VocPolarityOK = self.SMU.checkVOCPolarity(IV_param)
+                        
+                    if self.abortRunFlag():
+                        self.SMU.turn_off()
                         self.show_status("Run Aborted")
                         break
-                    if abs((lightIntensity - IV_param['light_int'])/IV_param['light_int']) > 0.1 :
-                        self.error_window("Error: Light level measured by reference diode is more than 10% off from requested level.  Aborting Scan")
-                        
-                        self.show_status("Run Aborted (Wrong Light Level)")
-                            
+                    if not VocPolarityOK:
+                        self.SMU.turn_off()
+                        self.show_status("ERROR: Wrong Voc Polarity...")
+                        self.error_window("Error: Incorrect polarity detected for Voc.  This could be due to wires plugged incorrectly or light source not turning on.  Aborting Scan")
+                        self.show_status("Run Aborted (Wrong Voc Polarity)")
                         break
+                        
+                    self.show_status("Running J-V Scan...")
                     
-                VocPolarityOK = True
-                if self.checkVOCBeforeScan and IV_param['light_int']  > 0: #check Voc polarity only when light is on
-                    self.show_status("Checking Voc Polarity...")
-                    VocPolarityOK = self.SMU.checkVOCPolarity(IV_param)
-                if self.abortRunFlag():
-                    self.show_status("Run Aborted")
-                    break
-                if not VocPolarityOK:
-                    self.show_status("ERROR: Wrong Voc Polarity...")
-                    self.error_window("Error: Incorrect polarity detected for Voc.  This could be due to wires plugged incorrectly or light source not turning on.  Aborting Scan")
-                    self.show_status("Run Aborted (Wrong Voc Polarity)")
-                    
-                    break
-                    
-                self.show_status("Running J-V Scan...")
-                
-                try:
                     (v_smu, i_smu, i_ref) = self.SMU.measure_IV_point_by_point(IV_param) #measure_IVcurve(IV_param)
-                except ValueError as err:
-                    self.error_window(str(err))
-                    break
-                except Exception as err:
-                    print(err)
-                    self.error_window("Execution Error in smu.measure_IVcurve().\nSee terminal for details.")
-                    break
-                
-                if self.SMU.useReferenceDiode:
-                    if self.SMU.referenceDiodeParallel: #light level was measured real-time during scan
-                        avgRefCurrent = sum(i_ref)/len(i_ref)
-                        avgLightLevel = abs(100. * avgRefCurrent / self.SMU.fullSunReferenceCurrent)
-                        if self.app != None:
-                            self.win.updateMeasuredLightIntensity(avgLightLevel)
-                            self.app.processEvents()
-                        lightLevelCorrectionFactor = IV_param['light_int'] / avgLightLevel
-                    else: #light level was only measured once at the beginning
-                        avgLightLevel = lightIntensity
-                        lightLevelCorrectionFactor = IV_param['light_int'] / avgLightLevel
-                else:
-                    lightLevelCorrectionFactor = 1.0
-                    avgLightLevel = IV_param['light_int']
-                
-                if len(v_smu) > 1:
-                    self.IV_Results = {}
-                    self.IV_Results['active_area'] = IV_param['active_area']
-                    self.IV_Results['cell_name'] = IV_param['cell_name']
-                    self.IV_Results['light_int'] = IV_param['light_int']
-                    if self.SMU.useReferenceDiode:
-                        self.IV_Results['light_int_meas'] = IV_param['light_int']/lightLevelCorrectionFactor
-                    self.IV_Results['Imax'] = IV_param['Imax']
-                    self.IV_Results['Dwell'] = IV_param['Dwell']
                     
-                    if IV_param['light_int'] > 0 and not self.abortRunFlag(): #don't analyze dark or aborted runs
-                        pairs = []
-                        dataJ = []
-                        for v, i in zip(v_smu, i_smu):
-                            pairs.append((v, i * lightLevelCorrectionFactor / IV_param['active_area']))
-                            dataJ.append(i * 1000. * lightLevelCorrectionFactor / IV_param['active_area'])
-                        #update JV plot with data from single-point light level correction.
+                    if self.SMU.useReferenceDiode:
+                        if self.SMU.referenceDiodeParallel: #light level was measured real-time during scan
+                            avgRefCurrent = sum(i_ref)/len(i_ref)
+                            avgLightLevel = abs(100. * avgRefCurrent / self.SMU.fullSunReferenceCurrent)
+                            if self.app != None:
+                                self.win.updateMeasuredLightIntensity(avgLightLevel)
+                                self.app.processEvents()
+                            
+                        else: #light level was only measured once at the beginning
+                            avgLightLevel = lightIntensity
+                            
+                    else:
+                        avgLightLevel = IV_param['light_int']
+                    
+                    if len(v_smu) > 1:
+                        self.IV_Results = {}
+                        self.IV_Results['active_area'] = IV_param['active_area']
+                        self.IV_Results['cell_name'] = IV_param['cell_name']
+                        self.IV_Results['light_int'] = IV_param['light_int']
+                        if self.SMU.useReferenceDiode:
+                            self.IV_Results['light_int_meas'] = avgLightLevel
+                        self.IV_Results['Imax'] = IV_param['Imax']
+                        self.IV_Results['Dwell'] = IV_param['Dwell']
+                        
+                        if IV_param['light_int'] > 0 and not self.abortRunFlag(): #don't analyze dark or aborted runs
+                            pairs = []
+                            dataJ = []
+                            for v, i in zip(v_smu, i_smu):
+                                pairs.append((v, i / IV_param['active_area']))
+                                dataJ.append(i * 1000. / IV_param['active_area'])
+                            #update JV plot with data from single-point light level correction.
+                            
+                            if self.win != None:
+                                self.win.updatePlotIV(v_smu,dataJ)
+                                
+                            jvData = np.array(pairs)
+                            df = pd.DataFrame(jvData)
+                            metrics = [ 'voltage', 'current' ]
+                            header = pd.MultiIndex.from_product( [ [ IV_param['cell_name'] ], metrics ], names = [ 'sample', 'metrics' ]  )
+                            df.columns = header
+                            
+                            df.index = df.xs( 'voltage', level = 'metrics', axis = 1 ).values.flatten()
+                            df.drop( 'voltage', level = 'metrics', axis = 1, inplace = True )
+                            df.columns = df.columns.droplevel( 'metrics' )
+
+                            jv_metrics = bric_jv.get_metrics(df, generator=False, fit_window=4)
+                            #print(jv_metrics)
+                            
+                            self.IV_Results['Voc'] = float(jv_metrics['voc'])
+                            self.IV_Results['Jsc'] = float(jv_metrics['jsc'])*1000.
+                            self.IV_Results['Vmpp'] = float(jv_metrics['vmpp'])
+                            self.IV_Results['Jmpp'] = float(jv_metrics['jmpp'])*1000.
+                            self.IV_Results['Pmpp'] = abs(float(jv_metrics['pmpp'])*1000.)
+                            self.IV_Results['PCE'] = 100. * abs(float(jv_metrics['pmpp'])*1000.) / avgLightLevel #IV_param['light_int'] #percent
+                            self.IV_Results['FF'] = float(jv_metrics['ff'])
+                                
+                        #use actual voltage start and stop values for datafile.
+                        #important in case of 0-Voc scanning, or scan abort
+                        if len(v_smu) > 0:
+                            self.IV_Results['start_V'] = v_smu[0]
+                            self.IV_Results['stop_V'] = v_smu[len(v_smu)-1]
+                        else:
+                            self.IV_Results['start_V'] = IV_param['start_V']
+                            self.IV_Results['stop_V'] = IV_param['stop_V']
+                        self.IV_Results['dV'] = IV_param['dV']
+                        self.IV_Results['sweep_rate'] = IV_param['sweep_rate']
                         
                         if self.win != None:
-                            self.win.updatePlotIV(v_smu,dataJ)
+                            self.win.updateIVResults(self.IV_Results)
                             
-                        jvData = np.array(pairs)
-                        df = pd.DataFrame(jvData)
-                        metrics = [ 'voltage', 'current' ]
-                        header = pd.MultiIndex.from_product( [ [ IV_param['cell_name'] ], metrics ], names = [ 'sample', 'metrics' ]  )
-                        df.columns = header
+                        #self.flag_abortRun = False        
+                        self.data_IV = {}
+                        self.data_IV['scanType'] = 'JV'
+                        self.data_IV['start_time'] = dateTimeString
+                        self.data_IV['v'] = v_smu
+                        self.data_IV['i'] = i_smu
+                        self.data_IV['i_ref'] = i_ref
                         
-                        df.index = df.xs( 'voltage', level = 'metrics', axis = 1 ).values.flatten()
-                        df.drop( 'voltage', level = 'metrics', axis = 1, inplace = True )
-                        df.columns = df.columns.droplevel( 'metrics' )
-
-                        jv_metrics = bric_jv.get_metrics(df, generator=False, fit_window=4)
-                        #print(jv_metrics)
-                        
-                        self.IV_Results['Voc'] = float(jv_metrics['voc'])
-                        self.IV_Results['Jsc'] = float(jv_metrics['jsc'])*1000.
-                        self.IV_Results['Vmpp'] = float(jv_metrics['vmpp'])
-                        self.IV_Results['Jmpp'] = float(jv_metrics['jmpp'])*1000.
-                        self.IV_Results['Pmpp'] = abs(float(jv_metrics['pmpp'])*1000.)
-                        self.IV_Results['PCE'] = 100. * abs(float(jv_metrics['pmpp'])*1000.) / avgLightLevel #IV_param['light_int'] #percent
-                        self.IV_Results['FF'] = float(jv_metrics['ff'])
-                            
-                    #use actual voltage start and stop values for datafile.
-                    #important in case of 0-Voc scanning, or scan abort
-                    if len(v_smu) > 0:
-                        self.IV_Results['start_V'] = v_smu[0]
-                        self.IV_Results['stop_V'] = v_smu[len(v_smu)-1]
-                    else:
-                        self.IV_Results['start_V'] = IV_param['start_V']
-                        self.IV_Results['stop_V'] = IV_param['stop_V']
-                    self.IV_Results['dV'] = IV_param['dV']
-                    self.IV_Results['sweep_rate'] = IV_param['sweep_rate']
+                    break #break out of while loop
                     
-                    if self.win != None:
-                        self.win.updateIVResults(self.IV_Results)
-                        
-                    #self.flag_abortRun = False        
-                    self.data_IV = {}
-                    self.data_IV['scanType'] = 'JV'
-                    self.data_IV['start_time'] = dateTimeString
-                    self.data_IV['v'] = v_smu
-                    self.data_IV['i'] = i_smu
-                    self.data_IV['i_ref'] = i_ref
-                    
-                break #break out of while loop
+            except ValueError as err:
+                self.error_window(str(err))
+            except Exception as err:
+                print(err)
+                self.error_window("Execution Error in system.measure_IVcurve().\nSee terminal for details.")
                 
             self.show_status("Turning lamp off...")
             
@@ -2372,9 +2366,15 @@ class system:
                 self.win.runFinished() # also lowers abortRun flag
             raise ValueError("ERROR: measure_V_time_dependent set current outside of compliance range")
         
-        #this parameter is now set from the front panel
-        #param["Dwell"] = self.firstPointDwellTime
-        
+        #check that the SMU can handle the requested measurement interval
+        if param['interval'] < self.SMU.meas_period_min:
+            param['interval'] = self.SMU.meas_period_min
+            errorMsg = "WARNING: the SMU is unable to provide the requested measurement rate.\n"
+            errorMsg += "The measurement interval has been set to the maximum allowed by the SMU."
+            self.error_window(errorMsg)
+            if self.win != None:
+                win.fieldConstantIInterval.setText("{:5.2f}".format(param['interval']))
+                
         #param: light int, set current, time, interval
         self.show_status("Turning lamp on...")
             
@@ -2385,16 +2385,14 @@ class system:
         if not lampError:
             try:
                 while(True):
-                    if self.SMU.useReferenceDiode and (param['light_int'] > 1.0):
+                    if self.SMU.useReferenceDiode:
                         lightIntensity = self.measure_light_intensity() #status messages set internally
                         
                         if self.abortRunFlag() :
                             break
                                 
-                        elif abs((lightIntensity - param['light_int'])/param['light_int']) > 0.1 :
-                            self.show_status("Run Aborted (Wrong Light Level)")
-                            self.error_window("Error: Light level measured by reference diode is more than 10% off from requested level.  Aborting Scan")
-                            break
+                        elif (param['light_int'] > 1.0) and abs((lightIntensity - param['light_int'])/param['light_int']) > 0.1 :
+                            self.error_window("WARNING: Light level measured by reference diode is more than 10% off from requested level")
                                 
                     self.show_status("Running Constant Current Measurement...")
                     
@@ -2463,9 +2461,15 @@ class system:
                 self.win.runFinished() # also lowers abortRun flag
             raise ValueError("ERROR: measure_I_time_dependent set voltage outside of compliance range")
         
-        #this parameter is now set from the front panel
-        #param["Dwell"] = self.firstPointDwellTime
-        
+        #check that the SMU can handle the requested measurement interval
+        if param['interval'] < self.SMU.meas_period_min:
+            param['interval'] = self.SMU.meas_period_min
+            errorMsg = "WARNING: the SMU is unable to provide the requested measurement rate.\n"
+            errorMsg += "The measurement interval has been set to the maximum allowed by the SMU."
+            self.error_window(errorMsg)
+            if self.win != None:
+                win.fieldConstantVInterval.setText("{:5.2f}".format(param['interval']))
+                
         #param: light int, set voltage, time, interval
         self.show_status("Turning lamp on...")
         lampError = self.turn_lamp_on(param['light_int']) #True
@@ -2474,7 +2478,7 @@ class system:
         if not lampError:
             try:
                 while(True):
-                    if self.SMU.useReferenceDiode and (param['light_int'] > 1.0):
+                    if self.SMU.useReferenceDiode :
                         lightIntensity = self.measure_light_intensity() #status messages set internally
                         
                         param['light_int_meas'] = lightIntensity
@@ -2483,25 +2487,37 @@ class system:
                             #break out directly if run aborted during setup - don't even start the measurement
                             break
                             
-                        elif abs((lightIntensity - param['light_int'])/param['light_int']) > 0.1 :
-                            self.error_window("Error: Light level measured by reference diode is more than 10% off from requested level.  Aborting Scan")
-                            self.show_status("Run Aborted (Wrong Light Level)")
-                            break
+                        elif (param['light_int'] > 1.0) and abs((lightIntensity - param['light_int'])/param['light_int']) > 0.1 :
+                            self.error_window("WARNING: Light level measured by reference diode is more than 10% off from requested level")
                                 
                     self.show_status("Running Constant Voltage Measurement...")
                     
-                    t, i_smu_corrected, i_smu = self.SMU.measure_I_time_dependent(param)
+                    t, i_smu, i_ref = self.SMU.measure_I_time_dependent(param)
                     
                     v_smu = []
                     for i in i_smu:
                         v_smu.append(param['set_voltage'])
+                    
+                    if self.SMU.useReferenceDiode:
+                        if self.SMU.referenceDiodeParallel: #light level was measured real-time during scan
+                            avgRefCurrent = sum(i_ref)/len(i_ref)
+                            avgLightLevel = abs(100. * avgRefCurrent / self.SMU.fullSunReferenceCurrent)
+                            if self.app != None:
+                                self.win.updateMeasuredLightIntensity(avgLightLevel)
+                                self.app.processEvents()
+                            
+                        else: #light level was only measured once at the beginning
+                            avgLightLevel = lightIntensity
+                            
+                    else:
+                        avgLightLevel = IV_param['light_int']
                     
                     self.CV_Results = {}
                     self.CV_Results['active_area'] = param['active_area']
                     self.CV_Results['cell_name'] = param['cell_name']
                     self.CV_Results['light_int'] = param['light_int']
                     if self.SMU.useReferenceDiode:
-                        self.CV_Results['light_int_meas'] = lightIntensity
+                        self.CV_Results['light_int_meas'] = avgLightLevel
                     self.CV_Results['set_voltage'] = param['set_voltage']
                     self.CV_Results['interval'] = param['interval']
                     self.CV_Results['duration'] = param['duration']
@@ -2511,7 +2527,7 @@ class system:
                     self.data_CV['start_time'] = dateTimeString
                     self.data_CV['t'] = t
                     self.data_CV['v'] = v_smu
-                    self.data_CV['i_corr'] = i_smu_corrected
+                    self.data_CV['i_ref'] = i_ref
                     self.data_CV['i'] = i_smu
                     
                     if self.saveDataAutomatic:
@@ -2559,13 +2575,18 @@ class system:
                     self.win.runFinished() # also lowers abortRun flag
                 raise ValueError("ERROR: measure_MPP_time_dependent start voltage outside of compliance range")
         
-        #this parameter is now set from the front panel
-        #param["Dwell"] = self.firstPointDwellTime
-        
-        param['voltage_step'] = self.MPPVoltageStep
+        #check that the SMU can handle the requested measurement interval
+        if param['interval'] < self.SMU.meas_period_min:
+            param['interval'] = self.SMU.meas_period_min
+            errorMsg = "WARNING: the SMU is unable to provide the requested measurement rate.\n"
+            errorMsg += "The measurement interval has been set to the maximum allowed by the SMU."
+            self.error_window(errorMsg)
+            if self.win != None:
+                win.fieldMaxPPInterval.setText("{:5.2f}".format(param['interval']))
+                
+        param['voltage_step'] = self.MPPVoltageStepInitial
         param['voltage_step_max'] = self.MPPVoltageStepMax
         param['voltage_step_min'] = self.MPPVoltageStepMin
-        param['MPP_step_gain'] = self.MPPStepGain
         
         #param: light int, start voltage, time, interval
         self.show_status("Turning lamp on...")
@@ -2576,7 +2597,7 @@ class system:
             try:
                 while(True):
             
-                    if self.SMU.useReferenceDiode and (param['light_int'] > 1.0):
+                    if self.SMU.useReferenceDiode :
                         lightIntensity = self.measure_light_intensity() #status messages set internally
                         
                         param['light_int_meas'] = lightIntensity
@@ -2584,10 +2605,8 @@ class system:
                             #break out directly if run aborted during setup - don't even start the measurement
                             break
                             
-                        elif abs((lightIntensity - param['light_int'])/param['light_int']) > 0.1 :
-                            self.error_window("Error: Light level measured by reference diode is more than 10% off from requested level.  Aborting Scan")
-                            self.show_status("Run Aborted (Wrong Light Level)")
-                            break
+                        elif (param['light_int'] > 1.0) and abs((lightIntensity - param['light_int'])/param['light_int']) > 0.1 :
+                            self.error_window("WARNING: Light level measured by reference diode is more than 10% off from requested level")
                             
                     #check Voc polarity.  If it is ok and the run has not been aborted during the Voc check, run MPP
                     VocPolarityOK = True #variable must be defined in case Voc Polarity is not checked
@@ -2598,11 +2617,12 @@ class system:
                         
                         if self.abortRunFlag() :
                             #break out directly if run aborted during Voc check
+                            self.SMU.turn_off()
                             break
                             
                         if not VocPolarityOK :
+                            self.SMU.turn_off()
                             self.show_status("ERROR: Wrong Voc Polarity.")
-                            
                             self.error_window("Error: Incorrect polarity detected for Voc.  This could be due to wires plugged incorrectly.  Aborting Scan")
                             self.show_status("Run Aborted")
                             break
@@ -2610,14 +2630,28 @@ class system:
                     #if we get this far then the setup was all ok and we can start the measurement
                     self.show_status("Running MPP Measurement...")
                     
-                    t, v_smu, i_smu_corrected, i_smu = self.SMU.measure_MPP_time_dependent(param)
-                
+                    t, v_smu, i_smu, i_ref = self.SMU.measure_MPP_time_dependent(param)
+                    
+                    if self.SMU.useReferenceDiode:
+                        if self.SMU.referenceDiodeParallel: #light level was measured real-time during scan
+                            avgRefCurrent = sum(i_ref)/len(i_ref)
+                            avgLightLevel = abs(100. * avgRefCurrent / self.SMU.fullSunReferenceCurrent)
+                            if self.app != None:
+                                self.win.updateMeasuredLightIntensity(avgLightLevel)
+                                self.app.processEvents()
+                            
+                        else: #light level was only measured once at the beginning
+                            avgLightLevel = lightIntensity
+                            
+                    else:
+                        avgLightLevel = IV_param['light_int']
+                    
                     self.MPP_Results = {}
                     self.MPP_Results['active_area'] = param['active_area']
                     self.MPP_Results['cell_name'] = param['cell_name']
                     self.MPP_Results['light_int'] = param['light_int']
                     if self.SMU.useReferenceDiode:
-                        self.MPP_Results['light_int_meas'] = lightIntensity
+                        self.MPP_Results['light_int_meas'] = avgLightLevel
                     if param['start_voltage'] == 'auto' and len(v_smu) > 0:
                         self.MPP_Results['start_voltage'] = v_smu[0]
                     else:
@@ -2631,7 +2665,7 @@ class system:
                     self.data_MPP['t'] = t
                     self.data_MPP['v'] = v_smu
                     self.data_MPP['i'] = i_smu
-                    self.data_MPP['i_corr'] = i_smu_corrected
+                    self.data_MPP['i_ref'] = i_ref
                     
                     if self.abortRunFlag():
                         self.show_status("Run Aborted")
@@ -2857,7 +2891,7 @@ class system:
             if 'Pmpp' in IV_Results:
                 headerLines.append("Pmpp," + str(IV_Results['Pmpp']) + ",mW/cm^2")
             if self.SMU.useReferenceDiode:
-                headerLines.append("Voltage(V),Normalized Current(A),Raw Current(A),light intensity (mW/cm^2)")
+                headerLines.append("Voltage(V),Current(A),light intensity (mW/cm^2)")
             else:
                 headerLines.append("Voltage(V),Current(A)")
         elif data['scanType'] == 'CV':
@@ -2866,7 +2900,7 @@ class system:
             headerLines.append("Measurement Duration," + str(IV_Results['duration'] ) + ",sec")
             headerLines.append("Constant Voltage Results")
             if self.SMU.useReferenceDiode:
-                headerLines.append("Time(s),Voltage(V),Normalized Current(A), Raw Current(A)")
+                headerLines.append("Time(s),Voltage(V),Current(A),light intensity (mW/cm^2)")
             else:
                 headerLines.append("Time(s),Voltage(V),Current(A)")
         elif data['scanType'] == 'CC':
@@ -2881,7 +2915,7 @@ class system:
             headerLines.append("Measurement Duration," + str(IV_Results['duration'] ) + ",sec")
             headerLines.append("Maximum Power Point Results")
             if self.SMU.useReferenceDiode:
-                headerLines.append("Time(s),Voltage(V),Normalized Current(A),Normalized Power(mW/cm2),Raw Current (A)")
+                headerLines.append("Time(s),Voltage(V),Current (A),Power(mW/cm2),light intensity (mW/cm^2)")
             else:
                 headerLines.append("Time(s),Voltage(V),Current(A),Power(mW/cm2)")
         else:
@@ -2895,21 +2929,21 @@ class system:
             fileString += line + "\n"
         
         if data['scanType'] == 'JV':
-            for v,i,ref in zip(data['v'], data['i'], data['i_ref']):
+            for v,i,i_ref in zip(data['v'], data['i'], data['i_ref']):
+                fileLine = str(round(v,12)) + "," + str(round(i,12))
                 if self.SMU.useReferenceDiode:
-                    i_corr = i * IV_Results['light_int'] / IV_Results['light_int_meas']
-                    light_intensity = 100.0 * ref / self.SMU.fullSunReferenceCurrent
-                    fileLine = (str(round(v,12)) + "," + str(round(i_corr,12)) + "," + str(round(i,12)) + "," + str(round(light_intensity,12)) + "\n")
-                else:
-                    fileLine = str(round(v,12)) + "," + str(round(i,12)) + "\n"
+                    light_intensity = -100.0 * i_ref / self.SMU.fullSunReferenceCurrent
+                    fileLine += "," + str(round(light_intensity,12))
+                fileLine += "\n"
                 f.write(fileLine)
                 fileString += fileLine
         elif data['scanType'] == 'CV':
-            for t,v,i_corr,i in zip(data['t'], data['v'], data['i_corr'], data['i']):
+            for t,v,i_ref,i in zip(data['t'], data['v'], data['i_ref'], data['i']):
+                fileLine = str(round(t,6)) + "," + str(round(v,12)) + "," + str(round(i,12))
                 if self.SMU.useReferenceDiode:
-                    fileLine = str(round(t,6)) + "," + str(round(v,12)) + "," + str(round(i_corr,12)) + "," + str(round(i,12)) + "\n"
-                else:
-                    fileLine = str(round(t,6)) + "," + str(round(v,12)) + "," + str(round(i,12)) + "\n"
+                    light_intensity = -100.0 * i_ref / self.SMU.fullSunReferenceCurrent
+                    fileLine += "," + str(round(light_intensity,12))
+                fileLine += "\n"
                 f.write(fileLine)
                 fileString += fileLine
         elif data['scanType'] == 'CC':
@@ -2918,13 +2952,13 @@ class system:
                 f.write(fileLine)
                 fileString += fileLine
         elif data['scanType'] == 'MPP':
-            for t,v,i_corr,i in zip(data['t'], data['v'], data['i_corr'], data['i']):
+            for t,v,i_ref,i in zip(data['t'], data['v'], data['i_ref'], data['i']):
+                w = abs(i*v*1000./IV_Results['active_area'])
+                fileLine = str(round(t,6)) + "," + str(round(v,12)) + "," + str(round(i,12)) + "," + str(round(w,12))
                 if self.SMU.useReferenceDiode:
-                    w = abs(i_corr*v*1000./IV_Results['active_area'])
-                    fileLine = str(round(t,6)) + "," + str(round(v,12)) + "," + str(round(i_corr,12)) + "," + str(round(w,12)) + "," + str(round(i,12)) + "\n"
-                else:
-                    w = abs(i*v*1000./IV_Results['active_area'])
-                    fileLine = str(round(t,6)) + "," + str(round(v,12)) + "," + str(round(i,12)) + "," + str(round(w,12)) + "\n"
+                    light_intensity = -100.0 * i_ref / self.SMU.fullSunReferenceCurrent
+                    fileLine += "," + str(round(light_intensity,12))
+                fileLine += "\n"
                 f.write(fileLine)
                 fileString += fileLine
         
@@ -2953,20 +2987,13 @@ class system:
         A4SizeX = 11.75 #inches, for A4
         
         #load EPFL logo png file
-        basepath, trash = os.path.split(os.getcwd())
-        logoPath = os.path.join(basepath,"IVLab Accessories","EPFL_Logo.png")
+        logoPath = os.path.join(os.getcwd(),"EPFL_Logo.png")
         logo = plt.imread(logoPath)
 
         dataJ = []
-        if self.SMU.useReferenceDiode:
-            for i in data['i']:
-                #i_corr = i * IV_Results['light_int'] / IV_Results['light_int_meas']
-                i_corr = i
-                dataJ.append(i_corr*1000./IV_Results['active_area'])
-        else:
-            for i in data['i']:
-                dataJ.append(i*1000./IV_Results['active_area'])
-        
+        for i in data['i']:
+            dataJ.append(i*1000./IV_Results['active_area'])
+    
         #make plot of JV curve
         fig = plt.figure(figsize=(A4SizeX,A4SizeY))
         ax1 = fig.add_axes([0.5,0.4,0.4,0.4]) #x, y, width, height
@@ -3182,14 +3209,15 @@ if __name__ == "__main__":
     
     s = system(sp, app=app, gui=win)
     
-    #system preferences
+    #system preferences - have been moved into the system parameters file.
+    # default values are set in the system and SMU object initialization routines
+    """
     s.saveDataAutomatic = False #automatically save every scan upon completion
     s.checkVOCBeforeScan = True #check Voc polarity before each run and warn user if incorrect
     s.firstPointDwellTime = 5.0 #allow the cell to stabilize at the initial setting for this many seconds before starting a scan
-    s.MPPVoltageStep = 0.005    #initial step size for MPP algorithm
+    s.MPPVoltageStepInitial = 0.005    #initial step size for MPP algorithm
     s.MPPVoltageStepMax = 0.01 #maximum step size for MPP algorithm
     s.MPPVoltageStepMin = 0.001 #minimum step size for MPP algorithm
-    s.MPPStepGain = 10 #gain factor which determines MPP voltage step size.  change this to modify convergence time for MPP algo
     s.SMU.sense_mode = '2wire'
     s.SMU.autorange = True #False
     s.SMU.useReferenceDiode = True
@@ -3202,7 +3230,8 @@ if __name__ == "__main__":
         s.SMU.referenceDiodeParallel = False
     
     s.SMU.referenceDiodeImax = 0.010
-        
+    """
+    
     s.lamp.recipeDict = {100 : "1 sun, 1 h", 50 : "0.5 sun, 1 h", 20 : "0.2 sun, 1 h", 10 : "0.1 sun, 1 h",  0 : "dummy"}
     #filter wheel dictionary key is light level, value is filter wheel angle
     #s.lamp.filterWheelDict = {100 : 60, 50 : 120, 20 : 180, 10 : 240,  0 : 300} 

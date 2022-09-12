@@ -1,29 +1,40 @@
 {
-    "computer":
-    {
-        "hardware": "OrielIV MAC",
-        "os": "macOS Mojave 10.14.6",
-        "basePath": "/Users/lpi/Documents/IVlab_data",
-        "sdPath": "/Users/lpi/Documents/sd"
-    },
-    "IVsys":
-    {
-        "sysName": "IVLab",
-        "fullSunReferenceCurrent": 0.006318,
-        "calibrationDateTime": "Wed Jun  8 16:07:18 2022"
-    },
-    "lamp":
-    {
-        "brand": "keithley",
-        "model": "filter wheel",
-        "emulate": false
-    },
-    "SMU":
-    {
-        "brand": "Keithley",
-        "model": "2400",
-        "visa_address": "GPIB0::24::INSTR",
-        "visa_library": "/Library/Frameworks/VISA.framework/Versions/A/Headers/visa.h",
-        "emulate": false
-    }
+	"computer": 
+	{
+		"hardware": "PC",
+		"os": "Windows 10",
+		"basePath": "C:\\Users\\Public\\Documents\\IVLab",
+		"sdPath": "C:\\Users\\Public\\Documents\\IVLab\\sd"
+	},
+	"IVsys": 
+	{
+		"sysName": "IVLab",
+		"fullSunReferenceCurrent": 0.00014299999999999998,
+		"calibrationDateTime": "Wed Sep  7 11:39:05 2022",
+		"referenceDiodeImax": 0.005,
+		"saveDataAutomatic": false,
+		"checkVOCBeforeScan": true,
+		"firstPointDwellTime": 5.0,
+		"MPPVoltageStepInitial": 0.002,
+		"MPPVoltageStepMax": 0.002,
+		"MPPVoltageStepMin": 0.001
+	},
+	"lamp": 
+	{
+		"brand": "Wavelabs",
+		"model": "Sinus70",
+		"emulate": true
+	},
+	"SMU": 
+	{
+		"brand": "Keithley",
+		"model": "2400",
+		"visa_address": "ASRL1::INSTR",
+		"visa_library": "C:\\Windows\\System32\\visa32.dll",
+		"emulate": false,
+		"senseMode": "2wire",
+		"autorange": true,
+		"measSpeed": "normal",
+		"useReferenceDiode": true
+	}
 }

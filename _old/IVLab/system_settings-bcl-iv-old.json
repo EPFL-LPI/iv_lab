@@ -10,27 +10,40 @@
     {
         "sysName": "Old_IV",
         "fullSunReferenceCurrent": 0.000145,
-        "calibrationDateTime": "Wed Feb 16 16:55:17 2022"
+        "calibrationDateTime": "Wed Feb 16 16:55:17 2022",
+		"referenceDiodeImax" : 0.005,
+		"saveDataAutomatic" : false,
+		"checkVOCBeforeScan" : true,
+		"firstPointDwellTime" : 5.0,
+		"MPPVoltageStepInitial" : 0.002,
+		"MPPVoltageStepMax" : 0.002,
+		"MPPVoltageStepMin" : 0.001
     },
     "lamp":
     {
         "brand": "Trinamic",
         "model": "TMCM-3110",
         "visa_address": "ASRL1::INSTR",
-        "visa_library": "C:\\Windows\\System32\\visa32.dll"
-    },
-    "arduino":
-    {
-        "brand": "Arduino",
-        "model": "Uno",
-        "visa_address": "ASRL1::INSTR",
-        "visa_library": "C:\\Windows\\System32\\visa32.dll"
+        "visa_library": "C:\\Windows\\System32\\visa32.dll",
+		"emulate": true
     },
     "SMU":
     {
         "brand": "Keithley",
         "model": "2602",
         "visa_address": "GPIB0::24::INSTR",
-        "visa_library": "C:\\Windows\\System32\\visa32.dll"
+        "visa_library": "C:\\Windows\\System32\\visa32.dll",
+		"emulate": true,
+		"senseMode" : "2wire",
+		"autorange" : true,
+		"useReferenceDiode" : true
+    },
+	"arduino":
+    {
+        "brand": "Arduino",
+        "model": "Uno",
+        "visa_address": "ASRL1::INSTR",
+        "visa_library": "C:\\Windows\\System32\\visa32.dll",
+		"emulate" : true
     }
 }

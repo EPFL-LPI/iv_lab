@@ -616,11 +616,12 @@ class Window(QMainWindow):
         
     def createPlotHeaderWidget(self):   
         #buttons and fields above the plot
-        self.fieldCellName = QLineEdit("Enter Cell Name Here...")
+        self.fieldCellName = QLineEdit("")
+        self.fieldCellName.setPlaceholderText("Enter Cell Name Here...")
         self.fieldCellName.setMinimumWidth(500)
         self.fieldCellName.setEnabled(False)
         #self.fieldCellName.mousePressEvent = self.clearCellName
-        self.fieldCellName.cursorPositionChanged.connect(self.clearCellName)
+        #self.fieldCellName.cursorPositionChanged.connect(self.clearCellName)
         
         self.checkBoxAutoSave = QCheckBox("Auto-save")
         self.checkBoxAutoSave.setEnabled(False)
@@ -629,16 +630,19 @@ class Window(QMainWindow):
         self.buttonSaveData = QPushButton("Save Data",self)
         self.buttonSaveData.clicked.connect(self.saveScanData)
         self.buttonSaveData.setEnabled(False)
+        self.buttonSaveData.setEnabled(False)
         
         self.panelLogIn = QWidget()
         panelLogInLayout = QHBoxLayout()
-        self.fieldUserName = QLineEdit("Username")
+        self.fieldUserName = QLineEdit("")
+        self.fieldUserName.setPlaceholderText("Username")
         self.fieldUserName.setMinimumWidth(100)
-        self.fieldUserName.cursorPositionChanged.connect(self.clearUserName)
-        self.fieldUserSciper = QLineEdit("Sciper")
+        #self.fieldUserName.cursorPositionChanged.connect(self.clearUserName)
+        self.fieldUserSciper = QLineEdit("")
+        self.fieldUserSciper.setPlaceholderText("Sciper")
         self.fieldUserSciper.returnPressed.connect(self.logIn)
         self.fieldUserSciper.setMinimumWidth(100)
-        self.fieldUserSciper.cursorPositionChanged.connect(self.clearSciper)
+        #self.fieldUserSciper.cursorPositionChanged.connect(self.clearSciper)
         self.buttonLogIn = QPushButton("Log In",self)
         self.buttonLogIn.clicked.connect(self.logIn)
         
@@ -1058,8 +1062,8 @@ class Window(QMainWindow):
         
         IV_params['active_area'] = cell_active_area
         cellName = self.fieldCellName.text()
-        if cellName == "Enter Cell Name Here...":
-            cellName = ""
+        #if cellName == "Enter Cell Name Here...":
+        #    cellName = ""
         IV_params['cell_name'] = self.sanitizeCellName(cellName)
         
         #IV_params['Imax'] = 0.010
@@ -1094,8 +1098,8 @@ class Window(QMainWindow):
         params['Vmax'] = Vcompliance
         params['active_area'] = float(self.fieldCellActiveArea.text())
         cellName = self.fieldCellName.text()
-        if cellName == "Enter Cell Name Here...":
-            cellName = ""
+        #if cellName == "Enter Cell Name Here...":
+        #    cellName = ""
         params['cell_name'] = self.sanitizeCellName(cellName)
         
         self.runStarted()
@@ -1127,8 +1131,8 @@ class Window(QMainWindow):
         params['Vmax'] = abs(float(self.fieldVoltageLimit.text()))
         params['active_area'] = float(self.fieldCellActiveArea.text())
         cellName = self.fieldCellName.text()
-        if cellName == "Enter Cell Name Here...":
-            cellName = ""
+        #if cellName == "Enter Cell Name Here...":
+        #    cellName = ""
         params['cell_name'] = self.sanitizeCellName(cellName)
         
         self.runStarted()
@@ -1163,8 +1167,8 @@ class Window(QMainWindow):
         params['Vmax'] = Vcompliance
         params['active_area'] = float(self.fieldCellActiveArea.text())
         cellName = self.fieldCellName.text()
-        if cellName == "Enter Cell Name Here...":
-            cellName = ""
+        #if cellName == "Enter Cell Name Here...":
+        #    cellName = ""
         params['cell_name'] = self.sanitizeCellName(cellName)
         
         self.runStarted()
@@ -1197,8 +1201,8 @@ class Window(QMainWindow):
         params['Vmax'] = Vcompliance
         params['active_area'] = float(self.fieldCellActiveArea.text())
         cellName = self.fieldCellName.text()
-        if cellName == "Enter Cell Name Here...":
-            cellName = ""
+        #if cellName == "Enter Cell Name Here...":
+        #    cellName = ""
         params['cell_name'] = self.sanitizeCellName(cellName)
         
         self.runStarted()
@@ -1251,8 +1255,8 @@ class Window(QMainWindow):
     def saveScanData(self):
         scanType = str(self.menuSelectMeasurement.currentText())
         cellName = self.fieldCellName.text()
-        if cellName == "Enter Cell Name Here...":
-            cellName = ""
+        #if cellName == "Enter Cell Name Here...":
+        #    cellName = ""
         self.signal_saveScanData.emit(scanType, cellName)
     
     def setCalibrationReferenceCurrent(self,current):
@@ -1445,14 +1449,15 @@ class Window(QMainWindow):
         self.menuSelectMeasurement.setCurrentIndex(0)
         results = {}
         self.updateIVResults(results)
+        self.fieldCellName.setText("")
         #ugly hack to get around cursorPositionChanged event...
         #this event is not called when deleting a character, so write our default string
         #with a dot at the start, move the cursor to the start, and delete
         #otherwise if we put this string in directly the cursorPositionChanged callback
         #is activated and our default string is deleted.
-        self.fieldCellName.setText(".Enter Cell Name Here...")
-        self.fieldCellName.setCursorPosition(0)
-        self.fieldCellName.del_()
+        #self.fieldCellName.setText(".Enter Cell Name Here...")
+        #self.fieldCellName.setCursorPosition(0)
+        #self.fieldCellName.del_()
         self.ButtonSaveCalibration.setEnabled(False)
         self.fieldCalibrationReferenceCellCurrent.setText('1.00')
         self.fieldCalibrationStabilizationTime.setText('5.0')
