@@ -184,6 +184,8 @@ class SMU:
         self.fullSunReferenceCurrent = 1.0
         self.referenceDiodeImax = 0.005
         self.calibrationDateTime = 'Mon, Jan 01 00:00:00 1900'
+        
+        self.meas_period_min = 1/16 # this value is overwritten in 'connect' based on the type of SMU selected
 
         if "senseMode" in SMU_details:
             self.senseMode = SMU_details["senseMode"]
@@ -2297,7 +2299,6 @@ class system:
                             df.columns = df.columns.droplevel( 'metrics' )
 
                             jv_metrics = bric_jv.get_metrics(df, generator=False, fit_window=4)
-                            #print(jv_metrics)
                             
                             self.IV_Results['Voc'] = float(jv_metrics['voc'])
                             self.IV_Results['Jsc'] = float(jv_metrics['jsc'])*1000.
@@ -2715,8 +2716,7 @@ class system:
         #param['duration'] = 15.0
         
         #param: light int, set voltage, time, interval
-        #try:
-        if True:
+        try:
             self.show_status("Turning lamp on...")
             
             lampError = self.turn_lamp_on(param['light_int'])
@@ -2773,27 +2773,26 @@ class system:
             
             self.lamp.light_off()  
             
-            #process data and set reference diode calibration
-            #Average all current values for both diodes
-            averageMeasCurrent = sum(i_smu)/len(i_smu)
-            averageRefCurrent = sum(i_ref)/len(i_ref)
-            calFactor = (param['reference_current'] / averageMeasCurrent)*(100./param['light_int'])
-            
-            #write the new photodiode calibration current to the gui.  The user
-            #must click 'save calibration' to save this value to the config file.
-            if self.app != None:
-                win.setCalibrationReferenceCurrent(abs(averageRefCurrent * calFactor * 1000.))
-            else:
-                print("New Reference Diode Calibration Current: " + str(abs(averageRefCurrent * calFactor * 1000.)) + "mA")
-            #self.fullSunReferenceCurrent = averageRefCurrent * calFactor
-            #self.save_calibration_to_system_settings()
-            
             if self.abortRunFlag():
                 self.show_status("Calibration Aborted")
             else:
+                #process data and set reference diode calibration
+                #Average all current values for both diodes
+                averageMeasCurrent = sum(i_smu)/len(i_smu)
+                averageRefCurrent = sum(i_ref)/len(i_ref)
+                calFactor = (param['reference_current'] / averageMeasCurrent)*(100./param['light_int'])
+                
+                #write the new photodiode calibration current to the gui.  The user
+                #must click 'save calibration' to save this value to the config file.
+                if self.app != None:
+                    win.setCalibrationReferenceCurrent(abs(averageRefCurrent * calFactor * 1000.))
+                else:
+                    print("New Reference Diode Calibration Current: " + str(abs(averageRefCurrent * calFactor * 1000.)) + "mA")
+                #self.fullSunReferenceCurrent = averageRefCurrent * calFactor
+                #self.save_calibration_to_system_settings()
+            
                 self.show_status("Calibration finished")
-        try:
-            pass
+        
         except ValueError as err:
             self.error_window(str(err))
             self.show_status("Calibration Aborted With Error")
