@@ -736,6 +736,10 @@ class Window(QMainWindow):
         self.fieldPmpp = QLabel("-----")
         self.labelPmppUnits = QLabel("mW/cm^2")
         
+        self.labelLightInt = QLabel("Light Intensity:")
+        self.fieldLightInt = QLabel("-----")
+        self.labelLightIntUnits = QLabel("% sun")
+        
         IVResultsLayoutVoc = QHBoxLayout()
         IVResultsLayoutVoc.addWidget(self.labelVoc)
         IVResultsLayoutVoc.addWidget(self.fieldVoc)
@@ -771,6 +775,10 @@ class Window(QMainWindow):
         IVResultsLayoutFF.addWidget(self.fieldFillFactor)
         IVResultsLayoutFF.addWidget(self.labelFillFactorUnits)
         #IVResultsLayoutLine2.addStretch(1)
+        IVResultsLayoutLightInt = QHBoxLayout()
+        IVResultsLayoutLightInt.addWidget(self.labelLightInt)
+        IVResultsLayoutLightInt.addWidget(self.fieldLightInt)
+        IVResultsLayoutLightInt.addWidget(self.labelLightIntUnits)
         
         IVResultsLayout.addLayout(IVResultsLayoutJsc,0,0)
         IVResultsLayout.addLayout(IVResultsLayoutVoc,1,0)
@@ -779,6 +787,7 @@ class Window(QMainWindow):
         IVResultsLayout.addLayout(IVResultsLayoutJmpp,0,2)
         IVResultsLayout.addLayout(IVResultsLayoutVmpp,1,2)
         IVResultsLayout.addLayout(IVResultsLayoutPmpp,2,2)
+        IVResultsLayout.addLayout(IVResultsLayoutLightInt,3,2)
         IVResultsLayout.setColumnStretch(1,1)
         IVResultsLayout.setColumnStretch(3,1)
         #IVResultsLayout.setColumnStretch(5,1)
@@ -1311,6 +1320,10 @@ class Window(QMainWindow):
             self.fieldPmpp.setText("{:.3f}".format(IV_Results['Pmpp']))
         else:
             self.fieldPmpp.setText("-----") 
+        if 'light_int_meas' in IV_Results:
+            self.fieldLightInt.setText(f"{IV_Results['light_int_meas']:.1f}")
+        else:
+            self.fieldLightInt.setText("-----") 
         
     
     def updatePlotConstantV(self,dataX, dataY):

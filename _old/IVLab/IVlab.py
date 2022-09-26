@@ -2511,7 +2511,7 @@ class system:
                             avgLightLevel = lightIntensity
                             
                     else:
-                        avgLightLevel = IV_param['light_int']
+                        avgLightLevel = param['light_int']
                     
                     self.CV_Results = {}
                     self.CV_Results['active_area'] = param['active_area']
@@ -2645,7 +2645,7 @@ class system:
                             avgLightLevel = lightIntensity
                             
                     else:
-                        avgLightLevel = IV_param['light_int']
+                        avgLightLevel = param['light_int']
                     
                     self.MPP_Results = {}
                     self.MPP_Results['active_area'] = param['active_area']
