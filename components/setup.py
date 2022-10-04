@@ -23,13 +23,12 @@ setuptools.setup(
         "Operating System :: OS Independent",
         "Development Status :: 3 - Alpha"
     ],
-    python_requires=">=3.6.8, <3.7",
+    python_requires=">=3.6.8",
     install_requires=[
         'pyvisa',  # only required for lamps.oriel*
         'pymeasure',
         'pytrinamic',  # only required for lamps.trinamic*
     ],
     package_data={
-        'iv_lab_components.systems': 'systems'
     }
 )

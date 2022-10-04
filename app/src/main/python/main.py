@@ -1,10 +1,10 @@
 import sys
 import argparse
 
-from fbs_runtime.application_context.PyQt5 import ApplicationContext
+from fbs_runtime.application_context.PyQt6 import ApplicationContext
 
-from PyQt5.QtCore import QCoreApplication
-from PyQt5.QtWidgets import QMainWindow
+from PyQt6.QtCore import QCoreApplication
+from PyQt6.QtWidgets import QMainWindow
 
 from iv_lab_interface import IVLabInterface
 
@@ -27,7 +27,7 @@ class AppContext(ApplicationContext):
         window.setCentralWidget(interface)
         window.show()
 
-        return self.app.exec_()
+        return self.app.exec()
 
 
 def _get_cmdline_parser():

@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import (
+from PyQt6.QtWidgets import (
     QLabel,
     QDoubleSpinBox,
     QGridLayout,
@@ -21,7 +21,6 @@ class ComplianceWidget(QGroupBox):
         self.sb_voltage_limit.setDecimals(2)
         self.sb_voltage_limit.setSingleStep(0.01)
         self.sb_voltage_limit.setMinimum(0)
-        self.sb_voltage_limit.setValue(2)
         self.sb_voltage_limit.setMaximumWidth(75)
 
         lbl_current_limit = QLabel("Current Limit")
@@ -30,7 +29,6 @@ class ComplianceWidget(QGroupBox):
         self.sb_current_limit.setDecimals(2)
         self.sb_current_limit.setSingleStep(1)
         self.sb_current_limit.setMinimum(0)
-        self.sb_current_limit.setValue(5)
         self.sb_current_limit.setMaximumWidth(75)
         
         lo_main = QGridLayout()
@@ -46,6 +44,8 @@ class ComplianceWidget(QGroupBox):
         self.setMaximumWidth(300)
         self.setEnabled(False)
 
+        self.reset_fields()
+
     @property
     def value(self) -> ComplianceParameters:
         """
@@ -56,3 +56,10 @@ class ComplianceWidget(QGroupBox):
         params.current_limit = self.sb_current_limit.value() / 1000
 
         return params
+
+    def reset_fields(self):
+        """
+        Reset field value to a default value.
+        """
+        self.sb_voltage_limit.setValue(2)
+        self.sb_current_limit.setValue(5)

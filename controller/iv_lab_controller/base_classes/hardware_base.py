@@ -2,9 +2,10 @@ import logging
 from abc import ABC, abstractmethod
 
 from pyee import EventEmitter
+from pymeasure.instruments.instrument import Instrument
 
 
-class HardwareBase(ABC, EventEmitter):
+class HardwareBase(ABC, EventEmitter, Instrument):
     """
     Base class for hardware devices.
 
@@ -25,12 +26,14 @@ class HardwareBase(ABC, EventEmitter):
         """
         raise NotImplementedError()
 
+    # @todo: See pymeasure.experiment.procedure#Procedure.should_stop() 
+    # https://github.com/pymeasure/pymeasure/blob/4770fe54be14b2c1618df9711b197330dbd3f262/pymeasure/experiment/procedure.py#L204
     @property
     def should_abort(self) -> bool:
         """
         :returns: If measurement should be aborted
         """
-        self._should_abort = True
+        return self._should_abort
 
     @property
     def emulate(self) -> bool:
@@ -77,6 +80,12 @@ class HardwareBase(ABC, EventEmitter):
             self._disconnect()
 
         self._connected = False
+
+    def shutdown(self):
+        """
+        Shutdown the hardware.
+        """
+        raise NotImplementedError()
 
     def update_status(self, msg: str):
         """

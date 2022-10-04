@@ -1,7 +1,7 @@
-from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtGui import QDoubleValidator
+from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtGui import QDoubleValidator
 
-from PyQt5.QtWidgets import (
+from PyQt6.QtWidgets import (
     QStackedWidget,
     QLabel,
     QLineEdit,

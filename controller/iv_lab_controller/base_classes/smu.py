@@ -5,7 +5,10 @@ import numpy as np
 
 from .hardware_base import HardwareBase
 
-
+"""
+Value that indicates the endpoint of a range.
+If `None`, indicates no limit.
+"""
 RangeValue = Union[float, None]
 
 

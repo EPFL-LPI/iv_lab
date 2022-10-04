@@ -1,9 +1,10 @@
 import logging
+from typing import Tuple, Union
 
 import numpy as np
 
 from iv_lab_controller.base_classes.hardware_base import HardwareBase
-from iv_lab_controller.base_classes.smu import SMU
+from iv_lab_controller.base_classes.smu import SMU, RangeValue
 
 
 class MockSMU(SMU):
@@ -28,6 +29,20 @@ class MockSMU(SMU):
         Disconnect from the SMU.
         """
         logging.debug('disconnect')
+
+    @property
+    def current_range(self) -> Tuple[RangeValue, RangeValue]:
+        """
+        :returns: Min and max current values.
+        """
+        logging.debug('current range')
+
+    @property
+    def voltage_range(self) -> Tuple[RangeValue, RangeValue]:
+        """
+        :returns: Min and max voltage values.
+        """
+        logging.debug('voltage range')
 
     def set_voltage(
         self,

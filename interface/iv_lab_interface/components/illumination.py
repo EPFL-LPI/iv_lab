@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import (
+from PyQt6.QtWidgets import (
     QHBoxLayout,
     QVBoxLayout,
     QPushButton,
@@ -15,7 +15,7 @@ from iv_lab_controller.measurements.illumination_parameters import IlluminationP
 
 class IlluminationWidget(QGroupBox):
     def __init__(self):
-        super().__init__()
+        super().__init__('Light Level')
         
         self.intensities = {
             '1 Sun': 100,
@@ -26,7 +26,6 @@ class IlluminationWidget(QGroupBox):
 
     def init_ui(self): 
         # presets
-        gb_intensity = QGroupBox('Light Level')
         self.cb_intensity = QComboBox()
         self.cb_intensity.setMaximumWidth(300)
         for lbl, _ in self.intensities.items():
@@ -38,7 +37,6 @@ class IlluminationWidget(QGroupBox):
         self.sb_manual_intensity = QDoubleSpinBox()
         self.sb_manual_intensity.setDecimals(2)
         self.sb_manual_intensity.setSingleStep(0.1)
-        self.sb_manual_intensity.setValue(100)
         
         lo_manual = QHBoxLayout()
         lo_manual.addWidget(lbl_manual_intensity)
@@ -71,6 +69,8 @@ class IlluminationWidget(QGroupBox):
         self.setLayout(lo_main)
         self.setMaximumWidth(300)
         self.setEnabled(False)
+
+        self.reset_fields()
     
     @property
     def manual_illumination(self) -> bool:
@@ -111,3 +111,10 @@ class IlluminationWidget(QGroupBox):
             params.intensity = inten
 
         return params
+
+    def reset_fields(self):
+        """
+        Reset fields to default values.
+        """
+        self.cb_intensity.setCurrentIndex(0)
+        self.sb_manual_intensity.setValue(100)

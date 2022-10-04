@@ -34,7 +34,7 @@ setuptools.setup(
         "Development Status :: 3 - Alpha"
     ],
     install_requires = [
-        'PyQt5'
+        'PyQt6'
         'bric_analysis_libraries>=0.1.2'
     ],
     package_data = {

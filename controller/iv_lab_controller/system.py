@@ -1,9 +1,9 @@
 import sys
 import inspect
 import importlib.util
-from typing import Tuple
+from typing import Tuple, Union
 
-from .base_classes.system import System
+from .base_classes.system import System as System
 
 
 def load_system(file: str, emulate: bool = False) -> Tuple[str, System]:
@@ -29,4 +29,4 @@ def load_system(file: str, emulate: bool = False) -> Tuple[str, System]:
         raise RuntimeError(f'System module must only define one class, found {len(mod_classes)}.')
 
     system = mod_classes[0]
-    return system
+    return system 

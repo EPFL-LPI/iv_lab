@@ -1,7 +1,7 @@
 from json import JSONDecodeError
 
-from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtWidgets import (
+from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtWidgets import (
     QLabel,
     QPushButton,
     QLineEdit,
@@ -84,7 +84,7 @@ class AuthenticationWidget(QStackedWidget):
             common.show_message_box(
                 'Users list missing',
                 'Could not load users list. Please contact an administrator.',
-                icon=QMessageBox.Critical
+                icon=QMessageBox.Icon.Critical
             )
             return
 
@@ -92,7 +92,7 @@ class AuthenticationWidget(QStackedWidget):
             common.show_message_box(
                 'Users list corrupt',
                 'Could not load users list. Please contact an administrator.',
-                icon=QMessageBox.Critical
+                icon=QMessageBox.Icon.Critical
             )
             return
 
@@ -101,7 +101,7 @@ class AuthenticationWidget(QStackedWidget):
             common.show_message_box(
                 'Invalid credentials',
                 'Invalid username or password.',
-                icon=QMessageBox.Critical
+                icon=QMessageBox.Icon.Critical
             )
             return
 

@@ -9,8 +9,8 @@ from pymeasure.experiment.parameters import (
 from ..base_classes.measurement_parameters import MeasurementParameters
 from .types import IVSweepDirection
 
-
-class IVCurveParameters(MeasurementParameters):
+# @todo: Create correct parameters, currenlty placeholder
+class ChronopotentiometryParameters(MeasurementParameters):
 	"""
 	Parameters for an IV curve measurement.
 	"""

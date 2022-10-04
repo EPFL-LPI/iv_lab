@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import (
+from PyQt6.QtWidgets import (
 	QDialog,
 	QPushButton,
 	QGridLayout,
@@ -166,7 +166,7 @@ class UsersDialog(QDialog):
 			common.show_message_box(
 				'Error saving users',
 				f'An error occurred when updating the users list\n{err}',
-				icon=QMessageBox.Critical
+				icon=QMessageBox.Icon.Critical
 			)
 
 			self.reject()

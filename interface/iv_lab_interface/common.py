@@ -1,6 +1,6 @@
 from typing import Union
 
-from PyQt5.QtWidgets import (
+from PyQt6.QtWidgets import (
     QMessageBox,
     QStatusBar
 )
@@ -10,7 +10,7 @@ def show_message_box(
     title: str,
     message: str,
     info: str = '',
-    icon: QMessageBox.Icon = QMessageBox.NoIcon
+    icon: QMessageBox.Icon = QMessageBox.Icon.NoIcon
 ):
     """
     Shows a nonmodal message box.
@@ -18,25 +18,25 @@ def show_message_box(
     :param title: Title of the box.
     :param message: Message content.
     :param info: Information text. [Default: '']
-    :param icon: Box icon. [Default: QMessageBox.NoIcon]
+    :param icon: Box icon. [Default: QMessageBox.Icon.NoIcon]
     """
     msg = QMessageBox()
     msg.setIcon(icon)
     msg.setText(message)
     msg.setInformativeText(info)
     msg.setWindowTitle(title)
-    msg.exec_()
+    msg.exec()
 
 
 class StatusBar():
     """
-    Singleton class used to hold the applications status bar.
+    Singleton class used to hold the application's status bar.
     Used for easy access to the status bar from anywhere in the application.
-    Should be initialized with the main wdiget.
+    Should be initialized with the main widget.
     """
     _instance: Union[QStatusBar, None] = None
 
-    def __new__(cls, statusbar: QStatusBar = None) -> 'StatusBar':
+    def __new__(cls, statusbar: Union[QStatusBar, None] = None) -> QStatusBar:
         """
         :param statusbar: Status bar to store.
         """

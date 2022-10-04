@@ -1,16 +1,9 @@
-from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtWidgets import (
-    QLabel,
+from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtWidgets import (
     QPushButton,
-    QComboBox,
     QLineEdit,
     QCheckBox,
-    QVBoxLayout,
     QHBoxLayout,
-    QGridLayout,
-    QGroupBox,
-    QStackedWidget,
-    QFrame,
     QWidget,
 )
         
@@ -42,6 +35,8 @@ class PlotHeaderWidget(QWidget):
         lo_main.addWidget(self.cb_auto_save)
         lo_main.addWidget(self.btn_save)
         self.setLayout(lo_main)
+
+        self.reset_fields()
     
     @property
     def cell_name(self) -> str:
@@ -59,5 +54,11 @@ class PlotHeaderWidget(QWidget):
 
     def save_data(self):
         cell_name = self.in_cell_name.text()
-        
         self.signal_save_data.emit(cell_name)
+
+    def reset_fields(self):
+        """
+        Reset field values to default.
+        """
+        self.in_cell_name.clear()
+        self.cb_auto_save.setChecked(False)

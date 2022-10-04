@@ -2,37 +2,36 @@ import datetime as dt
 from typing import Dict, List, Union
 
 import numpy as np
-from pymeasure.experiment.results import Results as PyMeasureResult
+from pymeasure.experiment.results import Results as PyMeasureResults
 
 from ..user import User
-from .computer_parameters import ComputerParameters
+from .. import common
+from .measurement_parameters import MeasurementParameters
 
 
-class Result(PyMeasureResult):
+class Results(PyMeasureResults):
     """
     Results from an experiment.
     """
     def __init__(
         self,
         data: np.array,
-        computer_parameters: ComputerParameters,
         user: Union[User, None] = None,
-        scan_parameters: Union[Dict, None] = None,
+        measurement_parameters: Union[MeasurementParameters, None] = None,
         cell_parameters: Union[Dict, None] = None,
         system_parameters: Union[Dict, None] = None
     ):
         """
         :param data: Data from the IV scan.
-        :param computer_parameters: ComputerParameters.
         :param user: User. [Default: None]
-        :param scan_parameters: Scan parameters. [Default: None]
+        :param scan_parameters: Measurement parameters. [Default: None]
         :param cell_parameters: Cell parameters. [Default: None]
         :param system_parameters: System parameters. [Default: None]
         """
-        super.__init__()
+        super().__init__()
+        self.user = user
         self.data = data
-        self.computer_parameters = computer_parameters
-        self.scan_parameters = scan_parameters
+        self.measurement_parameters = measurement_parameters
         self.cell_parameters = cell_parameters
         self.system_parameters = system_parameters
 
@@ -53,7 +52,7 @@ class Result(PyMeasureResult):
         :returns: User's name if user is available, otherwise `anonymous`.
         """
         return (
-            user.username
+            self.user.username
             if (self.user is not None) else
             'anonymous'
         )
@@ -62,7 +61,7 @@ class Result(PyMeasureResult):
         """
         :returns: List of header lines.
         """
-        return sef._default_header()
+        return self._default_header()
 
     def save_csv(self, file: Union[str, None]):
         """
@@ -89,6 +88,7 @@ class Result(PyMeasureResult):
                     fileLine = str(round(v,12)) + "," + str(round(i,12)) + "\n"
                 f.write(fileLine)
                 fileString += fileLine
+
         elif data['scanType'] == 'CV':
             for t,v,i_corr,i in zip(data['t'], data['v'], data['i_corr'], data['i']):
                 if self.SMU.useReferenceDiode:
@@ -97,11 +97,13 @@ class Result(PyMeasureResult):
                     fileLine = str(round(t,6)) + "," + str(round(v,12)) + "," + str(round(i,12)) + "\n"
                 f.write(fileLine)
                 fileString += fileLine
+
         elif data['scanType'] == 'CC':
             for t,v,i in zip(data['t'], data['v'], data['i']):
                 fileLine = str(round(t,6)) + "," + str(round(v,12)) + "," + str(round(i,12)) + "\n"
                 f.write(fileLine)
                 fileString += fileLine
+
         elif data['scanType'] == 'MPP':
             for t,v,i_corr,i in zip(data['t'], data['v'], data['i_corr'], data['i']):
                 if self.SMU.useReferenceDiode:
@@ -128,12 +130,13 @@ class Result(PyMeasureResult):
             s = open(sdFilePath, "w")
             s.write(self.scramble_string(fileString)) 
             s.close()
+
         except:
             pass
 
         out = '\n'.join(out)
         
-        data_path = os.path.join(self.computer_parameters.data_path, self.username, filename)
+        data_path = os.path.join(common.data_directory(), self.username, filename)
         basePath, _ = os.path.split(dataFilePath)
         if not os.path.exists(basePath):
             os.makedirs(basePath)

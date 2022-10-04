@@ -8,7 +8,7 @@ import math
 # from pymeasure.instruments.keithley import Keithley2400 # this is imported in the code if keithley not emulated
 # import pyvisa #used for oriel lamp
 from IV_gui import Window
-from PyQt5.QtWidgets import QApplication, QMessageBox
+from PyQt6.QtWidgets import QApplication, QMessageBox
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd

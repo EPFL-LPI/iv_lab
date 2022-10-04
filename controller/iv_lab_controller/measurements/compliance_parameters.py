@@ -5,6 +5,7 @@ from pymeasure.experiment.parameters import FloatParameter
 from ..base_classes.measurement_parameters import MeasurementParameters
 
 
+# @todo: Create correct parameters, currently placeholder
 class ComplianceParameters(MeasurementParameters):
 	"""
 	Parameters for measurement compliance.

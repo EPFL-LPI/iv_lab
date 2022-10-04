@@ -19,7 +19,7 @@ class Lamp(HardwareBase):
         self._intensity: float = 100  # light intensity set point
             
     @property
-    def light_is_on(self) -> bool:
+    def is_light_on(self) -> bool:
         """
         :returns: Whether or not the light is on.
         """

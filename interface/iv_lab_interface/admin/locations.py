@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import (
+from PyQt6.QtWidgets import (
 	QMessageBox,
 	QDialog,
 	QPushButton,
@@ -61,7 +61,7 @@ class ApplicationLocationsDialog(QDialog):
 			common.show_message_box(
 				'Error saving data directory',
 				f'An error occured while saving the data directory\n{err}',
-				icon=QMessageBox.Critical
+				icon=QMessageBox.Icon.Critical
 			)
 			return
 

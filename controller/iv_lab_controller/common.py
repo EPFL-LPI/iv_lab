@@ -2,14 +2,14 @@
 Common functions used throughout the application.
 """
 import os
-from PyQt5.QtCore import QSettings, QStandardPaths
+from PyQt6.QtCore import QSettings, QStandardPaths
 
 
 def app_data_folder() -> str:
 	"""
 	:returns: Path to the directory where application data should be stored.
 	"""
-	return QStandardPaths.writableLocation(QStandardPaths.AppDataLocation)
+	return QStandardPaths.writableLocation(QStandardPaths.StandardLocation.AppDataLocation)
 
 
 def default_system_parameters_file() -> str:
@@ -60,7 +60,7 @@ def data_directory() -> str:
 	:returns: Path to the default measurement data folder.
 	"""
 	settings = QSettings()
-	default = QStandardPaths.writableLocation(QStandardPaths.DocumentsLocation)
+	default = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.DocumentsLocation)
 	default = os.path.join(default, 'data')
 	return settings.value('data_directory', default, type=str)
 

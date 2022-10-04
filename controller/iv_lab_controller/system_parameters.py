@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Union, Dict
 import json
 
 from . import common
@@ -29,9 +29,9 @@ class SystemParameters:
 
     def __init__(self, **kwargs):
     
-        self.lamp = None
-        self.arduino = None
-        self.SMU = None
+        self.lamp: Union[Dict, None] = None
+        self.arduino: Union[Dict, None] = None
+        self.SMU: Union[Dict, None] = None
     
         for key, value in kwargs.items():
             if key == 'computer':

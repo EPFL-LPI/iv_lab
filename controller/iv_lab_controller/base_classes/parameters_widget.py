@@ -1,22 +1,14 @@
 from abc import abstractmethod
 
-from PyQt5.QtCore import pyqtSignal
+from PyQt6.QtCore import pyqtSignal
 
-from PyQt5.QtWidgets import (
-    QStackedWidget,
-    QLabel,
-    QLineEdit,
-    QHBoxLayout,
+from PyQt6.QtWidgets import (
     QVBoxLayout,
     QPushButton,
     QWidget,
-    QGroupBox,
-    QCheckBox,
-    QComboBox,
-    QGridLayout
 )
 
-from iv_lab_controller.base_classes.measurement_parameters import MeasurementParameters
+from .measurement_parameters import MeasurementParameters
 
 
 class MeasurementParametersWidget(QWidget):
@@ -59,6 +51,13 @@ class MeasurementParametersWidget(QWidget):
         Adds parameter elements to the main layout.
 
         :param lo_main: Main layout.
+        """
+        raise NotImplementedError()
+
+    @abstractmethod
+    def reset_fields():
+        """
+        Set field values to default value.
         """
         raise NotImplementedError()
 

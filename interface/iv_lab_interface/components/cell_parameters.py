@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import (
+from PyQt6.QtWidgets import (
     QLabel,
     QDoubleSpinBox,
     QHBoxLayout,
@@ -23,7 +23,6 @@ class CellParametersWidget(QWidget):
         self.sb_cell_area.setDecimals(2)
         self.sb_cell_area.setSingleStep(0.01)
         self.sb_cell_area.setMinimum(0)
-        self.sb_cell_area.setValue(1)
         self.sb_cell_area.setMaximumWidth(75)
         
         lo_main = QHBoxLayout()
@@ -32,6 +31,8 @@ class CellParametersWidget(QWidget):
         lo_main.addWidget(lbl_cell_area_units)
         self.setLayout(lo_main)
         self.setEnabled(False)
+
+        self.reset_fields()
     
     @property
     def value(self) -> CellParameters:
@@ -42,3 +43,9 @@ class CellParametersWidget(QWidget):
         params.cell_area = self.sb_cell_area.value()
 
         return params
+
+    def reset_fields(self):
+        """
+        Reset field values to default values.
+        """
+        self.sb_cell_area.setValue(1)

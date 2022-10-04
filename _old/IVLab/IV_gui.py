@@ -5,10 +5,10 @@ import json
 import unicodedata
 import re
 
-from PyQt5.QtCore import Qt
-from PyQt5.QtCore import QObject, QThread, pyqtSignal, QRectF
-from PyQt5.QtGui import QIntValidator, QDoubleValidator
-from PyQt5.QtWidgets import (
+from PyQt6.QtCore import Qt
+from PyQt6.QtCore import QObject, QThread, pyqtSignal, QRectF
+from PyQt6.QtGui import QIntValidator, QDoubleValidator
+from PyQt6.QtWidgets import (
     QApplication,
     QLabel,
     QMainWindow,

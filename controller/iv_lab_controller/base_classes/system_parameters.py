@@ -2,7 +2,7 @@ from abc import ABC
 from datetime import datetime
 
 
-class IVSystemParameters(ABC):
+class SystemParameters(ABC):
 	"""
 	Parameters describing the IV system.
 	"""

@@ -1,13 +1,13 @@
 import json
-from typing import Union
+from typing import Union, List
 
-from PyQt5.QtCore import (
+from PyQt6.QtCore import (
     Qt,
     QSettings,
     pyqtSignal
 )
 
-from PyQt5.QtWidgets import (
+from PyQt6.QtWidgets import (
     QMainWindow,
     QHBoxLayout,
     QSplitter,
@@ -16,17 +16,21 @@ from PyQt5.QtWidgets import (
     QMessageBox,
     QMenuBar
 )
+from pymeasure.experiment.procedure import Procedure
 
 from iv_lab_controller import gui as GuiCtrl
 from iv_lab_controller import system as SystemCtrl
+from iv_lab_controller import common as ctrl_common
 from iv_lab_controller.user import User, Permission
 from iv_lab_controller.system_parameters import SystemParameters
-from iv_lab_controller.measurements.types import MeasurementType
+from iv_lab_controller.base_classes.system import System
+from iv_lab_controller.base_classes.results import Results
+from iv_lab_controller.base_classes.experiment import Experiment
 
 from . import common
 from .measurement import MeasurementFrame
 from .plot import PlotFrame
-from.admin.systems import SystemsDialog
+from .admin.systems import SystemsDialog
 from .admin.locations import ApplicationLocationsDialog
 from .admin.users import UsersDialog
 
@@ -63,10 +67,10 @@ class IVLabInterface(QWidget):
         self.__debug = debug
 
         # --- instance variables ---
-        self.clicksCount = 0
-        self.flag_abortRun = False
-        self.system = None
-        self._system_name = None
+        # self.clicksCount = 0
+        self.flag_abortRun: bool = False
+        self.system: Union[System, None] = None
+        self._system_name: Union[str, None] = None
 
         # self.window = None
         self.settings = QSettings()
@@ -78,7 +82,7 @@ class IVLabInterface(QWidget):
         self.register_connections()
 
         # signal all listeners of initial user
-        self.user = None
+        self.user: Union[User, None] = None
 
     @property
     def debug(self) -> bool:
@@ -121,14 +125,14 @@ class IVLabInterface(QWidget):
         self.plot_frame = PlotFrame()
         self.authentication = self.plot_frame.authentication
 
-        splitter = QSplitter(Qt.Horizontal)
+        splitter = QSplitter(Qt.Orientation.Horizontal)
         splitter.addWidget(self.measurement_frame)
         splitter.addWidget(self.plot_frame)
-        splitter.setStretchFactor(1,10)
+        splitter.setStretchFactor(1, 10)
         
         layout = QHBoxLayout()
         layout.addWidget(splitter)
-        layout.setContentsMargins(10,10,10,10)
+        layout.setContentsMargins(10, 10, 10, 10)
         self.setLayout(layout)
 
         # main menu bar
@@ -142,7 +146,7 @@ class IVLabInterface(QWidget):
         self.authentication.user_authenticated.connect(self.set_user)
         self.authentication.user_logged_out.connect(self.on_log_out)
         self.measurement_frame.initialize_hardware.connect(self.initialize_system)
-        self.measurement_frame.run_measurement.connect(self.run_measurement)
+        self.measurement_frame.run_procedure.connect(self.run_procedure)
 
     def __delete_controller(self):
         """
@@ -159,7 +163,6 @@ class IVLabInterface(QWidget):
         self._user = user
         enable_user_ui = (user is not None)
         self.toggle_user_ui(enable=enable_user_ui)
-        
         is_admin = (
             (user is not None) and
             (Permission.Admin in user.permissions)
@@ -286,38 +289,26 @@ class IVLabInterface(QWidget):
         Create system controller if not already.
         Initialize hardware.
         """
-        common.StatusBar().showMessage('Initializing hardware...')
-
+        # load system files
         if self.system is None:
+            # load system
             try:
-                sys_params = SystemParameters.from_file()
+                system_file = ctrl_common.system_path()
+                self._system_name, system_cls = SystemCtrl.load_system(system_file, emulate=self.emulate)
             
             except FileNotFoundError:
                 common.show_message_box(
-                    'Missing system parameters file',
-                    'System parameters file could not be found.\nPlease contact an administrator.',
-                    icon=QMessageBox.Critical
+                    'Could not load System',
+                    f'Could not find System file\nPlease contact an administrator.',
+                    icon=QMessageBox.Icon.Critical
                 )
                 return
 
-
-            except json.JSONDecodeError:
-                common.show_message_box(
-                    'System parameters file corrupted',
-                    'System parameters file is corrupted.\nPlease contact an administrator.',
-                    icon=QMessageBox.Critical
-                )
-                return
-
-            try:
-                system_file = '/home/brian/Documents/lab/python_scripts/iv_lab/components/systems/mock_system.py'
-                self._system_name, system_cls = SystemCtrl.load_system(system_file, emulate=self.emulate)
-            
             except RuntimeError as err:
                 common.show_message_box(
                     'Could not load System',
                     f'Could not load System due to the following error:\n{err}\nPlease contact an administrator.',
-                    icon=QMessageBox.Critical
+                    icon=QMessageBox.Icon.Critical
                 )
                 return
 
@@ -325,6 +316,14 @@ class IVLabInterface(QWidget):
             self.system.smu.add_listener('status_update', common.StatusBar().showMessage)
             self.system.lamp.add_listener('status_update', common.StatusBar().showMessage)
 
+            experiments: List[Experiment] = []
+            for perm in self.user.permissions:
+                experiments += self.system.experiments_for_permission(perm)
+
+            self.measurement_frame.experiments = experiments
+
+        # initialize hardware
+        common.StatusBar().showMessage('Initializing hardware...')
         try:
             self.system.connect()
 
@@ -332,17 +331,28 @@ class IVLabInterface(QWidget):
             common.show_message_box(
                 'Could not initialize hardware',
                 f'Could not initialize hardware due to the following error.\n{err}',
-                icon=QMessageBox.Critical
+                icon=QMessageBox.Icon.Critical
             )
+            common.StatusBar().showMessage('Error initializing hardware')
 
         else:
+            self.measurement_frame.system = self.system
             common.StatusBar().showMessage('Hardware initialized')
-            self.measurement_frame.enable_measurement_ui()
 
-    def run_measurement(self, kind: MeasurementType, params: dict):
+    # @todo
+    def run_procedure(self, procedure: Procedure):
+        """
+        Runs a procedure.
+
+        :param procedure: The procedure to run.
+            The `lamp` and `smu` will be set from the system.
+        """
+        procedure.lamp = self.system.lamp
+        procedure.smu = self.system.smu
+        results = Results(procedure, data_filename)
+
         cell_name = self.plot_frame.plotHeader.cell_name
-        params['cell_name'] = GuiCtrl.sanitize_cell_name(cell_name)
-
+        cell_name = GuiCtrl.sanitize_cell_name(cell_name)
 
     # ---------------------
     # --- admin actions ---
