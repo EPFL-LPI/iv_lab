@@ -1,9 +1,7 @@
-from abc import ABC
-
-from iv_lab_controller.base_classes.lamp import Lamp
+from iv_lab_controller.base_classes import Lamp
 
 
-class TrinamicLamp(ABC, Lamp):
+class TrinamicLamp(Lamp):
     """
     Trinamic lamps base class.
     """

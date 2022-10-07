@@ -1,12 +1,12 @@
 from typing import Union
 
-from pymeasure.experiment.parameters import FloatParameter
+from pymeasure.experiment import FloatParameter
 
-from ..base_classes.measurement_parameters import MeasurementParameters
+from ..base_classes import ExperimentParameters
 
 
 # @todo: Create correct parameters, currently placeholder
-class ComplianceParameters(MeasurementParameters):
+class ComplianceParameters(ExperimentParameters):
 	"""
 	Parameters for measurement compliance.
 	"""

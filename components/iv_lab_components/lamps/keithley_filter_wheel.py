@@ -1,7 +1,6 @@
 import time
 
-from iv_lab_controller.base_classes.lamp import Lamp
-from ..smu import SMU
+from iv_lab_controller.base_classes import Lamp, SMU
 
 
 class KeithleyFilterWheel(Lamp):
@@ -12,7 +11,7 @@ class KeithleyFilterWheel(Lamp):
         """
         :param emulate: Whether to emulate the lamp or not. [Default: False]
         """
-        super().__init__()
+        super().__init__(emulate=emulate)
 
         self.smu = smu
         self.filter_wheel_map = {

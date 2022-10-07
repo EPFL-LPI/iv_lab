@@ -19,15 +19,15 @@ class IVCurveParametersWidget(MeasurementParametersWidget):
     def __init__(self):
         super().__init__()
 
+        self.user_current_limit = 0
+        self.user_voltage_limit = 1.2
+
         self.setMaximumWidth(300)
 
     def init_params_ui(self, lo_main: QVBoxLayout):
         """
         Initialize parameters UI.
         """
-        self.user_current_limit = 0
-        self.user_voltage_limit = 1.2
-
         self.sb_use_auto_limits = QCheckBox("Use Automatic Limits (0 - Fwd Limit)")
         self.sb_use_auto_limits.stateChanged.connect(self.toggle_limit_mode)
 
@@ -36,6 +36,7 @@ class IVCurveParametersWidget(MeasurementParametersWidget):
         self.sb_min_voltage.setDecimals(2)
         self.sb_min_voltage.setSingleStep(0.01)
         self.sb_min_voltage.setMinimum(0)
+        self.sb_min_voltage.setMinimum(-self.user_voltage_limit)
         self.sb_min_voltage.setMaximum(self.user_voltage_limit)
 
         self.lbl_max_voltage = QLabel("Maximum Voltage")

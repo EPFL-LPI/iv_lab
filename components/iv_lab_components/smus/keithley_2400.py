@@ -1,6 +1,7 @@
 from typing import Tuple
 
-from pymeasure.instruments.keithley.keithley2400 import Keithley2400 as Keithley2400Base
+import numpy as np
+from pymeasure.instruments.keithley import Keithley2400 as Keithley2400Base
 from pymeasure.adapters import Adapter
 
 from iv_lab_controller.base_classes.smu import SMU, RangeValue

@@ -1,10 +1,10 @@
 from abc import ABC
-from typing import Type, Dict, Any
+from typing import Type, Dict, Union, Any
 
-from pymeasure.experiment.procedure import Procedure as Procedure
-from pymeasure.experiment.parameters import Parameter
+from pymeasure.experiment import Procedure
+from pymeasure.display.widgets import TabWidget
 
-from .parameters_widget import MeasurementParametersWidget
+from .experiment_parameters_widget import ExperimentParametersWidget
 
 
 class Experiment(ABC):
@@ -14,12 +14,8 @@ class Experiment(ABC):
     # display name of the procedure
     name: str
     procedure: Type[Procedure]
-    ui: MeasurementParametersWidget
-
-    def __init__(self):
-        """
-        """
-        pass
+    ui: ExperimentParametersWidget
+    plot_widget: Union[TabWidget, None]
 
     @classmethod
     def create_procedure(cls, params: Dict[str, Any]) -> Procedure:

@@ -82,7 +82,6 @@ def authenticate(username: str, pwd: str) -> Union[User, None]:
     :param pwd: Cleartext password.
     :returns: User if valid user is found and authenticated, None otherwise.
     """
-    username_std = username.lower()
     users = user_list()
     user = get_user_by_name(username, users)
 

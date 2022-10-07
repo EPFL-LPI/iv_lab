@@ -1,6 +1,6 @@
 import pyvisa
 
-from iv_lab_controller.base_classes.lamp import Lamp
+from iv_lab_controller.base_classes import Lamp
 
 
 class OrielLSS7120(Lamp):

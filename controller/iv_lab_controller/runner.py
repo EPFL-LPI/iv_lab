@@ -1,9 +1,9 @@
 from collections import deque
 from typing import Union
 
-from pymeasure.experiments.workers import Worker
+from pymeasure.experiment import Worker
 
-from .measurements.base_classes.result import Result
+from .base_classes import Results
 
 
 class Runner():
@@ -14,11 +14,11 @@ class Runner():
     def __init__(self):
         """
         """
-        self._result_queue: deque[Result] = deque()
+        self._result_queue: deque[Results] = deque()
         self._active_worker: Union[Worker, None] = None
 
     @property
-    def result_queue(self) -> deque[Result]:
+    def result_queue(self) -> deque[Results]:
         """
         :returns: The procedure queue.
         """

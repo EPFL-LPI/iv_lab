@@ -2,11 +2,11 @@ import datetime as dt
 from typing import Dict, List, Union
 
 import numpy as np
-from pymeasure.experiment.results import Results as PyMeasureResults
+from pymeasure.experiment import Results as PyMeasureResults
 
 from ..user import User
 from .. import common
-from .measurement_parameters import MeasurementParameters
+from .experiment_parameters import ExperimentParameters
 
 
 class Results(PyMeasureResults):
@@ -17,7 +17,7 @@ class Results(PyMeasureResults):
         self,
         data: np.array,
         user: Union[User, None] = None,
-        measurement_parameters: Union[MeasurementParameters, None] = None,
+        measurement_parameters: Union[ExperimentParameters, None] = None,
         cell_parameters: Union[Dict, None] = None,
         system_parameters: Union[Dict, None] = None
     ):

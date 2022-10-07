@@ -3,21 +3,26 @@ from typing import List
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import (
     QStackedWidget,
+    QPushButton,
     QVBoxLayout,
     QGroupBox,
     QComboBox,
 )
 
-from iv_lab_controller.base_classes.measurement_parameters import MeasurementParameters
-from iv_lab_controller.base_classes.experiment import Experiment
+from iv_lab_controller.base_classes import ExperimentParameters, Experiment
+
+from ..types import ExperimentAction, ExperimentState
 
 
 class ExperimentParametersWidget(QGroupBox):
-    run_experiment = pyqtSignal()
-    abort = pyqtSignal()
+    queue_experiment = pyqtSignal(type(Experiment), ExperimentParameters)
+    action = pyqtSignal(ExperimentAction)
 
     def __init__(self):
         super().__init__("Measurement")
+        
+        self._state = ExperimentState.Standby
+
         self.init_ui()
         self.register_connections()
 
@@ -47,7 +52,7 @@ class ExperimentParametersWidget(QGroupBox):
 
             e_ui = exp.ui()
             self.stk_experiments.addWidget(e_ui)
-            e_ui.run.connect(self.run_experiment.emit)
+            e_ui.queue.connect(lambda: self.queue_experiment.emit(exp, e_ui.value))
 
     @property
     def active_experiment(self) -> Experiment:
@@ -58,7 +63,35 @@ class ExperimentParametersWidget(QGroupBox):
         return self.experiments[selected]
 
     @property
-    def value(self) -> MeasurementParameters:
+    def state(self) -> ExperimentState:
+        """
+        :returns: Current state of the experiment.
+        """
+        return self._state
+
+    @state.setter
+    def state(self, state: ExperimentState):
+        """
+        Sets the current experiment state.
+        """
+        self._state = state
+        if self.state == ExperimentState.Standby:
+            self.stk_action.setCurrentIndex(ExperimentAction.Run.value)
+            self.btn_run.setEnabled(True)
+        
+        elif self.state == ExperimentState.Running:
+            self.stk_action.setCurrentIndex(ExperimentAction.Abort.value)
+            
+        elif self.state == ExperimentState.Aborting:
+            self.stk_action.setCurrentIndex(ExperimentAction.Run.value)
+            self.btn_run.setEnabled(False)
+
+        else:
+            # @unreachable
+            raise ValueError('Unknown experiment state.')
+
+    @property
+    def value(self) -> ExperimentParameters:
         """
         :returns: Parameter values of the active measurement.
         """
@@ -74,15 +107,25 @@ class ExperimentParametersWidget(QGroupBox):
         self.cb_measurement_select.setMaximumWidth(300)
         self.stk_experiments = QStackedWidget()
 
+        self.btn_run = QPushButton('Run')
+        self.btn_abort = QPushButton('Abort')
+        self.stk_action = QStackedWidget()
+        self.stk_action.insertWidget(ExperimentAction.Run.value, self.btn_run)
+        self.stk_action.insertWidget(ExperimentAction.Abort.value, self.btn_abort)
+
         lo_main = QVBoxLayout()
         lo_main.addWidget(self.cb_measurement_select)
         lo_main.addWidget(self.stk_experiments)
+        lo_main.addWidget(self.stk_action)
+
         self.setLayout(lo_main)
         self.setEnabled(False)
         self.setMaximumWidth(300)
 
     def register_connections(self):
         self.cb_measurement_select.currentIndexChanged.connect(self.select_experiment)
+        self.btn_run.clicked.connect(self.trigger_run)
+        self.btn_abort.clicked.connect(self.trigger_abort)
 
     def select_experiment(self, i: int):
         """
@@ -93,8 +136,16 @@ class ExperimentParametersWidget(QGroupBox):
         """
         self.stk_experiments.setCurrentIndex(i)
 
-    def _abort(self):
+    def trigger_run(self):
         """
-        Signal to abort measurement.
+        Trigger a run.
         """
-        self.abort.emit()
+        self.action.emit(ExperimentAction.Run)
+        self.state = ExperimentState.Running
+
+    def trigger_abort(self):
+        """
+        Trigger an abort.
+        """
+        self.action.emit(ExperimentAction.Abort)
+        self.state = ExperimentState.Aborting

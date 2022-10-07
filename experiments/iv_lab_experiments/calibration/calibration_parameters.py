@@ -1,11 +1,11 @@
 from typing import Union
 
-from pymeasure.experiment.parameters import FloatParameter
+from pymeasure.experiment import FloatParameter
 
-from .base_classes.measurement_parameters import MeasurementParameters
+from iv_lab_controller.base_classes import ExperimentParameters
 
 
-class CalibrationParameters(MeasurementParameters):
+class CalibrationParameters(ExperimentParameters):
     """
     Measurement parameters for MPP measurements.
     """

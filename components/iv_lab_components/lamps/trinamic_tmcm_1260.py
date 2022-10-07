@@ -1,5 +1,5 @@
-from PyTrinamic.connections.ConnectionManager import ConnectionManager
-from PyTrinamic.modules.TMCM3110.TMCM_3110 import TMCM_3110
+from pytrinamic.connections import ConnectionManager
+from pytrinamic.modules import TMCM1260
 
 from .trinamic_base import TrinamicLamp
 
@@ -32,7 +32,7 @@ class TrinamicTMCM1260(TrinamicLamp):
     def _connect(self):
         connectionManager = ConnectionManager()
         self.interface = connectionManager.connect()
-        self.motor = TMCM_3110(myInterface)
+        self.motor = TMCM1260(myInterface)
         
         self.motor.setMaxAcceleration(0, 1000)
         self.motor.setMaxVelocity(0, 1000)

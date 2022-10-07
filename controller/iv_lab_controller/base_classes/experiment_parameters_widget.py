@@ -4,19 +4,17 @@ from PyQt6.QtCore import pyqtSignal
 
 from PyQt6.QtWidgets import (
     QVBoxLayout,
-    QPushButton,
-    QWidget,
 )
 
-from .measurement_parameters import MeasurementParameters
+from .experiment_parameters import ExperimentParameters
+from .value_widget import ValueWidget
 
 
-class MeasurementParametersWidget(QWidget):
+class ExperimentParametersWidget(ValueWidget):
     """
     Measurement parameters widget.
     """
-    run = pyqtSignal()
-    abort = pyqtSignal()
+    queue = pyqtSignal()
 
     def __init__(self):
         super().__init__()
@@ -25,24 +23,18 @@ class MeasurementParametersWidget(QWidget):
 
     @property
     @abstractmethod
-    def value(self) -> MeasurementParameters:
+    def value(self) -> ExperimentParameters:
         """
         :returns: Parameter values.
         """
         raise NotImplementedError()
 
     def init_ui(self):
-        self.btn_run = QPushButton("Run")
-
-        self.btn_abort = QPushButton("Abort")
-        self.btn_abort.setEnabled(False)
+        # self.btn_queue = QPushButton("Queue")
 
         lo_main = QVBoxLayout()
         self.init_params_ui(lo_main)
-
-        lo_main.addWidget(self.btn_run)
-        lo_main.addWidget(self.btn_abort)
-
+        # lo_main.addWidget(self.btn_queue)
         self.setLayout(lo_main)
 
     @abstractmethod
@@ -62,5 +54,5 @@ class MeasurementParametersWidget(QWidget):
         raise NotImplementedError()
 
     def register_connections(self):
-        self.btn_run.clicked.connect(self.run.emit)
-        self.btn_abort.clicked.connect(self.abort.emit)
+        # self.btn_queue.clicked.connect(lambda: self.queue.emit())
+        pass

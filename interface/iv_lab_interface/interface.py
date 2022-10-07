@@ -1,4 +1,4 @@
-import json
+import os
 from typing import Union, List
 
 from PyQt6.QtCore import (
@@ -16,23 +16,27 @@ from PyQt6.QtWidgets import (
     QMessageBox,
     QMenuBar
 )
-from pymeasure.experiment.procedure import Procedure
+from pymeasure.experiment import Procedure, Results
 
-from iv_lab_controller import gui as GuiCtrl
+from iv_lab_controlelr import Store
 from iv_lab_controller import system as SystemCtrl
 from iv_lab_controller import common as ctrl_common
 from iv_lab_controller.user import User, Permission
-from iv_lab_controller.system_parameters import SystemParameters
-from iv_lab_controller.base_classes.system import System
-from iv_lab_controller.base_classes.results import Results
-from iv_lab_controller.base_classes.experiment import Experiment
+from iv_lab_controller.base_classes import (
+    System,
+    Experiment,
+    ExperimentParameters,
+)
 
 from . import common
-from .measurement import MeasurementFrame
+from .types import ExperimentQueue, ApplicationState, HardwareState
+from .experiment import ExperimentFrame
 from .plot import PlotFrame
-from .admin.systems import SystemsDialog
-from .admin.locations import ApplicationLocationsDialog
-from .admin.users import UsersDialog
+from .admin import (
+    SystemsDialog,
+    ApplicationLocationsDialog,
+    UsersDialog
+)
 
 
 class IVLabInterface(QWidget):
@@ -67,14 +71,16 @@ class IVLabInterface(QWidget):
         self.__debug = debug
 
         # --- instance variables ---
-        # self.clicksCount = 0
-        self.flag_abortRun: bool = False
+        self._state: ApplicationState = ApplicationState.LoggedOut
+        self._hardware_state: HardwareState = HardwareState.Standby
+
         self.system: Union[System, None] = None
         self._system_name: Union[str, None] = None
 
-        # self.window = None
         self.settings = QSettings()
         self._app_resources = resources
+
+        self._user_results: List[Results] = []
 
         # --- init UI ---
         self.init_window(main_window)
@@ -82,7 +88,7 @@ class IVLabInterface(QWidget):
         self.register_connections()
 
         # signal all listeners of initial user
-        self.user: Union[User, None] = None
+        self._user: Union[User, None] = None
 
     @property
     def debug(self) -> bool:
@@ -99,11 +105,49 @@ class IVLabInterface(QWidget):
         return self._emulate
 
     @property
+    def state(self) -> ApplicationState:
+        """
+        :returns: Current state of the application.
+        """
+        return self.state
+
+    @state.setter
+    def state(self, state: ApplicationState):
+        """
+        Sets the application state, updating fields as needed.
+
+        :param state: Application state.
+        """
+        self._state = state
+        if self.state == ApplicationState.LoggedOut:
+            pass
+
+        elif self.state == ApplicationState.Standby:
+            pass
+
+        elif self.state == ApplicationState.Running:
+            pass
+
+        elif self.state == ApplicationState.Error:
+            pass
+
+        else:
+            # @unreachable
+            raise ValueError('Unknown application state')
+
+    @property
     def system_name(self) -> Union[str, None]:
         """
         :returns: Name of the loaded system or None if not loaded.
         """
         return self._system_name
+
+    @property
+    def user_results(self) -> List[Results]:
+        """
+        :returns: List of current results for the user.
+        """
+        return self._user_results
 
     def init_window(self, window):
         """
@@ -121,12 +165,12 @@ class IVLabInterface(QWidget):
         """
         Initialize UI.
         """
-        self.measurement_frame = MeasurementFrame()
+        self.experiment_frame = ExperimentFrame()
         self.plot_frame = PlotFrame()
         self.authentication = self.plot_frame.authentication
 
         splitter = QSplitter(Qt.Orientation.Horizontal)
-        splitter.addWidget(self.measurement_frame)
+        splitter.addWidget(self.experiment_frame)
         splitter.addWidget(self.plot_frame)
         splitter.setStretchFactor(1, 10)
         
@@ -145,8 +189,8 @@ class IVLabInterface(QWidget):
         """
         self.authentication.user_authenticated.connect(self.set_user)
         self.authentication.user_logged_out.connect(self.on_log_out)
-        self.measurement_frame.initialize_hardware.connect(self.initialize_system)
-        self.measurement_frame.run_procedure.connect(self.run_procedure)
+        self.experiment_frame.initialize_hardware.connect(self.initialize_system)
+        self.experiment_frame.run_experiments.connect(self.run_experiments)
 
     def __delete_controller(self):
         """
@@ -169,6 +213,10 @@ class IVLabInterface(QWidget):
         )
 
         self.toggle_admin_ui(enable=is_admin)
+
+        # clear user results if needed
+        if user is None:
+            self.clear_results()
 
     def set_user(self, user: Union[User, None]):
         """
@@ -203,23 +251,16 @@ class IVLabInterface(QWidget):
         """
         Enables UI elements for logged in users.
         """
-        username = 'guest' if (self.user is None) else self.user.username
-
         # subcomponents
-        self.measurement_frame.enable_ui()
-
-        # user-specific configuration files should be located here:
-        # configFilePath = os.path.join(self.sp.computer['basePath'] , self.username , 'IVLab_config.json')
-
-        # tell the gui to load the configuration file
-        # self.win.loadSettingsFile(configFilePath)
+        self.experiment_frame.enable_ui()
 
     def disable_user_ui(self):
         """
         Disables logged in user UI elements.
         """
         self.clear_results()
-        self.measurement_frame.disable_ui()
+        self.experiment_frame.disable_ui()
+        self.plot_frame.disable_ui()
 
     def toggle_admin_ui(self, enable: bool = False):
         """
@@ -256,33 +297,9 @@ class IVLabInterface(QWidget):
         
     def clear_results(self):
         """
-        Disables UI elements that only logged in users can access.
+        Clears the user's results.
         """
-        # user-specific configuration files should be located here:
-        # configFilePath = os.path.join(self.sp.computer['basePath'] , self.username , 'IVLab_config.json')
-        # tell the gui to save the current settings to the user's configuration file
-        # self.win.saveSettingsFile(configFilePath)
-        # clear the previous values from the gui
-        # self.win.setAllFieldsToDefault()
-        
-        # clear out scan data and results
-        self.data_IV = None
-        self.IV_Results = None
-        self.data_CC = None
-        self.CC_Results = None
-        self.data_CV = None
-        self.CV_Results = None
-        self.data_MPP = None
-        self.MPP_Results = None
-        
-        # disconnect the hardware
-        try:
-            self.SMU.disconnect()
-            self.lamp.disconnect()
-
-        except:
-            # nothing to do here
-            pass
+        self._user_results = []
 
     def initialize_system(self):
         """
@@ -320,7 +337,7 @@ class IVLabInterface(QWidget):
             for perm in self.user.permissions:
                 experiments += self.system.experiments_for_permission(perm)
 
-            self.measurement_frame.experiments = experiments
+            self.experiment_frame.experiments = experiments
 
         # initialize hardware
         common.StatusBar().showMessage('Initializing hardware...')
@@ -336,23 +353,62 @@ class IVLabInterface(QWidget):
             common.StatusBar().showMessage('Error initializing hardware')
 
         else:
-            self.measurement_frame.system = self.system
+            self.experiment_frame.system = self.system
             common.StatusBar().showMessage('Hardware initialized')
 
-    # @todo
-    def run_procedure(self, procedure: Procedure):
+        # enable plot ui
+        self.plot_frame.enable_ui()
+
+    def run_experiments(self, experiments: ExperimentQueue):
+        """
+        Runs an experiments queue.
+        """
+        for exp, params in experiments:
+            self.run_experiment(exp, params)
+
+    def run_experiment(self, exp: Experiment, params: ExperimentParameters):
+        """
+        Runs an experiment.
+        """
+        proc = exp.create_procedure(params.to_dict())
+        self.run_procedure(exp.name, proc)
+
+    def run_procedure(self, exp_name: str, procedure: Procedure):
         """
         Runs a procedure.
 
+        :param exp_name: Experiment name.
         :param procedure: The procedure to run.
             The `lamp` and `smu` will be set from the system.
         """
+        # data file
+        cell_name = self.plot_frame.cell_name
+        if not cell_name:
+            common.show_message_box(
+                'No cell name',
+                'Please enter a name for your cell.'
+            )
+            return
+
+        daily_dir = ctrl_common.get_user_daily_data_directory(self.user)
+
+        filename = f'{cell_name}--{exp_name}'
+        data_path = os.path.join(daily_dir, filename)
+        data_path += '.csv'
+        data_path = ctrl_common.unique_file(data_path)
+
+        # procedure
         procedure.lamp = self.system.lamp
         procedure.smu = self.system.smu
-        results = Results(procedure, data_filename)
 
-        cell_name = self.plot_frame.plotHeader.cell_name
-        cell_name = GuiCtrl.sanitize_cell_name(cell_name)
+        result = Results(procedure, data_path)
+        self.add_results(result)
+
+    def add_results(self, result: Results):
+        """
+        """
+        self._user_results.append(result)
+        self.plot_frame.add_result(result)
 
     # ---------------------
     # --- admin actions ---

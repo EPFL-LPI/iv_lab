@@ -1,7 +1,6 @@
 import logging
 
-from iv_lab_controller.base_classes.hardware_base import HardwareBase
-from iv_lab_controller.base_classes.lamp import Lamp
+from iv_lab_controller.base_classes import HardwareBase, Lamp
 
 
 class MockLamp(Lamp):

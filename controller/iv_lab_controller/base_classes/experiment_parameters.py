@@ -2,9 +2,9 @@ from abc import ABC, abstractmethod
 from typing import Dict, Any
 
 
-class MeasurementParameters(ABC):
+class ExperimentParameters(ABC):
     """
-    Holds parameters for a measurement.
+    Holds parameters for an experiment.
     """
 
     @abstractmethod 

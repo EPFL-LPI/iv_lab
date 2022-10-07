@@ -1,11 +1,11 @@
 from typing import Union
 
-from pymeasure.experiment.parameters import FloatParameter, BooleanParameter
+from pymeasure.experiment import FloatParameter, BooleanParameter
 
-from ..base_classes.measurement_parameters import MeasurementParameters
+from ..base_classes import ExperimentParameters
 
 
-class IlluminationParameters(MeasurementParameters):
+class IlluminationParameters(ExperimentParameters):
 	"""
 	Parameters for a cell.
 	"""
@@ -25,8 +25,8 @@ class IlluminationParameters(MeasurementParameters):
 		"""
 		:param inten: Light intensity manually set.
 		"""
-		if isinstance(inten, float):
-			param = BooelanParameter('manual_illumination')
+		if isinstance(manual, float):
+			param = BooleanParameter('manual_illumination')
 			param.value = manual
 
 		else:

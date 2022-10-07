@@ -1,16 +1,16 @@
 from typing import Union
 
-from pymeasure.experiment.parameters import (
+from pymeasure.experiment import (
     BooleanParameter,
     FloatParameter,
     IntegerParameter
 )
 
-from .base_classes.measurement_parameters import MeasurementParameters
+from iv_lab_controller.base_classes import ExperimentParameters
 from .types import IVSweepDirection
 
 
-class IVCurveParameters(MeasurementParameters):
+class IVCurveParameters(ExperimentParameters):
     """
     Parameters for an IV curve measurement.
     """

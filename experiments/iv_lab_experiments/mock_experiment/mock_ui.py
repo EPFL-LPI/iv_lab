@@ -8,10 +8,10 @@ from PyQt6.QtWidgets import (
 
 from .mock_parameters import MockExperimentParameters
 
-from iv_lab_controller.base_classes.parameters_widget import MeasurementParametersWidget
+from iv_lab_controller.base_classes import ExperimentParametersWidget
 
 
-class MockParametersWidget(MeasurementParametersWidget):
+class MockParametersWidget(ExperimentParametersWidget):
     """
     Measurement parameters for a Mock procedure.
     """

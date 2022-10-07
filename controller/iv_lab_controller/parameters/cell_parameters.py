@@ -1,11 +1,11 @@
 from typing import Union
 
-from pymeasure.experiment.parameters import FloatParameter
+from pymeasure.experiment import FloatParameter
 
-from ..base_classes.measurement_parameters import MeasurementParameters
+from ..base_classes import ExperimentParameters
 
 
-class CellParameters(MeasurementParameters):
+class CellParameters(ExperimentParameters):
 	"""
 	Parameters for a cell.
 	"""

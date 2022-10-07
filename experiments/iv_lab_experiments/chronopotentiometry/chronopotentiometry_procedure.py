@@ -1,104 +1,98 @@
-from datetime import datetime
+import time
 
-from iv_lab_controller.base_classes.experiment import Experiment
+from pymeasure.experiment import FloatParameter
 
-class Chronopotentiometry(Experiment):
+from iv_lab_controller.base_classes.procedure import Procedure
+ 
+
+class ChronopotentiometryProcedure(Procedure)
     """
-    Run a chronopotentiometry experiment.
+    Chronopotentiometry experiment.
     """
-    def execute(self, param):
+    set_current = FloatParameter(
+        'Set current',
+        units='V'
+    )
+
+    settling_time = FloatParameter(
+        'Settling time',
+        units='s',
+        min=0,
+        default=5
+    )
+    
+    duration = FloatParameter(
+        'Duration',
+        units='s',
+        min=0
+    )
+
+    interval = FloatParameter(
+        'Interval',
+        units='s',
+        min=0
+    )
+
+    def validate_parameters(self) -> bool: 
         """
-        Runs a chrono-potentiometry measurement.
-            Holds the potential constant, and measures the current.
+        :returns: `True` if all parameters and parameter combinations are valid.
+        :raises ValueError: If a parameter or combination of parameters are
+        invalid.
         """
-        # self.flag_abortRun = False
-        if self.app != None:
-            self.app.processEvents()
-        
-        dateTimeString = datetime.now().strftime("%Y%m%d_%H%M%S")
-        
-        if abs(param['set_current']) > abs(param['Imax']):
-            if self.win != None:
-                self.win.runFinished() # also lowers abortRun flag
-            raise ValueError("ERROR: measure_V_time_dependent set current outside of compliance range")
-        
-        #this parameter is now set from the front panel
-        #param["Dwell"] = self.firstPointDwellTime
-        
-        #param: light int, set current, time, interval
-        self.show_status("Turning lamp on...")
+        if abs(self.set_current) > self.compliance_current:
+            raise ValueError('Set current larger than compliance current')
+
+        return True
+
+
+    def startup(self):
+        """
+        Validate parameters, initialize hardware, and perform inital checks.
+        """
+        self.validate_parameters()
+
+        # set current and voltage
+        self.smu.compliance_voltage = self.compliance_voltage
+        self.smu.compliance_current = self.compliance_current
+        self.smu.set_current(self.set_current)
+
+        # initialize lamp
+        self.status.emit('status', 'Turning lamp on...')
+        self.lamp.intensity = self.light_intensity
+        self.light_on()
+
+        # wait for settling time
+        time.sleep(self.settling_time)
+
+    def shutdown(self):
+        pass
+
+    def execute(self):
+        """
+        Run a chronopotentiometry experiment.
+        """
+        start_time = time.time()
+        end_time = start_time + self.duration
+        meas_index = 0
+        while time.time() < end_time:
+            if self.should_stop():
+                break
             
-        #self.lamp.light_on(param['light_int'])
-        lampError = self.turn_lamp_on(param['light_int']) #True
-        runError = False
+            # wait until next measurement time
+            meas_time = meas_index * self.interval + start_time
+            wait_time = time.time() - meas_time
+            if wait_time > 0:
+                time.sleep(wait_time)
 
-        if not lampError:
-            try:
-                while(True):
-                    if self.smu.useReferenceDiode and (param['light_int'] > 1.0):
-                        lightIntensity = self.measure_light_intensity() #status messages set internally
-                        
-                        if self.abortRunFlag() :
-                            break
-                                
-                        elif abs((lightIntensity - param['light_int'])/param['light_int']) > 0.1 :
-                            self.show_status("Run Aborted (Wrong Light Level)")
-                            self.error_window("Error: Light level measured by reference diode is more than 10% off from requested level.  Aborting Scan")
-                            break
-                                
-                    self.show_status("Running Constant Current Measurement...")
-                    
-                    t, v_smu = self.smu.measure_V_time_dependent(param)
-                    
-                    i_smu = []
-                    for v in v_smu:
-                        i_smu.append(param['set_current'])
-                    
-                    self.CC_Results = {}
-                    self.CC_Results['active_area'] = param['active_area']
-                    self.CC_Results['cell_name'] = param['cell_name']
-                    self.CC_Results['light_int'] = param['light_int']
-                    if self.smu.useReferenceDiode:
-                        self.CC_Results['light_int_meas'] = lightIntensity
-                    self.CC_Results['set_current'] = param['set_current']
-                    self.CC_Results['interval'] = param['interval']
-                    self.CC_Results['duration'] = param['duration']
+            # measure current
+            elapsed_time = time.time() - start_time
+            voltage = self.smu.measure_voltage()
+            data = {
+                'time': elapsed_time,
+                'voltage': voltage
+            }
+            self.emit('results', data)
 
-                    self.data_CC = {}
-                    self.data_CC['scanType'] = 'CC'
-                    self.data_CC['start_time'] = dateTimeString
-                    self.data_CC['t'] = t
-                    self.data_CC['v'] = v_smu
-                    self.data_CC['i'] = i_smu
-                    
-                    if self.saveDataAutomatic:
-                        self.writeDataFile(self.data_CC, self.username, self.CC_Results)
-
-                    break #break out of infinite while loop
-                    
-            except ValueError as err:
-                self.error_window(str(err))
-                self.show_status("Run Aborted With Error")
-                runError = True
-            except Exception as err:
-                print(err)
-                self.error_window("Execution Error in measure_V_time_dependent().\nSee terminal for details.")
-                self.show_status("Run Aborted With Error")
-                runError = True
-        
-        self.show_status("Turning lamp off...")
-                    
-        lampError = self.turn_lamp_off()
-        
-        if runError:
-            self.show_status("Run Aborted With Error")
-        elif self.abortRunFlag():
-            self.show_status("Run Aborted")
-        else:
-            self.show_status("Run finished")
-                            
-        if self.win != None:
-            self.win.runFinished() # also lowers abortRun flag
-            #self.flag_abortRun = False  
-
-
+            meas_index += 1
+            complete_perc = elapsed_time / self.duration
+            self.emit('status', f'{complete_perc}% complete')

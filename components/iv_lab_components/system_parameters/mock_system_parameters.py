@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from iv_lab_controller.base_classes.system_parameters import SystemParameters
+from iv_lab_controller.base_classes import SystemParameters
 
 
 class MockSystemParameters(SystemParameters):

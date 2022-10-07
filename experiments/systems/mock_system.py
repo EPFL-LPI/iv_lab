@@ -1,5 +1,5 @@
 from iv_lab_controller.user import Permission
-from iv_lab_controller.base_classes.system import System
+from iv_lab_controller.base_classes import System
 
 from iv_lab_components.lamps.mock_lamp import MockLamp
 from iv_lab_components.smus.mock_smu import MockSMU

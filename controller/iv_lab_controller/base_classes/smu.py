@@ -1,163 +1,150 @@
 from abc import abstractmethod
-from typing import Tuple, Union
-
-import numpy as np
+from enum import Enum
+from typing import Union
 
 from .hardware_base import HardwareBase
 
+
 """
-Value that indicates the endpoint of a range.
-If `None`, indicates no limit.
+Value representing a voltage or current range.
 """
-RangeValue = Union[float, None]
+RangeValue = Union[float, Enum]
 
 
 class SMU(HardwareBase):
-	"""
-	Base class providing a common API for source meter units (SMUs).
-	"""
-	def __init__(self, emulate: bool = False):
-		"""
-		:param emualte: Run in emulation mode. [Default: False]
-		"""
-		super().__init__(emulate=emulate)
+    """
+    Base class providing a common API for source meter units (SMUs).
+    """
+    def __init__(self, emulate: bool = False):
+        """
+        :param emualte: Run in emulation mode. [Default: False]
+        """
+        super().__init__(emulate=emulate)
 
-	@property
-	@abstractmethod
-	def current_range(self) -> Tuple[RangeValue, RangeValue]:
-		"""
-		:returns: Min and max current values.
-		"""
-		raise NotImplementedError()
+    @property
+    @abstractmethod
+    def current_range(self) -> RangeValue:
+        """
+        :returns: Current measurement range.
+        """
+        raise NotImplementedError()
 
-	@property
-	@abstractmethod
-	def voltage_range(self) -> Tuple[RangeValue, RangeValue]:
-		"""
-		:returns: Min and max voltage values.
-		"""
-		raise NotImplementedError()
+    @current_range.setter
+    @abstractmethod
+    def current_range(self, rng: RangeValue):
+        """
+        Set the SMU's current range.
 
-	@abstractmethod
-	def set_voltage(
-		self,
-		voltage: float
-	):
-		"""
-		Sets the applied voltage.
+        :param rng: Current measurement range.
+        """
+        raise NotImplementedError()
 
-		:param voltage: Desired voltage.
-		"""
-		raise NotImplementedError()
+    @property
+    @abstractmethod
+    def voltage_range(self) -> RangeValue:
+        """
+        :returns: Voltage measurement range.
+        """
+        raise NotImplementedError()
 
-	@abstractmethod
-	def set_current(
-		self,
-		current: float
-	):
-		"""
-		Sets the applied current.
+    @voltage_range.setter
+    @abstractmethod
+    def voltage_range(self, rng: RangeValue):
+        """
+        Set the SMU's voltage range.
 
-		:param current: Desired current.
-		"""
-		raise NotImplementedError()
+        :param rng: Voltage measurement range.
+        """
+        raise NotImplementedError()
 
-	@abstractmethod
-	def enable_output(self):
-		"""
-		Enable output.
-		"""
-		raise NotImplementedError()
+    @property
+    @abstractmethod
+    def compliance_current(self) -> float:
+        """
+        :returns: Compliance current.
+        """
+        raise NotImplementedError()
 
-	@abstractmethod
-	def disable_output(self):
-		"""
-		Disable output.
-		"""
-		raise NotImplementedError()
+    @compliance_current.setter
+    @abstractmethod
+    def compliance_current(self, i: float):
+        """
+        Sets the compliance current.
 
-	@abstractmethod
-	def measure_voltage(self) -> float:
-		"""
-		Measure the voltage.
+        :param: Desired compliance current.
+        """
+        raise NotImplementedError()
 
-		:returns: Measured voltage.
-		"""
-		raise NotImplementedError()
+    @property
+    @abstractmethod
+    def compliance_voltage(self) -> float:
+        """
+        :returns: Compliance voltage.
+        """
+        raise NotImplementedError()
 
-	@abstractmethod
-	def measure_current(self) -> float:
-		"""
-		Measure the current.
+    @compliance_voltage.setter
+    @abstractmethod
+    def compliance_voltage(self, v: float):
+        """
+        Sets the compliance voltage.
 
-		:returns: Measured current.
-		"""
-		raise NotImplementedError()
+        :param v: Desired compliance voltage.
+        """
+        raise NotImplementedError()
 
-	@abstractmethod
-	def measure_iv_curve(
-		self,
-		start: float,
-		stop: float,
-		step: float,
-		rate: float,
-	) -> np.array:
-		"""
-		Measure an IV curve.
+    @abstractmethod
+    def set_voltage(
+        self,
+        voltage: float
+    ):
+        """
+        Sets the applied voltage.
 
-		:param start: Start voltage.
-		:param stop: Stop voltage.
-		:param step: Absolute voltage step size.
-		:param rate: Scan rate.
-		:returns: numpy.array of measured values.  
-		"""
-		raise NotImplementedError()
+        :param voltage: Desired voltage.
+        """
+        raise NotImplementedError()
 
-	@abstractmethod
-	def measure_iv_point_by_point(
-		self,
-		start: float,
-		stop: float,
-		step: float,
-		rate: float
-	) -> np.array:
-		"""
-		Measure an IV curve.
+    @abstractmethod
+    def set_current(
+        self,
+        current: float
+    ):
+        """
+        Sets the applied current.
 
-		:param start: Start voltage.
-		:param stop: Stop voltage.
-		:param step: Absolute voltage step size.
-		:param rate: Scan rate.
-		:returns: numpy.array of measured values.  
-		"""
-		raise NotImplementedError()
+        :param current: Desired current.
+        """
+        raise NotImplementedError()
 
-	@abstractmethod
-	def measure_chronopotentiometry(
-		self,
-		current: float,
-		time: float
-	) -> np.array:
-		"""
-		Perform a chronopotentiometry experiment.
+    @abstractmethod
+    def enable_output(self):
+        """
+        Enable output.
+        """
+        raise NotImplementedError()
 
-		:param current: Set point current.
-		:param time: Run time.
-		:returns: numpy.array of measured values.  
-		"""
-		raise NotImplementedError()
+    @abstractmethod
+    def disable_output(self):
+        """
+        Disable output.
+        """
+        raise NotImplementedError()
 
-	@abstractmethod
-	def measure_chronoampometry(
-		self,
-		voltage: float,
-		time: float
-	) -> np.array:
-		"""
-		Perform a chronoampometry experiment.
+    @abstractmethod
+    def measure_voltage(self) -> float:
+        """
+        Measure the voltage.
 
-		:param voltage: Set point voltage.
-		:param time: Run time.
-		:returns: numpy.array of measured values.  
-		"""
-		raise NotImplementedError()
+        :returns: Measured voltage.
+        """
+        raise NotImplementedError()
+
+    @abstractmethod
+    def measure_current(self) -> float:
+        """
+        Measure the current.
+
+        :returns: Measured current.
+        """
+        raise NotImplementedError()

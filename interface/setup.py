@@ -24,8 +24,7 @@ setuptools.setup(
     ],
     python_requires=">=3.6.8",
     install_requires=[
-        'PyQt6>=6.3',  # version requirement for fbs, use Python 3.6
-        'pyqtgraph',
+        'PyQt6>=6.3',
         'pandas',
         'matplotlib',
         'iv-lab-controller>=0.7.0'

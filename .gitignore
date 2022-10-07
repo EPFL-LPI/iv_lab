@@ -5,7 +5,3 @@ __pycache__
 app/.venv*
 app/target
 
-IVLab Accessories
-
-IVLab/users.txt
-IVLab/__pycache__

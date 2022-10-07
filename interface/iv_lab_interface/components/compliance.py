@@ -5,10 +5,12 @@ from PyQt6.QtWidgets import (
     QGroupBox
 )
 
-from iv_lab_controller.measurements.compliance_parameters import ComplianceParameters
+from iv_lab_controller.parameters import ComplianceParameters
+
+from ..base_classes import ToggleUiInterface
 
 
-class ComplianceWidget(QGroupBox):
+class ComplianceWidget(QGroupBox, ToggleUiInterface):
     def __init__(self):
         super().__init__("Compliance")
 
@@ -42,8 +44,8 @@ class ComplianceWidget(QGroupBox):
         
         self.setLayout(lo_main)
         self.setMaximumWidth(300)
-        self.setEnabled(False)
 
+        self.disable_ui()
         self.reset_fields()
 
     @property
@@ -56,6 +58,12 @@ class ComplianceWidget(QGroupBox):
         params.current_limit = self.sb_current_limit.value() / 1000
 
         return params
+
+    def enable_ui(self):
+        self.setEnabled(True)
+
+    def disable_ui(self):
+        self.setEnabled(False)
 
     def reset_fields(self):
         """

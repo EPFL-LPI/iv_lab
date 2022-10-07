@@ -5,10 +5,12 @@ from PyQt6.QtWidgets import (
     QWidget
 )
 
-from iv_lab_controller.measurements.cell_parameters import CellParameters
+from iv_lab_controller.parameters import CellParameters
+
+from ..base_classes import ToggleUiInterface
 
 
-class CellParametersWidget(QWidget):
+class CellParametersWidget(QWidget, ToggleUiInterface):
 
     def __init__(self):
         super().__init__()
@@ -18,7 +20,7 @@ class CellParametersWidget(QWidget):
     def init_ui(self): 
         # cell active area
         lbl_cell_area = QLabel("Cell Active Area")
-        lbl_cell_area_units = QLabel("cm^2")
+        lbl_cell_area_units = QLabel("cm<sup>2</sup>")
         self.sb_cell_area = QDoubleSpinBox()
         self.sb_cell_area.setDecimals(2)
         self.sb_cell_area.setSingleStep(0.01)
@@ -30,8 +32,8 @@ class CellParametersWidget(QWidget):
         lo_main.addWidget(self.sb_cell_area)
         lo_main.addWidget(lbl_cell_area_units)
         self.setLayout(lo_main)
-        self.setEnabled(False)
 
+        self.disable_ui()
         self.reset_fields()
     
     @property
@@ -43,6 +45,12 @@ class CellParametersWidget(QWidget):
         params.cell_area = self.sb_cell_area.value()
 
         return params
+
+    def enable_ui(self):
+        self.setEnabled(True)
+
+    def disable_ui(self):
+        self.setEnabled(False)
 
     def reset_fields(self):
         """

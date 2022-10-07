@@ -5,10 +5,10 @@ from pymeasure.experiment.parameters import (
     IntegerParameter
 )
 
-from iv_lab_controller.base_classes.measurement_parameters import MeasurementParameters
+from iv_lab_controller.base_classes import ExperimentParameters
 
 
-class MockExperimentParameters(MeasurementParameters):
+class MockExperimentParameters(ExperimentParameters):
     """
     Parameters for an mock experiment.
     """

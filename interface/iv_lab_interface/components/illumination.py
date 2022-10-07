@@ -10,10 +10,12 @@ from PyQt6.QtWidgets import (
     QLabel
 )
 
-from iv_lab_controller.measurements.illumination_parameters import IlluminationParameters
+from iv_lab_controller.parameters import IlluminationParameters
+
+from ..base_classes import ToggleUiInterface
 
 
-class IlluminationWidget(QGroupBox):
+class IlluminationWidget(QGroupBox, ToggleUiInterface):
     def __init__(self):
         super().__init__('Light Level')
         
@@ -33,7 +35,7 @@ class IlluminationWidget(QGroupBox):
 
         # manual
         lbl_manual_intensity = QLabel('Manual Light Level:')
-        lbl_manual_intensity_units = QLabel('mW/cm^2')
+        lbl_manual_intensity_units = QLabel('mW/cm<sup>2</sup>')
         self.sb_manual_intensity = QDoubleSpinBox()
         self.sb_manual_intensity.setDecimals(2)
         self.sb_manual_intensity.setSingleStep(0.1)
@@ -56,7 +58,7 @@ class IlluminationWidget(QGroupBox):
         # measured label
         lbl_measured_intensity_title = QLabel('Measured Light Intensity:')
         self.lbl_measured_intensity = QLabel('---.--')
-        lbl_measured_intensity_units = QLabel('mW/cm^2')
+        lbl_measured_intensity_units = QLabel('mW/cm<sup>2</sup>')
 
         lo_measured_intensity = QHBoxLayout()
         lo_measured_intensity.addWidget(lbl_measured_intensity_title)
@@ -68,8 +70,8 @@ class IlluminationWidget(QGroupBox):
         lo_main.addLayout(lo_measured_intensity)
         self.setLayout(lo_main)
         self.setMaximumWidth(300)
-        self.setEnabled(False)
-
+    
+        self.disable_ui()
         self.reset_fields()
     
     @property
@@ -111,6 +113,12 @@ class IlluminationWidget(QGroupBox):
             params.intensity = inten
 
         return params
+
+    def enable_ui(self):
+        self.setEnabled(True)
+
+    def disable_ui(self):
+        self.setEnabled(False)
 
     def reset_fields(self):
         """

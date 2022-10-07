@@ -1,26 +1,18 @@
-from PyQt6.QtCore import pyqtSignal
-from PyQt6.QtGui import QDoubleValidator
-
 from PyQt6.QtWidgets import (
-    QStackedWidget,
     QLabel,
-    QLineEdit,
-    QHBoxLayout,
+    QDoubleSpinBox,
     QVBoxLayout,
-    QPushButton,
-    QWidget,
-    QGroupBox,
-    QCheckBox,
-    QComboBox,
     QGridLayout
 )
 
-from .parameters_widget import MeasurementParametersWidget
+from iv_lab_cvontroller.base_classes.parameters_widget import MeasurementParametersWidget
+
+from .chronopotentiometry_parameters import ChronopotentiometryParameters
 
 
 class ChronopotentiometryParametersWidget(MeasurementParametersWidget):
     """
-    Measurement parameters for a chronopotentiometry measurement.
+    Measurement parameters for a chronopotentiometry experiment.
     """
 
     def __init__(self):
@@ -29,43 +21,81 @@ class ChronopotentiometryParametersWidget(MeasurementParametersWidget):
         self.setMaximumWidth(300)
 
     def init_params_ui(self, lo_main: QVBoxLayout):
-        self.fieldConstantISetI = QLineEdit("0.00")
-        self.ConstantISetIValidator = QDoubleValidator()
-        self.fieldConstantISetI.setValidator(self.ConstantISetIValidator)
-        self.labelConstantISetI = QLabel("Set Current")
-        self.fieldConstantIStabilizationTime = QLineEdit("5.0")
-        self.ConstantIStabilizationTimeValidator = QDoubleValidator()
-        self.fieldConstantIStabilizationTime.setValidator(self.ConstantIStabilizationTimeValidator)
-        self.labelConstantIStabilizationTime = QLabel("Stabilization Time")
-        self.labelConstantIStabilizationTimeUnits = QLabel("sec")
-        self.fieldConstantIInterval = QLineEdit("0.50")
-        self.ConstantIIntervalValidator = QDoubleValidator()
-        self.fieldConstantIInterval.setValidator(self.ConstantIIntervalValidator)
-        self.labelConstantIInterval = QLabel("Meas Interval")
-        self.fieldConstantIDuration = QLineEdit("60.0")
-        self.ConstantIDurationValidator = QDoubleValidator()
-        self.fieldConstantIDuration.setValidator(self.ConstantIDurationValidator)
-        self.labelConstantIDuration = QLabel("Meas Duration")
-        self.labelMilliAmps = QLabel("mA")
-        self.labelSeconds2 = QLabel("sec")
-        self.labelSeconds3 = QLabel("sec")
+        self.user_current_limit = 100  # mA
+
+        # set voltage
+        self.lbl_set_current = QLabel("Set Current")
+        self.lbl_set_current_units = QLabel("mA")
+        self.sb_set_current = QDoubleSpinBox()
+        self.sb_set_current.setDecimals(2)
+        self.sb_set_current.setSingleStep(0.1)
+        self.sb_set_current.setMinimum(-self.user_current_limit)
+        self.sb_set_current.setMaximum(self.user_current_limit)
+
+        # settling time
+        self.lbl_settling_time = QLabel("Stabilization Time")
+        self.lbl_settling_time_units = QLabel("sec")
+        self.sb_settling_time = QDoubleSpinBox()
+        self.sb_settling_time.setDecimals(1)
+        self.sb_settling_time.setSingleStep(0.1)
+        self.sb_settling_time.setMinimum(0)
+
+        # measurement interval
+        self.lbl_interval = QLabel("Meas Interval")
+        self.lbl_interval_untis = QLabel("sec")
+        self.sb_interval = QDoubleSpinBox()
+        self.sb_interval.setDecimals(1)
+        self.sb_interval.setSingleStep(0.1)
+        self.sb_interval.setMinimum(0)
+
+        # duration
+        self.lbl_duration = QLabel("Meas Duration")
+        self.lbl_duration_units = QLabel("sec")
+        self.sb_duration = QDoubleSpinBox()
+        self.sb_duration.setDecimals(1)
+        self.sb_duration.setSingleStep(0.1)
+        self.sb_duration.setMinimum(0)
         
-        # ConstantI panel layout
+        # layout
         lo_params = QGridLayout()
-        lo_params.addWidget(self.labelConstantISetI,0,0)
-        lo_params.addWidget(self.fieldConstantISetI,0,1)
-        lo_params.addWidget(self.labelMilliAmps,0,2)
+        lo_params.addWidget(self.lbl_set_current, 0, 0)
+        lo_params.addWidget(self.sb_set_current, 0, 1)
+        lo_params.addWidget(self.lbl_set_current_units, 0, 2)
 
-        lo_params.addWidget(self.labelConstantIStabilizationTime,1,0)
-        lo_params.addWidget(self.fieldConstantIStabilizationTime,1,1)
-        lo_params.addWidget(self.labelConstantIStabilizationTimeUnits,1,2)
+        lo_params.addWidget(self.lbl_settling_time, 1, 0)
+        lo_params.addWidget(self.sb_settling_time, 1, 1)
+        lo_params.addWidget(self.lbl_settling_time_units, 1, 2)
 
-        lo_params.addWidget(self.labelConstantIInterval,2,0)
-        lo_params.addWidget(self.fieldConstantIInterval,2,1)
-        lo_params.addWidget(self.labelSeconds2,2,2)
+        lo_params.addWidget(self.lbl_interval, 2, 0)
+        lo_params.addWidget(self.sb_interval, 2, 1)
+        lo_params.addWidget(self.lbl_interval_untis, 2, 2)
 
-        lo_params.addWidget(self.labelConstantIDuration,3,0)
-        lo_params.addWidget(self.fieldConstantIDuration,3,1)
-        lo_params.addWidget(self.labelSeconds3,3,2)
+        lo_params.addWidget(self.lbl_duration, 3, 0)
+        lo_params.addWidget(self.sb_duration, 3, 1)
+        lo_params.addWidget(self.lbl_duration_units, 3, 2)
         
         lo_main.addLayout(lo_params)
+
+        self.reset_fields()
+
+    @property
+    def value(self) -> ChronopotentiometryParameters:
+        """
+        :returns: Value of the measurement parameters.
+        """
+        params = ChronopotentiometryParameters()
+        params.set_current = self.sb_set_current.value()* 1e-3  # convert from mA to A
+        params.settling_time = self.sb_settling_time.value()
+        params.interval = self.sb_interval.value()
+        params.duration = self.sb_duraiton.value()
+
+        return params
+
+    def reset_fields(self):
+        """
+        Reset field values to default.
+        """
+        self.sb_set_current.setValue(0)
+        self.sb_settling_time.setValue(5)
+        self.sb_interval.setValue(0.1)
+        self.sb_duration.setValue(10)
