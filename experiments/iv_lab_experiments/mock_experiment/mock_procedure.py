@@ -1,22 +1,52 @@
-from time import sleep
+import time
+import random
 
-from pymeasure.experiment import Procedure
-from pymeasure.experiment import BooleanParameter, IntegerParameter
+from pymeasure.experiment import BooleanParameter, IntegerParameter, FloatParameter
+
+from iv_lab_controller.base_classes import Procedure
 
 
 class MockProcedure(Procedure):
     """
     A mock procedure.
+
+    Data consists of [`index`, `value`] where `value` is between 0 and 100.
     """
-    log = BooleanParameter('Log')
     times = IntegerParameter('Times')
+    log = BooleanParameter('Log', default=False)
+    min_value = IntegerParameter('Minimum value', default=0)
+    max_value = IntegerParameter('Maximum value', default=100)
+    sleep = FloatParameter('Sleep', default = 0.1)
+
+    DATA_COLUMNS = ['index', 'value']
 
     def execute(self):
-        print("starting mock")
+        if self.log:
+            print("starting mock")
+
+        r_gen = random.Random()
         for i in range(self.times):
+            if self.should_stop():
+                if self.log:
+                    print('should stop')
+
+                break
+
             if self.log:
-                print(f"iteration {i}...")
+                print(f'iteration {i}...')
 
-            sleep(1)
+            value = r_gen.randint(
+                self.min_value,
+                self.max_value
+            )
 
-        print("mock finished")
+            data = {
+                'index': i,
+                'value': value
+            }
+
+            self.emit('results', data)
+            time.sleep(self.sleep)
+
+        if self.log:
+            print("mock finished")

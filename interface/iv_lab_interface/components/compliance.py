@@ -21,7 +21,7 @@ class ComplianceWidget(QGroupBox, ToggleUiInterface):
         lbl_voltage_limit_units = QLabel("V")
         self.sb_voltage_limit = QDoubleSpinBox()
         self.sb_voltage_limit.setDecimals(2)
-        self.sb_voltage_limit.setSingleStep(0.01)
+        self.sb_voltage_limit.setSingleStep(0.1)
         self.sb_voltage_limit.setMinimum(0)
         self.sb_voltage_limit.setMaximumWidth(75)
 
@@ -29,7 +29,7 @@ class ComplianceWidget(QGroupBox, ToggleUiInterface):
         lbl_current_limit_units = QLabel("mA")
         self.sb_current_limit = QDoubleSpinBox()
         self.sb_current_limit.setDecimals(2)
-        self.sb_current_limit.setSingleStep(1)
+        self.sb_current_limit.setSingleStep(5)
         self.sb_current_limit.setMinimum(0)
         self.sb_current_limit.setMaximumWidth(75)
         

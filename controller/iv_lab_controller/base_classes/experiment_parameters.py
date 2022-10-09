@@ -2,11 +2,10 @@ from abc import ABC, abstractmethod
 from typing import Dict, Any
 
 
-class ExperimentParameters(ABC):
+class ExperimentParametersInterface(ABC):
     """
     Holds parameters for an experiment.
     """
-
     @abstractmethod 
     def validate(self) -> bool:
         """

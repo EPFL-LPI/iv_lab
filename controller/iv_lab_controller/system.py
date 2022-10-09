@@ -1,7 +1,6 @@
-import sys
 import inspect
 import importlib.util
-from typing import Tuple, Union
+from typing import Tuple
 
 from .base_classes.system import System as System
 
@@ -19,7 +18,11 @@ def load_system(file: str, emulate: bool = False) -> Tuple[str, System]:
         raise RuntimeError(f'File `{file}` could not be loaded as a Python module.')
 
     mod_system = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod_system)
+    try:
+        spec.loader.exec_module(mod_system)
+
+    except Exception as err:
+        raise RuntimeError(f'System could not be loaded as a module: {err}')
 
     # extract class defined in module
     all_classes = inspect.getmembers(mod_system, inspect.isclass)

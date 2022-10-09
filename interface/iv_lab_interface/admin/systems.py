@@ -12,11 +12,12 @@ from PyQt6.QtWidgets import (
     QFileDialog
 )
 
-from iv_lab_controller import common as ctrl
+from iv_lab_controller import Store, common as ctrl
 
 from .. import common
 
-
+# @todo: Prevent `Select one and only one` dialog from showing on directory change.
+# @todo: Must sometimes change directory twice.
 class SystemsDialog(QDialog):
     """
     Dialog to set the system.
@@ -101,7 +102,6 @@ class SystemsDialog(QDialog):
             if not, the original directory will be returned.
         """
         settings = QSettings()
-
         sys_dir = QFileDialog.getExistingDirectory()
         if not sys_dir:
             # user canceled change
@@ -156,10 +156,11 @@ class SystemsDialog(QDialog):
                 icon=QMessageBox.Icon.Critical
             )
 
+        Store.set('system_path', sys_path)
+
     @property
     def systems_dir(self) -> str:
         """
         :returns: Path the current systems directory.
         """
         return ctrl.application_systems_directory()
-    

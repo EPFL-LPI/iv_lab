@@ -49,7 +49,6 @@ def system_path() -> str:
 	settings = QSettings()
 	return settings.value('system_file', type=str)
 
-
 def set_system_path(path: str):
 	"""
 	Set the path to the currently active system.

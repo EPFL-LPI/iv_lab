@@ -3,56 +3,88 @@ from typing import List
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import (
     QStackedWidget,
-    QPushButton,
     QVBoxLayout,
     QGroupBox,
     QComboBox,
 )
 
-from iv_lab_controller.base_classes import ExperimentParameters, Experiment
+from iv_lab_controller import Store
+from iv_lab_controller.store import Observer
+from iv_lab_controller.base_classes import (
+    ExperimentParametersInterface,
+    Experiment,
+    System,
+)
 
-from ..types import ExperimentAction, ExperimentState
+from ..base_classes import ToggleUiInterface
+from ..types import ApplicationState, HardwareState
 
 
-class ExperimentParametersWidget(QGroupBox):
-    queue_experiment = pyqtSignal(type(Experiment), ExperimentParameters)
-    action = pyqtSignal(ExperimentAction)
+class ExperimentParametersWidget(QGroupBox, ToggleUiInterface):
+    queue_experiment = pyqtSignal(type(Experiment), ExperimentParametersInterface)
 
     def __init__(self):
         super().__init__("Measurement")
-        
-        self._state = ExperimentState.Standby
 
+        self._experiments: List[Experiment] = []
+        
         self.init_ui()
         self.register_connections()
+        self.init_observers()
 
+    def init_observers(self):
+        # system
+        def system_changed(system: System, o_sys: System):
+            """
+            Updates the UI to match the system's experiments.
+            """
+            self._experiments: List[Experiment] = []
+
+            # collect experiments
+            if system is not None:
+                user = Store.get('user')
+                for perm in user.permissions:
+                    self._experiments += system.experiments_for_permission(perm)
+
+            # clear holders
+            self.cb_measurement_select.clear()
+            for i in range(self.stk_experiments.count()):
+                wgt = self.stk_experiments.widget(i)
+                self.stk_experiments.removeWidget(wgt)
+
+            # load experiments
+            for exp in self.experiments:
+                self.cb_measurement_select.addItem(exp.name)
+
+                e_ui = exp.ui()
+                self.stk_experiments.addWidget(e_ui)
+                e_ui.queue.connect(lambda: self.queue_experiment.emit(exp, e_ui.value))
+
+        sys_observer = Observer(changed=system_changed)
+        Store.subscribe('system', sys_observer)
+
+        # hardware
+        def hardware_state_changed(state: HardwareState, o_state: HardwareState):
+            if state == HardwareState.Uninitialized:
+                self.disable_ui()
+
+        hardware_state_observer = Observer(changed=hardware_state_changed)
+        Store.subscribe('hardware_state', hardware_state_observer)
+
+        # application state
+        def app_state_changed(state: ApplicationState, o_state: ApplicationState):
+            if state is ApplicationState.Disabled:
+                self.disable_ui()
+
+        app_state_observer = Observer(changed=app_state_changed)
+        Store.subscribe('application_state', app_state_observer)
+                
     @property
     def experiments(self) -> List[Experiment]:
         """
-        :returns: List of experiments.
+        :returns: List of avaialble experiments.
         """
         return self._experiments
-
-    @experiments.setter
-    def experiments(self, experiments: List[Experiment]):
-        """
-        Sets the widgets experiments and update the UI to match.
-        """
-        self._experiments: List[Experiment] = experiments
-
-        # clear holders
-        self.cb_measurement_select.clear()
-        for i in range(self.stk_experiments.count()):
-            wgt = self.stk_experiments.widget(i)
-            self.stk_experiments.removeWidget(wgt)
-
-        # load experiments
-        for exp in self.experiments:
-            self.cb_measurement_select.addItem(exp.name)
-
-            e_ui = exp.ui()
-            self.stk_experiments.addWidget(e_ui)
-            e_ui.queue.connect(lambda: self.queue_experiment.emit(exp, e_ui.value))
 
     @property
     def active_experiment(self) -> Experiment:
@@ -63,35 +95,7 @@ class ExperimentParametersWidget(QGroupBox):
         return self.experiments[selected]
 
     @property
-    def state(self) -> ExperimentState:
-        """
-        :returns: Current state of the experiment.
-        """
-        return self._state
-
-    @state.setter
-    def state(self, state: ExperimentState):
-        """
-        Sets the current experiment state.
-        """
-        self._state = state
-        if self.state == ExperimentState.Standby:
-            self.stk_action.setCurrentIndex(ExperimentAction.Run.value)
-            self.btn_run.setEnabled(True)
-        
-        elif self.state == ExperimentState.Running:
-            self.stk_action.setCurrentIndex(ExperimentAction.Abort.value)
-            
-        elif self.state == ExperimentState.Aborting:
-            self.stk_action.setCurrentIndex(ExperimentAction.Run.value)
-            self.btn_run.setEnabled(False)
-
-        else:
-            # @unreachable
-            raise ValueError('Unknown experiment state.')
-
-    @property
-    def value(self) -> ExperimentParameters:
+    def value(self) -> ExperimentParametersInterface:
         """
         :returns: Parameter values of the active measurement.
         """
@@ -107,16 +111,9 @@ class ExperimentParametersWidget(QGroupBox):
         self.cb_measurement_select.setMaximumWidth(300)
         self.stk_experiments = QStackedWidget()
 
-        self.btn_run = QPushButton('Run')
-        self.btn_abort = QPushButton('Abort')
-        self.stk_action = QStackedWidget()
-        self.stk_action.insertWidget(ExperimentAction.Run.value, self.btn_run)
-        self.stk_action.insertWidget(ExperimentAction.Abort.value, self.btn_abort)
-
         lo_main = QVBoxLayout()
         lo_main.addWidget(self.cb_measurement_select)
         lo_main.addWidget(self.stk_experiments)
-        lo_main.addWidget(self.stk_action)
 
         self.setLayout(lo_main)
         self.setEnabled(False)
@@ -124,8 +121,12 @@ class ExperimentParametersWidget(QGroupBox):
 
     def register_connections(self):
         self.cb_measurement_select.currentIndexChanged.connect(self.select_experiment)
-        self.btn_run.clicked.connect(self.trigger_run)
-        self.btn_abort.clicked.connect(self.trigger_abort)
+
+    def enable_ui(self):
+        self.setEnabled(True)
+
+    def disable_ui(self):
+        self.setEnabled(False)
 
     def select_experiment(self, i: int):
         """
@@ -135,17 +136,3 @@ class ExperimentParametersWidget(QGroupBox):
         :param i: Index of the measurement.
         """
         self.stk_experiments.setCurrentIndex(i)
-
-    def trigger_run(self):
-        """
-        Trigger a run.
-        """
-        self.action.emit(ExperimentAction.Run)
-        self.state = ExperimentState.Running
-
-    def trigger_abort(self):
-        """
-        Trigger an abort.
-        """
-        self.action.emit(ExperimentAction.Abort)
-        self.state = ExperimentState.Aborting

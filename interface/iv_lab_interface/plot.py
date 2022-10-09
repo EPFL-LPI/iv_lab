@@ -18,9 +18,7 @@ class PlotFrame(QWidget, ToggleUiInterface):
     """
     def __init__(self):
         super().__init__()
-
         self.init_ui()
-
 
     def init_ui(self):
         # subwidgets
@@ -57,9 +55,3 @@ class PlotFrame(QWidget, ToggleUiInterface):
         :returns: Current cell name entered.
         """
         return self.plot_header.cell_name
-
-    def add_result(self, result: Results):
-        """
-        Adds a result to the plots.
-        """
-        self.plots_panel.add_result(result)

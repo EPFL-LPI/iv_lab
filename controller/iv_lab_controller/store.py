@@ -1,24 +1,44 @@
-from abc import ABC
 from enum import Enum
-from typing import Any, Callable, Dict, List
+from typing import Any, Dict, Set, Callable, Union
 
 
 
-class Subscriber(ABC):
+class Observer():
     """
-    Subscriber to the store.
+    Observer to the store.
     """
+    def __init__(
+        self,
+        subscribed: Union[Callable, None] = None,
+        changed: Union[Callable, None] = None,
+        removed: Union[Callable, None] = None,
+    ):
+        """
+        :param subscribed: Function to call for subscribed.
+        :param changed: Function to call for changed.
+        :param removed: Function to call for removed.
+        """
+        if subscribed is not None:
+            self.__setattr__('subscribed', subscribed)
+
+        if changed is not None:
+            self.__setattr__('changed', changed)
+
+        if removed is not None:
+            self.__setattr__('removed', removed)
+
+
     def subscribed(self, value: Any):
         """
-        Called when the subscriber is first subscribed to a key.
+        Called when the observer is first subscribed to a key.
 
         :param value: Current value of key's data.
         """
         pass
 
-    def change(self, value: Any, o_value: Any):
+    def changed(self, value: Any, o_value: Any):
         """
-        Called when a key's data the subscriber is 
+        Called when a key's data the observer is 
         subscribed to changes.
 
         :param value: New value of key's data.
@@ -28,7 +48,7 @@ class Subscriber(ABC):
 
     def removed(self, value: Any):
         """
-        Called when a key the subscriber is subscribed to
+        Called when a key the observer is subscribed to
         is removed from the store.
 
         :param value: Current value of key's data.
@@ -36,11 +56,11 @@ class Subscriber(ABC):
         pass
 
 
- class StoreValue(Enum):
-     """
-     Special values for the store.
-     """
-     Undefined = 0
+class StoreValue(Enum):
+    """
+    Special values for the store.
+    """
+    Undefined = 0
 
 
 class Store():
@@ -49,13 +69,13 @@ class Store():
     anywhere from within the app.
     """
     _store: Dict[str, Any] = {}
-    _subscribers: Dict[str, List[Subscriber]] = {}
+    _observers: Dict[str, Set[Observer]] = {}
 
     @classmethod
-    def put(cls, key: str, value: Any):
+    def set(cls, key: str, value: Any):
         """
         Insert or update a key value.
-        Calls subscribers to `key`.
+        Calls observers of `key`.
         
         :param key: Data key.
         :param value: Value to set for the key.
@@ -68,12 +88,12 @@ class Store():
 
         cls._store[key] = value
         
-        # subscribers
-        if key not in cls._subscribers:
-            cls._subscribers[key] = []
+        # observers
+        if key not in cls._observers:
+            cls._observers[key] = set()
 
-        for s in cls._subscribers[key]:
-            s.change(value, o_value)
+        for s in cls._observers[key]:
+            s.changed(value, o_value)
 
     @classmethod
     def get(cls, key: str) -> Any:
@@ -89,20 +109,40 @@ class Store():
     @classmethod
     def remove(cls, key: str):
         """
-        Remove a key, its data, and subscribers from the store.
-
+        Remove a key and its data, and observers from the store.
         If `key` does not exist in the store, returns silently. 
 
         :param key: Key to remove.
+        """
+        cls.remove_key(key)
+        cls.clear_observers(key)
+
+    @classmethod
+    def remove_key(cls, key: str):
+        """
+        Removes the key and its associated data from the store.
+        If the key does not exist, exits quietly.
+        Does not affect the key's observers.
+
+        :param key: Key to remove from the store.
         """
         if key not in cls._store:
             return
 
         value = cls._store[key]
-        for s in cls._subscribers[key]:
+        for s in cls._observers[key]:
             s.removed(value)
 
         del cls._store[key]
+
+    @classmethod
+    def clear_observers(cls, key: str):
+        """
+        Removes all observers from a key.
+        Does not affect the key's data.
+        """
+        if key in cls._observers:
+            del cls._observers[key]
 
     @classmethod
     def has(cls, key: str) -> bool:
@@ -113,17 +153,44 @@ class Store():
         return key in cls._store
 
     @classmethod
-    def subscribe(cls, key: str, subscriber: Subscriber):
+    def subscribe(cls, key: str, observer: Observer):
         """
-        Adds a subcriber function to be called when the 
-        given key is updated.
+        Adds an observer to the given key.
+        Subscribing is idempotent, meaning an observer may only be added once to a key.
+        Observers may subscribe to keys before they exist in the store.
 
         :param key: Key to subscribe to.
-        :param fcn: Function to call when key is updated.
-        :raises KeyError: if the given key does not exist in the store.
+        :param observer: Observer.
         """
-        if key not in cls._subscribers:
-            raise KeyError(key)
+        if key not in cls._observers:
+            cls._observers[key] = set()
 
-        cls._subscribers[key].append(subscriber)
-        subscriber.subscribed(cls._store[key])
+        cls._observers[key].add(observer)
+
+        # run subscribed
+        value = (
+            cls._store[key]
+            if key in cls._store else
+            StoreValue.Undefined
+        )
+
+        observer.subscribed(value)
+
+    @classmethod
+    def unsubscribe(cls, key: str, observer: Observer):
+        """
+        Removes a observer from the given key.
+        If `key` does not exist, or `observer` was not subscribed to `key`,
+        returns silently.
+
+        :param key: Key to remove the `observer` from.
+        :param observer: Observer to remove.
+        """
+        if key not in cls._observers:
+            return
+
+        try:
+            cls._observers[key].remove(observer)
+
+        except KeyError:
+            pass

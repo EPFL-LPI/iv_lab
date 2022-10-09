@@ -13,23 +13,20 @@ from PyQt6.QtWidgets import (
     QSplitter,
     QWidget,
     QStatusBar,
-    QMessageBox,
     QMenuBar
 )
 from pymeasure.experiment import Procedure, Results
 
-from iv_lab_controlelr import Store
-from iv_lab_controller import system as SystemCtrl
+from iv_lab_controller import Store
+from iv_lab_controller.store import Observer
 from iv_lab_controller import common as ctrl_common
 from iv_lab_controller.user import User, Permission
-from iv_lab_controller.base_classes import (
-    System,
-    Experiment,
-    ExperimentParameters,
+
+from .types import (
+    ApplicationState,
+    HardwareState,
 )
 
-from . import common
-from .types import ExperimentQueue, ApplicationState, HardwareState
 from .experiment import ExperimentFrame
 from .plot import PlotFrame
 from .admin import (
@@ -67,87 +64,30 @@ class IVLabInterface(QWidget):
         :param emulate: Run application in emulation mode. [Default: False]
         """
         super().__init__()
-        self._emulate = emulate
-        self.__debug = debug
 
         # --- instance variables ---
-        self._state: ApplicationState = ApplicationState.LoggedOut
-        self._hardware_state: HardwareState = HardwareState.Standby
-
-        self.system: Union[System, None] = None
-        self._system_name: Union[str, None] = None
-
         self.settings = QSettings()
         self._app_resources = resources
 
-        self._user_results: List[Results] = []
+        # --- store ---
+        Store.set('debug_mode', debug)  # bool
+        Store.set('emulation_mode', emulate)  # bool
+
+        Store.set('status_msg', None)  # Union[str, None]
+        Store.set('user', None)  # Union[User, None]
+        Store.set('application_state', ApplicationState.Disabled)  # ApplicationState
+        Store.set('hardware_state', HardwareState.Uninitialized)  # HardwareState
+        Store.set('system', None)  # Union[System, None]
+        Store.set('experiment_results', [])  # List[Results]
+        Store.set('autosave', True)  # bool
+        Store.set('system_path', ctrl_common.system_path())  # str
+        Store.set('cell_name', None)  # Union[str, None]
 
         # --- init UI ---
         self.init_window(main_window)
         self.init_ui()
         self.register_connections()
-
-        # signal all listeners of initial user
-        self._user: Union[User, None] = None
-
-    @property
-    def debug(self) -> bool:
-        """
-        :returns: Debug mode.
-        """
-        return self.__debug
-
-    @property
-    def emulate(self) -> bool:
-        """
-        :returns: Emulation mode.
-        """
-        return self._emulate
-
-    @property
-    def state(self) -> ApplicationState:
-        """
-        :returns: Current state of the application.
-        """
-        return self.state
-
-    @state.setter
-    def state(self, state: ApplicationState):
-        """
-        Sets the application state, updating fields as needed.
-
-        :param state: Application state.
-        """
-        self._state = state
-        if self.state == ApplicationState.LoggedOut:
-            pass
-
-        elif self.state == ApplicationState.Standby:
-            pass
-
-        elif self.state == ApplicationState.Running:
-            pass
-
-        elif self.state == ApplicationState.Error:
-            pass
-
-        else:
-            # @unreachable
-            raise ValueError('Unknown application state')
-
-    @property
-    def system_name(self) -> Union[str, None]:
-        """
-        :returns: Name of the loaded system or None if not loaded.
-        """
-        return self._system_name
-
-    @property
-    def user_results(self) -> List[Results]:
-        """
-        :returns: List of current results for the user.
-        """
-        return self._user_results
+        self.init_observers()
 
     def init_window(self, window):
         """
@@ -157,9 +97,8 @@ class IVLabInterface(QWidget):
         self.window.setGeometry(100, 100, 1200, 600)
         self.window.setWindowTitle('IV Lab')
 
-        self.statusBar = QStatusBar()
-        window.setStatusBar(self.statusBar)
-        common.StatusBar(self.statusBar)  # intialize status bar interface
+        self.status_bar = QStatusBar()
+        window.setStatusBar(self.status_bar)
 
     def init_ui(self):
         """
@@ -187,80 +126,71 @@ class IVLabInterface(QWidget):
         """
         Register top level connections.
         """
-        self.authentication.user_authenticated.connect(self.set_user)
-        self.authentication.user_logged_out.connect(self.on_log_out)
-        self.experiment_frame.initialize_hardware.connect(self.initialize_system)
-        self.experiment_frame.run_experiments.connect(self.run_experiments)
+        pass
+
+    def init_observers(self):
+        # status messages
+        def status_changed(msg: Union[str, None], o_msg: Union[str, None]):
+            """
+            Updates the status bar message.
+            """
+            self.status_bar.showMessage(msg)
+
+        status_observer = Observer(changed=status_changed)
+        Store.subscribe('status_msg', status_observer)
+
+        # user
+        def user_changed(user: Union[User, None], o_user: Union[User, None]):
+            """
+            Sets the UI based on the user's authentication state.
+            """
+            # clear user results if needed
+            if user is None:
+                Store.set('experiment_results', [])
+                Store.set('application_state', ApplicationState.Disabled)
+
+            else:
+                Store.set('application_state', ApplicationState.Active)
+
+        user_observer = Observer(changed=user_changed)
+        Store.subscribe('user', user_observer)
+
+        # application state
+        def app_state_changed(state: ApplicationState, o_state: ApplicationState):
+            """
+            Sets the application state, updating fields as needed.
+
+            :param state: Application state.
+            """
+            if state == ApplicationState.Disabled:
+                self.toggle_admin_ui(enable=False)
+
+            elif state == ApplicationState.Active:
+                user = Store.get('user')
+                is_admin = (
+                    (user is not None) and
+                    (Permission.Admin in user.permissions)
+                )
+                self.toggle_admin_ui(enable=is_admin)
+
+            elif state == ApplicationState.Running:
+                pass
+
+            elif state == ApplicationState.Error:
+                pass
+
+            else:
+                # @unreachable
+                raise ValueError('Unknown application state')
+
+        app_state_observer = Observer(changed=app_state_changed)
+        Store.subscribe('application_state', app_state_observer)
 
     def __delete_controller(self):
         """
         Delete GUI controller.
         """
         pass
-
-    @property
-    def user(self) -> Union[User, None]:
-        return self._user
-
-    @user.setter
-    def user(self, user: Union[User, None]):
-        self._user = user
-        enable_user_ui = (user is not None)
-        self.toggle_user_ui(enable=enable_user_ui)
-        is_admin = (
-            (user is not None) and
-            (Permission.Admin in user.permissions)
-        )
-
-        self.toggle_admin_ui(enable=is_admin)
-
-        # clear user results if needed
-        if user is None:
-            self.clear_results()
-
-    def set_user(self, user: Union[User, None]):
-        """
-        Delegator for `self.user = user`
-        """
-        self.user = user
-
-    def on_log_out(self):
-        """
-        Set user to None.
-        """
-        self.user = None
-
-    def toggle_user_ui(self, enable: Union[bool, None] = None):
-        """
-        Toggles the user UI state.
-
-        :param enabled: Whether to enable or disable the UI.
-            None to toggle to current user state.
-            [Default: None]
-        """
-        if enable == None:
-            enable = (self.user is not None)
-
-        if enable:
-            self.enable_user_ui()
-
-        else:
-            self.disable_user_ui()
-
-    def enable_user_ui(self):
-        """
-        Enables UI elements for logged in users.
-        """
-        # subcomponents
-        self.experiment_frame.enable_ui()
-
-    def disable_user_ui(self):
-        """
-        Disables logged in user UI elements.
-        """
-        self.clear_results()
-        self.experiment_frame.disable_ui()
-        self.plot_frame.disable_ui()
 
     def toggle_admin_ui(self, enable: bool = False):
         """
@@ -294,121 +224,6 @@ class IVLabInterface(QWidget):
         Disables the admin UI.
         """
         self.mb_main.clear()
-        
-    def clear_results(self):
-        """
-        Clears the user's results.
-        """
-        self._user_results = []
-
-    def initialize_system(self):
-        """
-        Create system controller if not already.
-        Initialize hardware.
-        """
-        # load system files
-        if self.system is None:
-            # load system
-            try:
-                system_file = ctrl_common.system_path()
-                self._system_name, system_cls = SystemCtrl.load_system(system_file, emulate=self.emulate)
-            
-            except FileNotFoundError:
-                common.show_message_box(
-                    'Could not load System',
-                    f'Could not find System file\nPlease contact an administrator.',
-                    icon=QMessageBox.Icon.Critical
-                )
-                return
-
-            except RuntimeError as err:
-                common.show_message_box(
-                    'Could not load System',
-                    f'Could not load System due to the following error:\n{err}\nPlease contact an administrator.',
-                    icon=QMessageBox.Icon.Critical
-                )
-                return
-
-            self.system = system_cls(emulate=self.emulate)
-            self.system.smu.add_listener('status_update', common.StatusBar().showMessage)
-            self.system.lamp.add_listener('status_update', common.StatusBar().showMessage)
-
-            experiments: List[Experiment] = []
-            for perm in self.user.permissions:
-                experiments += self.system.experiments_for_permission(perm)
-
-            self.experiment_frame.experiments = experiments
-
-        # initialize hardware
-        common.StatusBar().showMessage('Initializing hardware...')
-        try:
-            self.system.connect()
-
-        except Exception as err:
-            common.show_message_box(
-                'Could not initialize hardware',
-                f'Could not initialize hardware due to the following error.\n{err}',
-                icon=QMessageBox.Icon.Critical
-            )
-            common.StatusBar().showMessage('Error initializing hardware')
-
-        else:
-            self.experiment_frame.system = self.system
-            common.StatusBar().showMessage('Hardware initialized')
-
-        # enable plot ui
-        self.plot_frame.enable_ui()
-
-    def run_experiments(self, experiments: ExperimentQueue):
-        """
-        Runs an experiments queue.
-        """
-        for exp, params in experiments:
-            self.run_experiment(exp, params)
-
-    def run_experiment(self, exp: Experiment, params: ExperimentParameters):
-        """
-        Runs an experiment.
-        """
-        proc = exp.create_procedure(params.to_dict())
-        self.run_procedure(exp.name, proc)
-
-    def run_procedure(self, exp_name: str, procedure: Procedure):
-        """
-        Runs a procedure.
-
-        :param exp_name: Experiment name.
-        :param procedure: The procedure to run.
-            The `lamp` and `smu` will be set from the system.
-        """
-        # data file
-        cell_name = self.plot_frame.cell_name
-        if not cell_name:
-            common.show_message_box(
-                'No cell name',
-                'Please enter a name for your cell.'
-            )
-            return
-
-        daily_dir = ctrl_common.get_user_daily_data_directory(self.user)
-
-        filename = f'{cell_name}--{exp_name}'
-        data_path = os.path.join(daily_dir, filename)
-        data_path += '.csv'
-        data_path = ctrl_common.unique_file(data_path)
-
-        # procedure
-        procedure.lamp = self.system.lamp
-        procedure.smu = self.system.smu
-
-        result = Results(procedure, data_path)
-        self.add_results(result)
-
-    def add_results(self, result: Results):
-        """
-        """
-        self._user_results.append(result)
-        self.plot_frame.add_result(result)
 
     # ---------------------
     # --- admin actions ---

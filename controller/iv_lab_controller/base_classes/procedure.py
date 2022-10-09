@@ -1,12 +1,11 @@
-from abc import ABC
-
 from pymeasure.experiment import Procedure as PyMeasProcedure
-from pymeasure.experiment import FloatParameter
+from pymeasure.experiment import FloatParameter, BooleanParameter
 
 class Procedure(PyMeasProcedure):
     """
     An IV Lab procedure with standard parameters.
     """
+    # cell
     active_area = FloatParameter('Active area', units='cm^2')
     
     # compliance
@@ -25,6 +24,11 @@ class Procedure(PyMeasProcedure):
     )
 
     # light
+    light_level_manual = BooleanParameter(
+        'Manual light level',
+        default=False
+    )
+
     light_intensity = FloatParameter(
         'Light intensity',
         units='suns',

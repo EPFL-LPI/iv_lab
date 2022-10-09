@@ -6,7 +6,7 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
 )
 
-from .experiment_parameters import ExperimentParameters
+from .experiment_parameters import ExperimentParametersInterface
 from .value_widget import ValueWidget
 
 
@@ -23,7 +23,7 @@ class ExperimentParametersWidget(ValueWidget):
 
     @property
     @abstractmethod
-    def value(self) -> ExperimentParameters:
+    def value(self) -> ExperimentParametersInterface:
         """
         :returns: Parameter values.
         """

@@ -20,7 +20,7 @@ class IlluminationWidget(QGroupBox, ToggleUiInterface):
         super().__init__('Light Level')
         
         self.intensities = {
-            '1 Sun': 100,
+            '1 Sun': 1,
             'Dark': 0
         }
 

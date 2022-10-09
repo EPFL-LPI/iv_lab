@@ -8,10 +8,6 @@ class ValueWidget(QWidget):
     """
     Value widget.
     """
-
-    def __init__(self):
-        super().__init__()
-
     @property
     @abstractmethod
     def value(self) -> Any:

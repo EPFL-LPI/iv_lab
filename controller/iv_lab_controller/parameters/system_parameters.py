@@ -1,8 +1,6 @@
 from typing import Union, Dict, Any
 
-from pymeasure.experiment import FloatParameter
-
-from ..base_classes import ExperimentParameters
+from ..base_classes import ExperimentParametersInterface
 from . import (
     CellParameters,
     ComplianceParameters,
@@ -10,7 +8,7 @@ from . import (
 )
 
 
-class SystemParameters(ExperimentParameters):
+class SystemParameters(ExperimentParametersInterface):
     """
     Container for system parameters.
     """
@@ -65,7 +63,7 @@ class SystemParameters(ExperimentParameters):
 
         return {
             **cell_params.to_dict(),
-            **compliance_params.to_dict()
+            **compliance_params.to_dict(),
             **illumination_params.to_dict(),
         }
 
