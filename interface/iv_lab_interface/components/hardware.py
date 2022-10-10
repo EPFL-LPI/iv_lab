@@ -11,11 +11,10 @@ from iv_lab_controller import Store
 from iv_lab_controller.store import Observer
 from iv_lab_controller import system as SystemCtrl
 from iv_lab_controller import common as ctrl_common
-from iv_lab_controller.user import User
 
 from .. import common
 from ..base_classes import ToggleUiInterface
-from ..types import HardwareState
+from ..types import HardwareState, ApplicationState
 
 
 class HardwareInitialization(QWidget, ToggleUiInterface):
@@ -44,12 +43,14 @@ class HardwareInitialization(QWidget, ToggleUiInterface):
 
     def init_observers(self):
         # hardware state
-        def state_changed(state: HardwareState, o_state: HardwareState):
+        def enable_hardware_ui(state: HardwareState):
             if state is HardwareState.Uninitialized:
                 self.enable_ui()
+                self.btn_initialize.setText('Initialize Hardware')
 
             elif state is HardwareState.Initialized:
                 self.disable_ui()
+                self.btn_initialize.setText('Hardware Initialized')
 
             elif state is HardwareState.Error:
                 # allow user to attempt reinitialization
@@ -58,19 +59,29 @@ class HardwareInitialization(QWidget, ToggleUiInterface):
             else:
                 raise ValueError('Unknown hardware state')
 
-        state_observer = Observer(changed=state_changed)
-        Store.subscribe('hardware_state', state_observer)
+        def hardware_state_changed(state: HardwareState, o_state: HardwareState):
+            enable_hardware_ui(state)
+
+        hardware_state_observer = Observer(changed=hardware_state_changed)
+        Store.subscribe('hardware_state', hardware_state_observer)
     
-        # user
-        def user_changed(user: Union[User, None], o_user: Union[User, None]):
-            if user is None:
+        # application state
+        def app_state_changed(state: ApplicationState, o_state: ApplicationState):
+            if state is ApplicationState.Disabled:
+                self.disable_ui()
+
+            elif state is ApplicationState.Active:
+                enable_hardware_ui(Store.get('hardware_state'))
+
+            elif state is ApplicationState.Error:
                 self.disable_ui()
 
             else:
-                self.enable_ui()
+                # @unreachable
+                raise ValueError('Unknown application state')
 
-        user_observer = Observer(changed=user_changed)
-        Store.subscribe('user', user_observer)
+        app_state_observer = Observer(changed=app_state_changed)
+        Store.subscribe('application_state', app_state_observer)
 
         # system path
         def system_path_changed(path: str, o_path: str):

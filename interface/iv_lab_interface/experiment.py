@@ -1,3 +1,5 @@
+from typing import Union
+
 from PyQt6.QtWidgets import (
     QVBoxLayout,
     QPushButton,
@@ -8,17 +10,17 @@ from PyQt6.QtWidgets import (
 from iv_lab_controller import Runner
 from iv_lab_controller.types import RunnerState
 from iv_lab_controller.store import Store, Observer
+from iv_lab_controller.base_classes import System
 
 from . import common
 from .types import (
     ExperimentAction,
     HardwareState,
+    ApplicationState,
 )
 
-from .components import (
-    ParametersWidget,
-    HardwareInitialization,
-)
+from .components import HardwareInitialization
+from .components.parameters import CompleteParametersWidget
 
 class ExperimentFrame(QWidget):
     def __init__(self):
@@ -39,7 +41,7 @@ class ExperimentFrame(QWidget):
 
     def init_ui(self):
         self.wgt_hardware = HardwareInitialization()
-        self.wgt_parameters = ParametersWidget()
+        self.wgt_parameters = CompleteParametersWidget()
 
         # run / abort
         self.btn_run = QPushButton('Run')
@@ -58,60 +60,90 @@ class ExperimentFrame(QWidget):
         lo_main = QVBoxLayout()
         lo_main.addWidget(self.wgt_hardware)
         lo_main.addWidget(self.wgt_parameters)
+        lo_main.addStretch()
         lo_main.addWidget(self.stk_action)
         lo_main.addWidget(self.btn_reset_fields)
         
         self.setLayout(lo_main)  
     
     def init_observers(self):
-        # experiment state
-        def runner_state_changed(state: RunnerState, o_state: RunnerState):
+        # runner
+        def runner_state_ui(state: RunnerState):
             """
-            Sets the current experiment state.
+            Sets UI based on current runner state.
             """
             if state == RunnerState.Standby:
-                self.stk_action.setCurrentIndex(ExperimentAction.Run.value)
-                self.btn_run.setEnabled(True)
-                self.btn_abort.setEnabled(False)
-            
+                self.enable_run_ui()
+
             elif state == RunnerState.Running:
-                self.stk_action.setCurrentIndex(ExperimentAction.Abort.value)
-                self.btn_run.setEnabled(False)
-                self.btn_abort.setEnabled(True)
+                self.enable_abort_ui()
                 
             elif state == RunnerState.Aborting:
-                self.stk_action.setCurrentIndex(ExperimentAction.Run.value)
-                self.btn_run.setEnabled(False)
-                self.btn_abort.setEnabled(False)
+                self.disable_ui()
 
             else:
                 # @unreachable
-                raise ValueError('Unknown experiment state.')
+                raise ValueError('Unknown runner state.')
+
+        # experiment state
+        def runner_state_changed(state: RunnerState, o_state: RunnerState):
+            runner_state_ui(state)
 
         runner_state_observer = Observer(changed=runner_state_changed)
         Store.subscribe('runner_state', runner_state_observer)
 
         # hardware state
-        def hardware_state_changed(state: HardwareState, o_state: HardwareState):
+        def enable_hardware_ui(state: HardwareState):
             if state is HardwareState.Uninitialized:
-                self.wgt_parameters.disable_ui()
-                self.btn_run.setEnabled(False)
-                self.btn_abort.setEnabled(False)
+                self.disable_ui()
 
             elif state is HardwareState.Initialized:
-                self.wgt_parameters.enable_ui()
-                self.btn_run.setEnabled(True)
-                self.btn_abort.setEnabled(True)
+                self.enable_run_ui()
 
             elif state is HardwareState.Error:
                 # allow user to attempt reinitialization
-                self.enable_ui()
+                runner_state = Store.get('runner_state')
+                runner_state_ui(runner_state)
 
             else:
+                # @unreachable
                 raise ValueError('Unknown hardware state')
+
+        def hardware_state_changed(state: HardwareState, o_state: HardwareState):
+            enable_hardware_ui(state)
 
         hardware_state_observer = Observer(changed=hardware_state_changed)
         Store.subscribe('hardware_state', hardware_state_observer)
+
+        # application state
+        def app_state_changed(state: ApplicationState, o_state: ApplicationState):
+            if state is ApplicationState.Disabled:
+                self.disable_ui()
+
+            elif state is ApplicationState.Active:
+                enable_hardware_ui(Store.get('hardware_state'))
+
+            elif state is ApplicationState.Error:
+                self.disable_ui()
+
+            else:
+                # @unreachable
+                raise ValueError('Unknown application state')
+
+        app_state_observer = Observer(changed=app_state_changed)
+        Store.subscribe('application_state', app_state_observer)
+
+        # system
+        def system_changed(system: Union[System, None], o_sys: Union[System, None]):
+            if system is None:
+                self.btn_reset_fields.setEnabled(False)
+
+            else:
+                enable = Store.get('application_state') is not ApplicationState.Disabled
+                self.btn_reset_fields.setEnabled(enable)
+
+        system_observer = Observer(changed=system_changed)
+        Store.subscribe('system', system_observer)
 
     def register_connections(self):
         self.btn_reset_fields.clicked.connect(self.reset_all_fields)
@@ -119,8 +151,33 @@ class ExperimentFrame(QWidget):
         self.btn_run.clicked.connect(self.trigger_run)
         self.btn_abort.clicked.connect(self.trigger_abort)
 
+    def enable_run_ui(self):
+        """
+        Enable run UI, diable abort UI.
+        """
+        self.stk_action.setCurrentIndex(ExperimentAction.Run.value)
+        self.btn_run.setEnabled(True)
+        self.btn_abort.setEnabled(False)
+
+    def enable_abort_ui(self):
+        """
+        Enable abort UI, diable run UI.
+        """
+        self.stk_action.setCurrentIndex(ExperimentAction.Abort.value)
+        self.btn_run.setEnabled(False)
+        self.btn_abort.setEnabled(True)
+
+    def disable_ui(self):
+        """
+        Disable own UI elements. Show run UI.
+        """
+        self.stk_action.setCurrentIndex(ExperimentAction.Run.value)
+        self.btn_run.setEnabled(False)
+        self.btn_abort.setEnabled(False)
+        self.btn_reset_fields.setEnabled(False)
+
     def reset_all_fields(self):
-        self.wgt_parameters.reset_fields()
+        Store.emit('reset_parameter_fields')
 
     def trigger_abort(self):
         """

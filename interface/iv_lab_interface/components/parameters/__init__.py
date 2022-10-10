@@ -1,0 +1,6 @@
+from .illumination_parameters import IlluminationParametersWidget
+from .cell_parameters import CellParametersWidget
+from .compliance_parameters import ComplianceParametersWidget
+from .experiment_parameters import ExperimentParametersWidget
+from .system_parameters import SystemParametersWidget
+from .complete_parameters import CompleteParametersWidget

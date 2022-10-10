@@ -7,6 +7,8 @@ from pymeasure.display.widgets import PlotWidget
 
 from iv_lab_controller.store import Store, Observer
 
+from ..types import ApplicationState
+
 
 class GraphPanels(QTabWidget):
     """
@@ -26,6 +28,14 @@ class GraphPanels(QTabWidget):
 
         results_observer = Observer(changed=results_changed)
         Store.subscribe('experiment_results', results_observer)
+
+        # application state
+        def app_state_changed(state: ApplicationState, o_state: ApplicationState):
+            if state is ApplicationState.Disabled:
+                self.clear()
+
+        app_state_observer = Observer(changed=app_state_changed)
+        Store.subscribe('application_state', app_state_observer)
 
     @property
     def results(self) -> List[Results]:

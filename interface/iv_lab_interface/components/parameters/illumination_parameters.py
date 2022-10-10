@@ -1,7 +1,8 @@
+from typing import Dict
+
 from PyQt6.QtWidgets import (
     QHBoxLayout,
     QVBoxLayout,
-    QPushButton,
     QWidget,
     QGroupBox,
     QComboBox,
@@ -12,19 +13,19 @@ from PyQt6.QtWidgets import (
 
 from iv_lab_controller.parameters import IlluminationParameters
 
-from ..base_classes import ToggleUiInterface
+from .parameters_widget_base import ParametersWidgetBase
 
 
-class IlluminationWidget(QGroupBox, ToggleUiInterface):
+class IlluminationParametersWidget(QGroupBox, ParametersWidgetBase):
+    intensities: Dict[str, float] = {
+        '1 Sun': 1,
+        'Dark': 0
+    }
+
     def __init__(self):
         super().__init__('Light Level')
-        
-        self.intensities = {
-            '1 Sun': 1,
-            'Dark': 0
-        }
-
         self.init_ui()
+        self.init_observers()
 
     def init_ui(self): 
         # presets

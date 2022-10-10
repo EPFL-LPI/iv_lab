@@ -2,7 +2,6 @@ from enum import Enum
 from typing import Any, Dict, Set, Callable, Union
 
 
-
 class Observer():
     """
     Observer to the store.
@@ -70,7 +69,9 @@ class Store():
     """
     _store: Dict[str, Any] = {}
     _observers: Dict[str, Set[Observer]] = {}
+    _listeners: Dict[str, Set[Callable]] = {}
 
+    # --- observers ---
     @classmethod
     def set(cls, key: str, value: Any):
         """
@@ -194,3 +195,48 @@ class Store():
 
         except KeyError:
             pass
+
+    # --- listeners ---
+    @classmethod
+    def on(cls, topic: str, listener: Callable):
+        """
+        Adds a listener for the given topic.
+        This is an idempotent function, meaning adding the same listener
+        to the same topic multiple times will have not additional effects.
+
+        :param topic: Topic to listen to.
+        :param listener: Callable to run when topic emits.
+        """
+        if topic not in cls._listeners:
+            cls._listeners[topic] = set()
+
+        cls._listeners[topic].add(listener)
+
+    @classmethod
+    def ignore(cls, topic: str, listener: Callable):
+        """
+        Remove a listener from the given topic.
+        If `listener` was not listening to `topic`, fails silently.
+
+        :param topic: Topic to search.
+        :param listener: Callable to remove.
+        """
+        if topic in cls._listeners:
+            cls._listeners[topic].remove(listener)
+
+    @classmethod
+    def emit(cls, topic: str, *args, **kwargs):
+        """
+        Emits a signal to listeners of the topic.
+
+        :param topic: Topic to emit to.
+        :param *args: Positional arguments passed to the listeners.
+        :param **kwargs: Keyword arguments passed to the listeners.
+        """
+        if topic not in cls._listeners:
+            return
+
+        for listener in cls._listeners[topic]:
+            listener(*args, **kwargs)
+
+

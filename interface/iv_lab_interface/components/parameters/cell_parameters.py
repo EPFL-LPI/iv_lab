@@ -2,30 +2,32 @@ from PyQt6.QtWidgets import (
     QLabel,
     QDoubleSpinBox,
     QHBoxLayout,
-    QWidget
 )
 
 from iv_lab_controller.parameters import CellParameters
 
-from ..base_classes import ToggleUiInterface
+from .parameters_widget_base import ParametersWidgetBase
 
 
-class CellParametersWidget(QWidget, ToggleUiInterface):
-
+class CellParametersWidget(ParametersWidgetBase):
+    """
+    Cell parameters widget.
+    """
     def __init__(self):
         super().__init__()
 
         self.init_ui()
+        self.init_observers()
 
     def init_ui(self): 
         # cell active area
         lbl_cell_area = QLabel("Cell Active Area")
         lbl_cell_area_units = QLabel("cm<sup>2</sup>")
         self.sb_cell_area = QDoubleSpinBox()
-        self.sb_cell_area.setDecimals(2)
+        self.sb_cell_area.setDecimals(3)
         self.sb_cell_area.setSingleStep(0.01)
         self.sb_cell_area.setMinimum(0)
-        self.sb_cell_area.setMaximumWidth(75)
+        self.sb_cell_area.setMaximumWidth(100)
         
         lo_main = QHBoxLayout()
         lo_main.addWidget(lbl_cell_area)
@@ -56,4 +58,4 @@ class CellParametersWidget(QWidget, ToggleUiInterface):
         """
         Reset field values to default values.
         """
-        self.sb_cell_area.setValue(1)
+        self.sb_cell_area.setValue(0.15)

@@ -7,14 +7,14 @@ from PyQt6.QtWidgets import (
 
 from iv_lab_controller.parameters import ComplianceParameters
 
-from ..base_classes import ToggleUiInterface
+from .parameters_widget_base import ParametersWidgetBase
 
 
-class ComplianceWidget(QGroupBox, ToggleUiInterface):
+class ComplianceParametersWidget(QGroupBox, ParametersWidgetBase):
     def __init__(self):
         super().__init__("Compliance")
-
         self.init_ui()
+        self.init_observers()
 
     def init_ui(self):
         lbl_voltage_limit = QLabel("Voltage Limit")

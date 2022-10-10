@@ -16,11 +16,10 @@ from iv_lab_controller.base_classes import (
     System,
 )
 
-from ..base_classes import ToggleUiInterface
-from ..types import ApplicationState, HardwareState
+from .parameters_widget_base import ParametersWidgetBase
 
 
-class ExperimentParametersWidget(QGroupBox, ToggleUiInterface):
+class ExperimentParametersWidget(QGroupBox, ParametersWidgetBase):
     queue_experiment = pyqtSignal(type(Experiment), ExperimentParametersInterface)
 
     def __init__(self):
@@ -33,12 +32,14 @@ class ExperimentParametersWidget(QGroupBox, ToggleUiInterface):
         self.init_observers()
 
     def init_observers(self):
+        super().init_observers()
+
         # system
         def system_changed(system: System, o_sys: System):
             """
             Updates the UI to match the system's experiments.
             """
-            self._experiments: List[Experiment] = []
+            self._experiments = []
 
             # collect experiments
             if system is not None:
@@ -62,22 +63,6 @@ class ExperimentParametersWidget(QGroupBox, ToggleUiInterface):
 
         sys_observer = Observer(changed=system_changed)
         Store.subscribe('system', sys_observer)
-
-        # hardware
-        def hardware_state_changed(state: HardwareState, o_state: HardwareState):
-            if state == HardwareState.Uninitialized:
-                self.disable_ui()
-
-        hardware_state_observer = Observer(changed=hardware_state_changed)
-        Store.subscribe('hardware_state', hardware_state_observer)
-
-        # application state
-        def app_state_changed(state: ApplicationState, o_state: ApplicationState):
-            if state is ApplicationState.Disabled:
-                self.disable_ui()
-
-        app_state_observer = Observer(changed=app_state_changed)
-        Store.subscribe('application_state', app_state_observer)
                 
     @property
     def experiments(self) -> List[Experiment]:
@@ -136,3 +121,11 @@ class ExperimentParametersWidget(QGroupBox, ToggleUiInterface):
         :param i: Index of the measurement.
         """
         self.stk_experiments.setCurrentIndex(i)
+
+    def reset_fields(self):
+        """
+        Reset fields on all experiments, if possible.
+        """
+        for i in range(self.stk_experiments.count()):
+            wgt = self.stk_experiments.widget(i)
+            wgt.reset_fields()

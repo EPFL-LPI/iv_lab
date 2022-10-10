@@ -1,19 +1,16 @@
-from PyQt6.QtWidgets import (
-    QVBoxLayout
-)
+from PyQt6.QtWidgets import QVBoxLayout
 
 from iv_lab_controller.base_classes import ValueWidget
 from iv_lab_controller.parameters import SystemParameters
 
-from ..base_classes import ToggleUiInterface
 from . import (
-    IlluminationWidget,
+    IlluminationParametersWidget,
     CellParametersWidget,
-    ComplianceWidget,
+    ComplianceParametersWidget,
 )
 
 
-class SystemParametersWidget(ValueWidget, ToggleUiInterface):
+class SystemParametersWidget(ValueWidget):
     """
     Container widget for system parameters.
     """
@@ -23,9 +20,9 @@ class SystemParametersWidget(ValueWidget, ToggleUiInterface):
         self.init_ui()
 
     def init_ui(self):
-        self.wgt_illumination_parameters = IlluminationWidget()
+        self.wgt_illumination_parameters = IlluminationParametersWidget()
         self.wgt_cell_parameters = CellParametersWidget()
-        self.wgt_compliance_parameters = ComplianceWidget()
+        self.wgt_compliance_parameters = ComplianceParametersWidget()
 
         # layout
         lo_main = QVBoxLayout()

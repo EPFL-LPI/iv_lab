@@ -10,6 +10,8 @@ from .experiment_parameters import ExperimentParametersInterface
 from .value_widget import ValueWidget
 
 
+# @note: Queuing functionality commented out for easy implentation
+#   later on, if desired.
 class ExperimentParametersWidget(ValueWidget):
     """
     Measurement parameters widget.
@@ -51,7 +53,7 @@ class ExperimentParametersWidget(ValueWidget):
         """
         Set field values to default value.
         """
-        raise NotImplementedError()
+        raise NotImplementedError('`reset_fields` should be implemented by subclass')
 
     def register_connections(self):
         # self.btn_queue.clicked.connect(lambda: self.queue.emit())
