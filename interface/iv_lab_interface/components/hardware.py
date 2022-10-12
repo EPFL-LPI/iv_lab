@@ -17,7 +17,7 @@ from ..base_classes import ToggleUiInterface
 from ..types import HardwareState, ApplicationState
 
 
-class HardwareInitialization(QWidget, ToggleUiInterface):
+class HardwareInitializationWidget(QWidget, ToggleUiInterface):
     """
     Handles hardware initialization.
     """

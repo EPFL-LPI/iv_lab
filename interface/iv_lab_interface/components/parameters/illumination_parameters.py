@@ -1,3 +1,4 @@
+from enum import Enum
 from typing import Dict
 
 from PyQt6.QtWidgets import (
@@ -16,6 +17,14 @@ from iv_lab_controller.parameters import IlluminationParameters
 from .parameters_widget_base import ParametersWidgetBase
 
 
+class IlluminationMode(Enum):
+    """
+    Illumination modes.
+    """
+    Auto = 0
+    Manual = 1
+
+
 class IlluminationParametersWidget(QGroupBox, ParametersWidgetBase):
     intensities: Dict[str, float] = {
         '1 Sun': 1,
@@ -24,10 +33,13 @@ class IlluminationParametersWidget(QGroupBox, ParametersWidgetBase):
 
     def __init__(self):
         super().__init__('Light Level')
+
+        self._illumination_mode: IlluminationMode = IlluminationMode.Auto
+
         self.init_ui()
         self.init_observers()
 
-    def init_ui(self): 
+    def init_ui(self):
         # presets
         self.cb_intensity = QComboBox()
         self.cb_intensity.setMaximumWidth(300)
@@ -40,7 +52,7 @@ class IlluminationParametersWidget(QGroupBox, ParametersWidgetBase):
         self.sb_manual_intensity = QDoubleSpinBox()
         self.sb_manual_intensity.setDecimals(2)
         self.sb_manual_intensity.setSingleStep(0.1)
-        
+
         lo_manual = QHBoxLayout()
         lo_manual.addWidget(lbl_manual_intensity)
         lo_manual.addWidget(self.sb_manual_intensity)
@@ -53,9 +65,9 @@ class IlluminationParametersWidget(QGroupBox, ParametersWidgetBase):
         self.stk_intensity = QStackedWidget()
         self.stk_intensity.addWidget(self.cb_intensity)
         self.stk_intensity.addWidget(wgt_manual)
-        self.stk_intensity.setCurrentIndex(0)
-        self.lightLevelModeManual = False
-        
+        self.stk_intensity.setCurrentIndex(self.illumination_mode.value)
+        self.manual_light_level = False
+
         # measured label
         lbl_measured_intensity_title = QLabel('Measured Light Intensity:')
         self.lbl_measured_intensity = QLabel('---.--')
@@ -65,34 +77,37 @@ class IlluminationParametersWidget(QGroupBox, ParametersWidgetBase):
         lo_measured_intensity.addWidget(lbl_measured_intensity_title)
         lo_measured_intensity.addWidget(self.lbl_measured_intensity)
         lo_measured_intensity.addWidget(lbl_measured_intensity_units)
-        
+
         lo_main = QVBoxLayout()
         lo_main.addWidget(self.stk_intensity)
         lo_main.addLayout(lo_measured_intensity)
         self.setLayout(lo_main)
         self.setMaximumWidth(300)
-    
+
         self.disable_ui()
         self.reset_fields()
-    
-    @property
-    def manual_illumination(self) -> bool:
-        """
-        :returns: If in manual mode.
-        """
-        return (self.stk_intensity.currentIndex() == 1)
 
-    def setLightLevelModeManual(self):
-        self.stk_intensity.setCurrentIndex(1)
-        
-        
-    def setLightLevelModeMenu(self):
-        self.stk_intensity.setCurrentIndex(0)
-    
-    def updateMeasuredLightIntensity(self,intensity):
+    @property
+    def illumination_mode(self) -> IlluminationMode:
+        """
+        :returns: Illumination mode.
+        """
+        return self._illumination_mode
+
+    @illumination_mode.setter
+    def illumination_mode(self, mode: IlluminationMode):
+        """
+        Set the illumination mode, changing UI as needed.
+        """
+        self._illumination_mode = mode
+        self.stk_intensity.setCurrentIndex(mode.value)
+
+    # @todo: Measured light level should be in Store.
+    #   Create an observer for updates.
+    def updateMeasuredLightIntensity(self, intensity):
         self.lbl_measured_intensity.setText(f'{intensity:6.2f}')
-    
-    def setLightLevelList(self,lightLevelDict):
+
+    def setLightLevelList(self, lightLevelDict):
         self.cb_intensity.clear()
         for light in lightLevelDict:
             self.cb_intensity.addItem(light)
@@ -105,7 +120,7 @@ class IlluminationParametersWidget(QGroupBox, ParametersWidgetBase):
         :returns: Illumination parameters.
         """
         params = IlluminationParameters()
-        if self.manual_illumination:
+        if self.illumination_mode is IlluminationMode.Manual:
             params.manual = True
             params.intensity = self.sb_manual_intensity.value()
 
@@ -114,6 +129,32 @@ class IlluminationParametersWidget(QGroupBox, ParametersWidgetBase):
             params.intensity = inten
 
         return params
+
+    @value.setter
+    def value(self, value: IlluminationParameters):
+        """
+        Set UI values.
+
+        :param value: Desired values.
+        :raises ValueError: If invalid intensity.
+        """
+        if value.manual.value:
+            self.illumination_mode = IlluminationMode.Manual
+
+        else:
+            self.illumination_mode = IlluminationMode.Auto
+
+            inten_index = None
+            for i, i_val in enumerate(self.intensities.values()):
+                if value.intensity.value == i_val:
+                    inten_index = i
+                    break
+
+            if inten_index is None:
+                # invalid intensity value
+                raise ValueError('Invalid illumination intensity')
+
+            self.cb_intensity.setCurrentIndex(inten_index)
 
     def enable_ui(self):
         self.setEnabled(True)

@@ -25,8 +25,8 @@ setuptools.setup(
     python_requires=">=3.6.8",
     install_requires=[
         'numpy',
-        'pymeasure',
-        'iv_lab_controller'
+        'pymeasure @ https://github.com/pymeasure/pymeasure.git',
+        'iv_lab_instruments'
     ],
     package_data={
         'iv-lab-experiments': ['systems']

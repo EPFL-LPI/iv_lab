@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Union
 
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import (
@@ -72,11 +72,14 @@ class ExperimentParametersWidget(QGroupBox, ParametersWidgetBase):
         return self._experiments
 
     @property
-    def active_experiment(self) -> Experiment:
+    def active_experiment(self) -> Union[Experiment, None]:
         """
         :returns: Currently selected experiment.
         """
         selected = self.cb_measurement_select.currentIndex()
+        if selected < 0:
+            return None
+
         return self.experiments[selected]
 
     @property

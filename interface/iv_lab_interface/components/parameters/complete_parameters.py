@@ -1,4 +1,4 @@
-from typing import Type, Tuple
+from typing import Type, Tuple, Union
 
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QVBoxLayout
@@ -34,7 +34,7 @@ class CompleteParametersWidget(ValueWidget):
         self.setLayout(lo_main)
 
     @property
-    def value(self) -> Tuple[Type[Experiment], CompleteParameters]:
+    def value(self) -> Tuple[Union[Type[Experiment], None], CompleteParameters]:
         exp = self.wgt_experiment_parameters.active_experiment
 
         params = CompleteParameters()

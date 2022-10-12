@@ -19,7 +19,7 @@ class CellParametersWidget(ParametersWidgetBase):
         self.init_ui()
         self.init_observers()
 
-    def init_ui(self): 
+    def init_ui(self):
         # cell active area
         lbl_cell_area = QLabel("Cell Active Area")
         lbl_cell_area_units = QLabel("cm<sup>2</sup>")
@@ -28,7 +28,7 @@ class CellParametersWidget(ParametersWidgetBase):
         self.sb_cell_area.setSingleStep(0.01)
         self.sb_cell_area.setMinimum(0)
         self.sb_cell_area.setMaximumWidth(100)
-        
+
         lo_main = QHBoxLayout()
         lo_main.addWidget(lbl_cell_area)
         lo_main.addWidget(self.sb_cell_area)
@@ -37,7 +37,7 @@ class CellParametersWidget(ParametersWidgetBase):
 
         self.disable_ui()
         self.reset_fields()
-    
+
     @property
     def value(self) -> CellParameters:
         """
@@ -47,6 +47,22 @@ class CellParametersWidget(ParametersWidgetBase):
         params.cell_area = self.sb_cell_area.value()
 
         return params
+
+    @value.setter
+    def value(self, value: CellParameters):
+        """
+        Set UI values.
+
+        :param value: Desired values.
+        :raises ValureError: If invalid parameter.
+        """
+        area = value.cell_area.value
+        area_min = self.sb_cell_area.minimum()
+        area_max = self.sb_cell_area.maximum()
+        if (area < area_min) or (area > area_max):
+            raise ValueError('Invalid cell area')
+
+        self.sb_cell_area.setValue(area)
 
     def enable_ui(self):
         self.setEnabled(True)

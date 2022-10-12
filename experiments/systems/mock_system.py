@@ -1,9 +1,9 @@
 from iv_lab_controller.user import Permission
 from iv_lab_controller.base_classes import System
 
-from iv_lab_components.lamps.mock_lamp import MockLamp
-from iv_lab_components.smus.mock_smu import MockSMU
-from iv_lab_components.system_parameters.mock_system_parameters import MockSystemParameters
+from iv_lab_instruments.lamps.mock_lamp import MockLamp
+from iv_lab_instruments.smus.mock_smu import MockSMU
+from iv_lab_instruments.system_parameters.mock_system_parameters import MockSystemParameters
 
 from iv_lab_experiments.mock_experiment import MockExperiment
 

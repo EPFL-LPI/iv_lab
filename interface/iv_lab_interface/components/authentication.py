@@ -1,3 +1,4 @@
+import logging
 from enum import Enum
 from json import JSONDecodeError
 
@@ -17,6 +18,10 @@ from iv_lab_controller.types import RunnerState
 import iv_lab_controller.authentication as auth_ctrl
 
 from .. import common
+
+
+# logger 
+logger = logging.getLogger('iv_lab')
 
 
 class Actions(Enum):
@@ -151,9 +156,17 @@ class AuthenticationWidget(QStackedWidget):
         self.in_username.clear()
         self.in_password.clear()
 
+        # log activity
+        logger.info(f'User `{user.username}` logged in')
+
     def log_out(self):
+        user = Store.get('user')
+
         Store.set('status_msg', 'Logged out')
         Store.set('user', None)
+
+        # log activity
+        logger.info(f'User `{user.username}` logged out')
 
     def set_username(self, username: str):
         self.lbl_username.setText(username)

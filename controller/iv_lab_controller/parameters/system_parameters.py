@@ -1,6 +1,11 @@
-from typing import Union, Dict, Any
+import json
+from typing import Union, Dict, Any, Tuple
 
-from ..base_classes import ExperimentParametersInterface
+from ..base_classes import (
+    ParametersDictionaryInterface,
+    ExperimentParametersInterface,
+)
+
 from . import (
     CellParameters,
     ComplianceParameters,
@@ -8,7 +13,7 @@ from . import (
 )
 
 
-class SystemParameters(ExperimentParametersInterface):
+class SystemParameters(ParametersDictionaryInterface):
     """
     Container for system parameters.
     """
@@ -42,17 +47,95 @@ class SystemParameters(ExperimentParametersInterface):
 
         return True
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict_set(self) -> Dict[str, Any]:
+        """
+        Converts parameter values into a dictionary of
+        key-value pairs, where the value is the value of the parameter.
+        If the parameter has not yet been set, it is not included.
+
+        :returns: Dictionary of key-value pairs.
+        """
+        d = {}
+        if self.cell_parameters is not None:
+            d['cell_parameters'] = self.cell_parameters.to_dict_set()
+
+        if self.compliance_parameters is not None:
+            d['compliance_parameters'] = self.compliance_parameters.to_dict_set()
+
+        if self.illumination_parameters is not None:
+            d['illumination_parameters'] = self.illumination_parameters.to_dict_set()
+
+        return d
+
+    def to_dict_default(self) -> Dict[str, Any]:
+        vals = self._children_values_with_defaults()
+        d = {k: v.to_dict_default() for k, v in vals.items()}
+        return d
+
+    def to_dict_parameters(self) -> Dict[str, Any]:
+        """
+        :returns: Dictionary of flattened parameters.
+            Unset parameters are ignored.
+        """
+        cell_params = (
+            {}
+            if self.cell_parameters is None else
+            self.cell_parameters.to_dict_parameters()
+        )
+
+        compliance_params = (
+            {}
+            if self.compliance_parameters is None else
+            self.compliance_parameters.to_dict_parameters()
+        )
+
+        illumination_params = (
+            {}
+            if self.illumination_parameters is None else
+            self.illumination_parameters.to_dict_parameters()
+        )
+
+        return {
+            **cell_params,
+            **compliance_params,
+            **illumination_params,
+        }
+
+    @classmethod
+    def from_dict(cls, d: Dict) -> 'SystemParameters':
+        """
+        Converts a dictionary to a SystemParameters from standard keys.
+        Attributes with missing keys are initialized to `None`.
+        Unrecognized keys are ignored.
+
+        :param d: Dictionary with values.
+            Keys are ['cell_parameters', 'compliance_parameters', 'illumination_parameters'],
+            with corresponding values.
+        :returns SystemParameters: SystemParameters constructed from the dictionary.
+        """
+        params = cls()
+        if 'cell_parameters' in d:
+            params.cell_parameters = CellParameters.from_dict(
+                d['cell_parameters']
+            )
+
+        if 'compliance_parameters' in d:
+            params.compliance_parameters = ComplianceParameters.from_dict(
+                d['compliance_parameters']
+            )
+
+        if 'illumination_parameters' in d:
+            params.illumination_parameters = IlluminationParameters.from_dict(
+                d['illumination_parameters']
+            )
+
+        return params
+
+    def _children_values_with_defaults(self) -> Dict[str, ExperimentParametersInterface]:
         cell_params = (
             CellParameters()
             if self.cell_parameters is None else
             self.cell_parameters
-        )
-
-        illumination_params = (
-            IlluminationParameters()
-            if self.illumination_parameters is None else
-            self.illumination_parameters
         )
 
         compliance_params = (
@@ -61,9 +144,29 @@ class SystemParameters(ExperimentParametersInterface):
             self.compliance_parameters
         )
 
+        illumination_params = (
+            IlluminationParameters()
+            if self.illumination_parameters is None else
+            self.illumination_parameters
+        )
+
         return {
-            **cell_params.to_dict(),
-            **compliance_params.to_dict(),
-            **illumination_params.to_dict(),
+            'cell_parameters': cell_params,
+            'compliance_parameters': compliance_params,
+            'illumination_parameters': illumination_params,
         }
 
+
+# ------------
+# --- json ---
+# ------------
+
+class SystemParametersJSONEncoder(json.JSONEncoder):
+    """
+    JSON encoder for SystemParameters.
+    """
+    def default(self, o: Any):
+        if isinstance(o, SystemParameters):
+            return o.to_dict_default()
+
+        return json.JSONEncoder.default(self, o)

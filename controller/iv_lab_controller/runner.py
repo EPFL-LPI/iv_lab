@@ -1,5 +1,8 @@
+"""
+Functionality related to running experiments.
+"""
 import os
-import time
+import logging
 from collections import deque
 from typing import Union, Tuple, Type
 
@@ -15,10 +18,24 @@ from .base_classes import (
 )
 from .parameters import CompleteParameters
 
+
 ExperimentInfo = Tuple[Type[Experiment], CompleteParameters]
 
+logger = logging.getLogger('iv_lab')
 
+
+# @note: Type support for annotations is only included in the `typing`
+#   package since Python 3.9. Because of this the type annotations of Deques
+#   in these classes will raise errors. To prevent this use the `Annotation`
+#   typing in the [`typing_extensions`](https://pypi.org/project/typing-extensions/)
+#   package, or remove the annotations.
+# 
+#   e.g.
+#   `deque[Results]` -> `deque`
 class ResultsRunner(QThread):
+    """
+    Runs `Results` in a separate thread to allow the UI to remian unblocked.
+    """
     progress = pyqtSignal(Results, int, int)  # current results, index, total
 
     def __init__(self, results_queue: deque[Results]):
@@ -48,11 +65,16 @@ class ResultsRunner(QThread):
             self.active_worker = None
 
     def stop(self):
+        """
+        Stops the current experiment and prevents more from running.
+        """
+        self.results_queue.clear()
         self.active_worker.stop()
+
 
 class Runner():
     """
-    An experiment runner.
+    Experiment runner.
     """
     def __init__(self):
         """
@@ -136,11 +158,15 @@ class Runner():
         """
         def on_finished():
             self._set_state(RunnerState.Standby)
-            Store.set('status_msg', 'Experiments complete')
+            msg = 'Experiments complete'
+            Store.set('status_msg', msg)
+            logger.info(msg)
             self._results_runner = None
 
         def on_progress(results: Results, index: int, total: int):
-            Store.set('status_msg', f'Running experiment {index + 1} of {total}')
+            msg = f'Running experiment {index + 1} of {total}'
+            Store.set('status_msg', msg)
+            logger.info(msg)
             self.add_results(results)
 
         self._results_runner = ResultsRunner(self._results_queue)
@@ -163,7 +189,8 @@ class Runner():
         :returns: Results.
         """
         system = Store.get('system')
-        procedure = exp.create_procedure(params.to_dict())
+        print(params.to_dict_parameters())
+        procedure = exp.create_procedure(params.to_dict_parameters())
         procedure.lamp = system.lamp
         procedure.smu = system.smu
 
@@ -203,9 +230,6 @@ class Runner():
         """
         self._set_state(RunnerState.Aborting)
         Store.set('status_msg', "Aborting measurements...")
+        logger.info('Aborting measurements')
 
-        self._results_queue.clear()
         self._results_runner.stop()
-
-        self._set_state(RunnerState.Standby)
-        Store.set('status_msg', "Measurements aborted")

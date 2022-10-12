@@ -26,17 +26,17 @@ class MockParametersWidget(ExperimentParametersWidget):
         """
         self.cb_log = QCheckBox("Log")
 
-        lbl_times = QLabel("Times")
-        self.sb_times = QSpinBox()
-        self.sb_times.setMinimum(0)
-        self.sb_times.setMaximum(100)
+        lbl_iterations = QLabel("Iterations")
+        self.sb_iterations = QSpinBox()
+        self.sb_iterations.setMinimum(0)
+        self.sb_iterations.setMaximum(100)
 
         # layout
         lo_params = QGridLayout()
         lo_params.addWidget(self.cb_log, 0, 0)
 
-        lo_params.addWidget(lbl_times, 1, 0)
-        lo_params.addWidget(self.sb_times, 1, 1)
+        lo_params.addWidget(lbl_iterations, 1, 0)
+        lo_params.addWidget(self.sb_iterations, 1, 1)
        
         lo_main.addLayout(lo_params)
         self.reset_fields()
@@ -49,7 +49,7 @@ class MockParametersWidget(ExperimentParametersWidget):
 
         params = MockExperimentParameters()
         params.log = self.cb_log.isChecked()
-        params.times = self.sb_times.value()
+        params.iterations = self.sb_iterations.value()
         return params
 
     def reset_fields(self):
@@ -57,4 +57,4 @@ class MockParametersWidget(ExperimentParametersWidget):
         Reset field values to default.
         """
         self.cb_log.setChecked(False)
-        self.sb_times.setValue(0)
+        self.sb_iterations.setValue(0)

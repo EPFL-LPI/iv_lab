@@ -4,12 +4,12 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from pymeasure.experiment import Results
-
 from .base_classes import ToggleUiInterface
-from .components.authentication import AuthenticationWidget
-from .components.plot_header import PlotHeaderWidget
-from .components.graph_panels import GraphPanels
+from .components import (
+    AuthenticationWidget,
+    PlotHeaderWidget,
+    ResultsWidget
+)
 
 
 class PlotFrame(QWidget, ToggleUiInterface):
@@ -24,7 +24,7 @@ class PlotFrame(QWidget, ToggleUiInterface):
         # subwidgets
         self.authentication = AuthenticationWidget()
         self.plot_header = PlotHeaderWidget()
-        self.plots_panel = GraphPanels()
+        self.wgt_results = ResultsWidget()
 
         # header
         lo_header = QHBoxLayout()
@@ -34,7 +34,7 @@ class PlotFrame(QWidget, ToggleUiInterface):
         # layout
         lo_main = QVBoxLayout()
         lo_main.addLayout(lo_header)
-        lo_main.addWidget(self.plots_panel, stretch=100)
+        lo_main.addWidget(self.wgt_results, stretch=100)
         self.setLayout(lo_main)
 
     def enable_ui(self):

@@ -10,7 +10,7 @@ from iv_lab_controller.store import Store, Observer
 from ..types import ApplicationState
 
 
-class GraphPanels(QTabWidget):
+class ResultsWidget(QTabWidget):
     """
     Displays results.
     """

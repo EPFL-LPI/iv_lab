@@ -4,7 +4,7 @@ from ..base_classes import ExperimentParametersInterface
 from . import SystemParameters
 
 
-class CompleteParameters(ExperimentParametersInterface):
+class CompleteParameters():
     """
     Container for complete parameters.
     """
@@ -31,7 +31,17 @@ class CompleteParameters(ExperimentParametersInterface):
 
         return True
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict_set(self) -> Dict[str, Any]:
+        d = {}
+        if self.system_parameters is not None:
+            d['system_parameters'] = self.system_parameters.to_dict_set()
+
+        if self.experiment_parameters is not None:
+            d['experiment_parameters'] = self.experiment_parameters.to_dict_set()
+
+        return d
+
+    def to_dict_parameters(self) -> Dict[str, Any]:
         system_params = (
             SystemParameters()
             if self.system_parameters is None else
@@ -41,11 +51,29 @@ class CompleteParameters(ExperimentParametersInterface):
         experiment_params = (
             {}
             if self.experiment_parameters is None else
-            self.experiment_parameters.to_dict()
+            self.experiment_parameters.to_dict_parameters()
         )
 
         return {
-            **system_params.to_dict(),
+            **system_params.to_dict_parameters(),
             **experiment_params
         }
 
+    @classmethod
+    def from_dict(cls, d: Dict) -> 'CompleteParameters':
+        """
+        Converts a dictionary to CompleteParameters.
+        Unrecognized key are ignored.
+        Missing values are initialized to `None`.
+
+        :param d: Dictionary to convert.
+        :returns: CompleteParameters with corresponding values.
+        """
+        params = cls()
+        if 'system_parameters' in d:
+            params.system_parameters = d['system_parameters']
+
+        if 'experiment_parameters' in d:
+            params.experiment_parameters = d['experiment_parameters']
+
+        return params

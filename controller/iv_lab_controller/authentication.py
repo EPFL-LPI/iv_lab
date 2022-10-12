@@ -12,7 +12,7 @@ def users_file_path() -> str:
     """
     :returns: Path to the users file.
     """
-    app_dir = common.app_data_folder()
+    app_dir = common.app_data_directory()
     users_path = os.path.join(app_dir, 'users.json')
     return users_path
 
@@ -21,13 +21,13 @@ def user_list() -> List[User]:
     """
     :return: List of user objects.
     """
-    app_dir = common.app_data_folder()
+    app_dir = common.app_data_directory()
     users_path = users_file_path()
 
     # ensure file exists
     if not os.path.exists(app_dir):
-        Path(app_dir).mkdir(parents = True)
-    
+        Path(app_dir).mkdir(parents=True)
+
     if not os.path.exists(users_path):
         with open(users_path, 'w') as f:
             f.write('[]')

@@ -2,7 +2,7 @@
 User functionality.
 """
 import json
-from typing import Union, Iterable, List
+from typing import Union, Iterable
 from enum import Enum
 
 

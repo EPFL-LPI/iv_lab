@@ -48,8 +48,25 @@ class SystemParametersWidget(ValueWidget):
         :returns: System parameters.
         """
         params = SystemParameters()
-        params.illumination_parameters = self.wgt_illumination_parameters.value
         params.cell_parameters = self.wgt_cell_parameters.value
         params.compliance_parameters = self.wgt_compliance_parameters.value
+        params.illumination_parameters = self.wgt_illumination_parameters.value
 
         return params
+
+    @value.setter
+    def value(self, value: SystemParameters):
+        """
+        Sets UI elements.
+        If attributes are `None` the corresponding UI elements remain unchanged.
+
+        :param value: Values to set.
+        """
+        if value.cell_parameters is not None:
+            self.wgt_cell_parameters.value = value.cell_parameters
+
+        if value.compliance_parameters is not None:
+            self.wgt_compliance_parameters.value = value.compliance_parameters
+
+        if value.illumination_parameters is not None:
+            self.wgt_illumination_parameters.value = value.illumination_parameters

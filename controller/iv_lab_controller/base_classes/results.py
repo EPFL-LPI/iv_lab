@@ -9,6 +9,7 @@ from .. import common
 from .experiment_parameters import ExperimentParametersInterface
 
 
+# @todo: PDF output, original file format
 class Results(PyMeasureResults):
     """
     Results from an experiment.

@@ -1,6 +1,4 @@
-from PyQt6.QtWidgets import (
-    QMessageBox,
-)
+from PyQt6.QtWidgets import QMessageBox
 
 
 def show_message_box(

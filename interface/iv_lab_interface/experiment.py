@@ -19,13 +19,14 @@ from .types import (
     ApplicationState,
 )
 
-from .components import HardwareInitialization
+from .components import HardwareInitializationWidget
 from .components.parameters import CompleteParametersWidget
+
 
 class ExperimentFrame(QWidget):
     def __init__(self):
         super().__init__()
-        
+
         self._runner = Runner()
 
         self.init_ui()
@@ -35,12 +36,12 @@ class ExperimentFrame(QWidget):
     @property
     def runner(self) -> Runner:
         """
-        :returns: Runner. 
+        :returns: Runner.
         """
         return self._runner
 
     def init_ui(self):
-        self.wgt_hardware = HardwareInitialization()
+        self.wgt_hardware = HardwareInitializationWidget()
         self.wgt_parameters = CompleteParametersWidget()
 
         # run / abort
@@ -55,7 +56,7 @@ class ExperimentFrame(QWidget):
         # reset button
         self.btn_reset_fields = QPushButton("Reset All Settings To Default", self)
         self.btn_reset_fields.setEnabled(False)
-        
+
         # Set the measurement frame layout
         lo_main = QVBoxLayout()
         lo_main.addWidget(self.wgt_hardware)
@@ -63,9 +64,9 @@ class ExperimentFrame(QWidget):
         lo_main.addStretch()
         lo_main.addWidget(self.stk_action)
         lo_main.addWidget(self.btn_reset_fields)
-        
-        self.setLayout(lo_main)  
-    
+
+        self.setLayout(lo_main)
+
     def init_observers(self):
         # runner
         def runner_state_ui(state: RunnerState):
@@ -77,7 +78,7 @@ class ExperimentFrame(QWidget):
 
             elif state == RunnerState.Running:
                 self.enable_abort_ui()
-                
+
             elif state == RunnerState.Aborting:
                 self.disable_ui()
 
@@ -99,6 +100,7 @@ class ExperimentFrame(QWidget):
 
             elif state is HardwareState.Initialized:
                 self.enable_run_ui()
+                self.btn_reset_fields.setEnabled(True)
 
             elif state is HardwareState.Error:
                 # allow user to attempt reinitialization

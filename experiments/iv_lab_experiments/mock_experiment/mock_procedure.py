@@ -12,7 +12,7 @@ class MockProcedure(Procedure):
 
     Data consists of [`index`, `value`] where `value` is between 0 and 100.
     """
-    times = IntegerParameter('Times')
+    iterations = IntegerParameter('Iterations')
     log = BooleanParameter('Log', default=False)
     min_value = IntegerParameter('Minimum value', default=0)
     max_value = IntegerParameter('Maximum value', default=100)
@@ -25,7 +25,7 @@ class MockProcedure(Procedure):
             print("starting mock")
 
         r_gen = random.Random()
-        for i in range(self.times):
+        for i in range(self.iterations):
             if self.should_stop():
                 if self.log:
                     print('should stop')
@@ -33,7 +33,7 @@ class MockProcedure(Procedure):
                 break
 
             if self.log:
-                print(f'iteration {i}...')
+                print(f'iteration {i+1}...')
 
             value = r_gen.randint(
                 self.min_value,

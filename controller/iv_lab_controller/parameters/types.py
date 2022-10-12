@@ -5,5 +5,5 @@ class SweepDirection(Enum):
     """
     Enum for the direction of a voltage or current sweep.
     """
-	Forward = 'forward'
-	Reverse = 'reverse'
+    Forward = 'forward'
+    Reverse = 'reverse'

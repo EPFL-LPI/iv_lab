@@ -1,16 +1,16 @@
 import setuptools
 
 # get __version__
-exec(open('iv_lab_components/_version.py').read())
+exec(open('iv_lab_instruments/_version.py').read())
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="iv-lab-components",
+    name="iv-lab-instruments",
     version=__version__,
     author="Benjamin Le Geyt <benjamin.legeyt@epfl.ch>, Felix Eickemeyer <felix.eickemeyer@epfl.ch>, Brian Carlsen <carlsen.bri@gmail.com>",
-    description="Components for EPFL's LPI IV Characterization lab.",
+    description="Instruments for EPFL's LPI IV Characterization lab.",
     long_description=long_description,
     long_description_content_type="text/markdown",
     keywords=['epfl', 'lpi'],

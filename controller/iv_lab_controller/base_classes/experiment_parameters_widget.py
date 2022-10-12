@@ -1,16 +1,13 @@
 from abc import abstractmethod
 
 from PyQt6.QtCore import pyqtSignal
-
-from PyQt6.QtWidgets import (
-    QVBoxLayout,
-)
+from PyQt6.QtWidgets import QVBoxLayout
 
 from .experiment_parameters import ExperimentParametersInterface
 from .value_widget import ValueWidget
 
 
-# @note: Queuing functionality commented out for easy implentation
+# @note: Queueing functionality commented out for easy implentation
 #   later on, if desired.
 class ExperimentParametersWidget(ValueWidget):
     """
@@ -28,6 +25,13 @@ class ExperimentParametersWidget(ValueWidget):
     def value(self) -> ExperimentParametersInterface:
         """
         :returns: Parameter values.
+        """
+        raise NotImplementedError()
+
+    @value.setter
+    def value(self, value: ExperimentParametersInterface):
+        """
+        Sets the widget's value to match those given.
         """
         raise NotImplementedError()
 
