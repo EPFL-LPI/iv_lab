@@ -213,6 +213,7 @@ class ExperimentFrame(QWidget):
             params.validate()
 
         except ValueError as err:
+            common.debug(err)
             common.show_message_box(
                 'Invalid parameters',
                 f'{err}'

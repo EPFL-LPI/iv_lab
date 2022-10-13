@@ -3,6 +3,8 @@ Common functions used throughout the application.
 """
 import os
 import time
+import shutil
+from typing import Union
 
 from PyQt6.QtCore import QSettings, QStandardPaths
 
@@ -152,6 +154,26 @@ def get_admin_daily_data_directory() -> str:
     daily_dir = admin_daily_data_directory()
     os.makedirs(daily_dir, exist_ok=True)
     return daily_dir
+
+
+def copy_file_to_admin(path: str, user: Union[str, None] = None):
+    """
+    Copy the given file to the daily admin data directory.
+    `user` is preprended to the file name.
+    If `user` is `None` uses the user `__anonymous__`.
+
+    :param path: Path of file to copy.
+    :param user: User name.
+    """
+    if user is None:
+        user = '__anonymous__'
+
+    filename = os.path.basename(path)
+    filename = f'{user}--{filename}'
+    dst = os.path.join(get_admin_daily_data_directory(), filename)
+
+    shutil.copyfile(path, dst)
+
 
 # ------------------------
 # --- helper functions ---

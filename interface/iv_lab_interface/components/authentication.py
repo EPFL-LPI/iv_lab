@@ -121,8 +121,9 @@ class AuthenticationWidget(QStackedWidget):
 
         try:
             user = auth_ctrl.authenticate(username, password)
-        
-        except FileNotFoundError:
+
+        except FileNotFoundError as err:
+            common.debug(err)
             common.show_message_box(
                 'Users list missing',
                 'Could not load users list. Please contact an administrator.',
@@ -130,7 +131,8 @@ class AuthenticationWidget(QStackedWidget):
             )
             return
 
-        except JSONDecodeError:
+        except JSONDecodeError as err:
+            common.debug(err)
             common.show_message_box(
                 'Users list corrupt',
                 'Could not load users list. Please contact an administrator.',
@@ -140,6 +142,7 @@ class AuthenticationWidget(QStackedWidget):
 
         if user is None:
             # invalid user
+            logger.info(f'Invalid login attempt for username `{username}`')
             common.show_message_box(
                 'Invalid credentials',
                 'Invalid username or password.',

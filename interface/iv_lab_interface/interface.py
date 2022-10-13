@@ -80,7 +80,7 @@ class IVLabInterface(QWidget):
 
         # --- logger ---
         log_file = os.path.join(ctrl_common.get_admin_daily_data_directory(), 'log.txt')
-        log_fmt = logging.Formatter('%(asctime)s %(message)s')
+        log_fmt = logging.Formatter('[%(asctime)s] %(message)s')
         log_fh = logging.FileHandler(log_file)
         log_fh.setFormatter(log_fmt)
         logger.addHandler(log_fh)
@@ -408,6 +408,7 @@ class IVLabInterface(QWidget):
             self.wgt_experiment.wgt_parameters.wgt_system_parameters.value = value
 
         except Exception as err:
+            common.debug(err)
             common.show_message_box(
                 'Could not load parameters',
                 f'An error occurred when attempting to set parameters from file\n{err}'
@@ -496,6 +497,7 @@ def save_value_to_file(
             json.dump(value, f, cls=encoder, indent=4)
 
         except Exception as err:
+            common.debug(err)
             common.show_message_box(
                 'Could not save',
                 f'An error occurred while saving\n{err}'
@@ -519,6 +521,7 @@ def load_value_from_file(
             val = json.load(f, cls=decoder)
 
         except Exception as err:
+            common.debug(err)
             common.show_message_box(
                 'Could not load',
                 f'An error occurred while loading\n{err}'

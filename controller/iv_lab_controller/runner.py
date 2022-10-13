@@ -29,7 +29,7 @@ logger = logging.getLogger('iv_lab')
 #   in these classes will raise errors. To prevent this use the `Annotation`
 #   typing in the [`typing_extensions`](https://pypi.org/project/typing-extensions/)
 #   package, or remove the annotations.
-# 
+#
 #   e.g.
 #   `deque[Results]` -> `deque`
 class ResultsRunner(QThread):
@@ -63,6 +63,13 @@ class ResultsRunner(QThread):
 
             i += 1
             self.active_worker = None
+
+            # copy resutls to admin
+            try:
+                copy_results_to_admin(results)
+
+            except Exception as err:
+                logger.debug('[runner] Error copying result to admin\n%s', err)
 
     def stop(self):
         """
@@ -173,7 +180,7 @@ class Runner():
         self._results_runner.finished.connect(on_finished)
         self._results_runner.progress.connect(on_progress)
         self._results_runner.start()
-    
+
     def experiment_to_results(
         self,
         exp: Type[Experiment],
@@ -189,7 +196,6 @@ class Runner():
         :returns: Results.
         """
         system = Store.get('system')
-        print(params.to_dict_parameters())
         procedure = exp.create_procedure(params.to_dict_parameters())
         procedure.lamp = system.lamp
         procedure.smu = system.smu
@@ -233,3 +239,20 @@ class Runner():
         logger.info('Aborting measurements')
 
         self._results_runner.stop()
+
+
+# ------------------------
+# --- helper functions ---
+# ------------------------
+
+def copy_results_to_admin(results: Results):
+    """
+    Copy the results data to the daily admin directory.
+
+    :param results: Results to copy.
+    """
+    user = Store.get('user')
+    if user is not None:
+        user = user.username
+
+    common.copy_file_to_admin(results.data_filename, user=user)
