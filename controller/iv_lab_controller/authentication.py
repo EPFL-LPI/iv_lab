@@ -31,7 +31,6 @@ def user_list() -> List[User]:
     if not os.path.exists(users_path):
         with open(users_path, 'w') as f:
             f.write('[]')
-
     # load users
     with open(users_path) as f:
         users = json.load(f)

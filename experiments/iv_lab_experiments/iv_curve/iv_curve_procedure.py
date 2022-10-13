@@ -29,21 +29,21 @@ class IVCurveProcedure(Procedure):
     voltage_step = FloatParameter(
         'Voltage step',
         units='V',
-        min=0,
+        minimum=0,
         default=0.01
     )
 
     sweep_rate = FloatParameter(
         'Sweep rate',
         units='V/s',
-        min=0,
+        minimum=0,
         default=0.1
     )
 
     settling_time = FloatParameter(
         'Settling time',
         units='s',
-        min=0,
+        minimum=0,
         default=0.1
     )
 

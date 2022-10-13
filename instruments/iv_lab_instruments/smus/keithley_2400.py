@@ -7,7 +7,19 @@ from iv_lab_controller.base_classes.smu import SMU, RangeValue
 
 class Keithley2400(SMU, Keithley2400Base):
     def __init__(self, adapter: Adapter, **kwargs):
+        # copy and remove emulate, if needed
+        emulate = None
+        if "emulate" in kwargs:
+            emulate = kwargs['emulate']
+            del kwargs['emulate']
+        
         Keithley2400Base.__init__(self, adapter, **kwargs)
+        if emulate is not None:
+            self.emulate = emulate
+        
+    @property
+    def name(self) -> str:
+        return "Keithley 2400"
 
     @property
     def current_range(self) -> RangeValue:
@@ -22,6 +34,44 @@ class Keithley2400(SMU, Keithley2400Base):
         :returns: Min and max voltage values.
         """
         return self.source_voltage_range
+    
+    def _connect(self):
+        pass
+        
+    def _disconnect(self):
+        super(Keithley2400Base, self).shutdown()
+        
+    @property
+    def compliance_current(self) -> float:
+        """
+        :returns: Compliance current.
+        """
+        return super(Keithley2400Base, self).compliance_current
+
+    @compliance_current.setter
+    def compliance_current(self, i: float):
+        """
+        Sets the compliance current.
+
+        :param: Desired compliance current.
+        """
+        super(Keithley2400Base, self).compliance_current = i
+
+    @property
+    def compliance_voltage(self) -> float:
+        """
+        :returns: Compliance voltage.
+        """
+        return super(Keithley2400Base, self).compliance_voltage
+
+    @compliance_voltage.setter
+    def compliance_voltage(self, v: float):
+        """
+        Sets the compliance voltage.
+
+        :param v: Desired compliance voltage.
+        """
+        super(Keithley2400Base, self).compliance_voltage = v
 
     def set_voltage(
         self,

@@ -7,12 +7,12 @@ from PyQt6.QtWidgets import (
     QGridLayout
 )
 
-from iv_lab_controller.measurements.iv_curve_parameters import IVCurveParameters
+from .iv_curve_parameters import IVCurveParameters
 
-from .parameters_widget import MeasurementParametersWidget
+from iv_lab_controller.base_classes import ExperimentParametersWidget
 
 
-class IVCurveParametersWidget(MeasurementParametersWidget):
+class IVCurveParametersWidget(ExperimentParametersWidget):
     """
     Measurement parameters for an IV curve.
     """

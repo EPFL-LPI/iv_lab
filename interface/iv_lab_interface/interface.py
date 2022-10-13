@@ -224,8 +224,8 @@ class IVLabInterface(QWidget):
             if (state is HardwareState.Uninitialized):
                 if hasattr(self, 'mn_basic'):
                     # disable system actions
-                    self.act_system_parameters.setEnabled(False)
-                    self.act_experiment_parameters.setEnabled(False)
+                    self.mn_system_parameters.setEnabled(False)
+                    self.mn_experiment_parameters.setEnabled(False)
 
             if (state is HardwareState.Initialized):
                 if hasattr(self, 'mn_basic'):
