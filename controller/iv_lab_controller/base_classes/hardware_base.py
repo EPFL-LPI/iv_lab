@@ -13,7 +13,6 @@ class HardwareBase(ABC, EventEmitter, Instrument):
     """
     def __init__(self, emulate: bool = False):
         super().__init__()
-        self._should_abort = False
         self._emulate = emulate
         self._connected = False
 
@@ -25,15 +24,6 @@ class HardwareBase(ABC, EventEmitter, Instrument):
             The name should be a unique static string that references the particular class.
         """
         raise NotImplementedError()
-
-    # @todo: See pymeasure.experiment.procedure#Procedure.should_stop() 
-    # https://github.com/pymeasure/pymeasure/blob/4770fe54be14b2c1618df9711b197330dbd3f262/pymeasure/experiment/procedure.py#L204
-    @property
-    def should_abort(self) -> bool:
-        """
-        :returns: If measurement should be aborted
-        """
-        return self._should_abort
 
     @property
     def emulate(self) -> bool:

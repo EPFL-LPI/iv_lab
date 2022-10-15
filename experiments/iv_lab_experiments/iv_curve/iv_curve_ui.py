@@ -10,17 +10,18 @@ from PyQt6.QtWidgets import (
 from .iv_curve_parameters import IVCurveParameters
 
 from iv_lab_controller.base_classes import ExperimentParametersWidget
+from iv_lab_controller.parameters.types import SweepDirection
 
 
 class IVCurveParametersWidget(ExperimentParametersWidget):
     """
     Measurement parameters for an IV curve.
     """
+    user_current_limit = 0
+    user_voltage_limit = 1.2
+
     def __init__(self):
         super().__init__()
-
-        self.user_current_limit = 0
-        self.user_voltage_limit = 1.2
 
         self.setMaximumWidth(300)
 
@@ -28,8 +29,8 @@ class IVCurveParametersWidget(ExperimentParametersWidget):
         """
         Initialize parameters UI.
         """
-        self.sb_use_auto_limits = QCheckBox("Use Automatic Limits (0 - Fwd Limit)")
-        self.sb_use_auto_limits.stateChanged.connect(self.toggle_limit_mode)
+        self.sb_auto_limits = QCheckBox("Use Automatic Limits (0 - Fwd Limit)")
+        self.sb_auto_limits.stateChanged.connect(self.toggle_limit_mode)
 
         lbl_min_voltage = QLabel("Minimum Voltage")
         self.sb_min_voltage = QDoubleSpinBox()
@@ -62,10 +63,10 @@ class IVCurveParametersWidget(ExperimentParametersWidget):
         self.sb_sweep_rate.setMinimum(0)
 
         lbl_stabilization_time = QLabel("Stabilization Time")
-        self.sb_stabilization_time = QDoubleSpinBox()
-        self.sb_stabilization_time.setDecimals(2)
-        self.sb_stabilization_time.setSingleStep(5)
-        self.sb_stabilization_time.setMinimum(0)
+        self.sb_settling_time = QDoubleSpinBox()
+        self.sb_settling_time.setDecimals(2)
+        self.sb_settling_time.setSingleStep(5)
+        self.sb_settling_time.setMinimum(0)
 
         lbl_sweep_direction = QLabel("Sweep Direction")
         self.cb_sweep_direction = QComboBox()
@@ -91,13 +92,13 @@ class IVCurveParametersWidget(ExperimentParametersWidget):
         lo_params.addWidget(QLabel("mV/s"), 3, 2)
 
         lo_params.addWidget(lbl_stabilization_time, 4, 0)
-        lo_params.addWidget(self.sb_stabilization_time, 4, 1)
+        lo_params.addWidget(self.sb_settling_time, 4, 1)
         lo_params.addWidget(QLabel("sec"), 4, 2)
 
         lo_params.addWidget(lbl_sweep_direction, 5, 0)
         lo_params.addWidget(self.cb_sweep_direction, 5, 1)
         
-        lo_main.addWidget(self.sb_use_auto_limits)
+        lo_main.addWidget(self.sb_auto_limits)
         lo_main.addLayout(lo_params)
 
         self.reset_fields()
@@ -119,52 +120,62 @@ class IVCurveParametersWidget(ExperimentParametersWidget):
             self.lbl_max_voltage.setText("Maximum Voltage")
             self.lbl_max_voltage_units.setText("V")
             self.sb_max_voltage.setValue(self.user_voltage_limit)
-    
+
     def max_voltage_changed(self, voltage: float):
         """
 
         """
-        if self.sb_use_auto_limits.isChecked():
-            self.user_current_limit = self.sb_max_voltage.value
+        if self.sb_auto_limits.isChecked():
+            self.user_current_limit = self.sb_max_voltage.value()
 
         else:
-            self.user_voltage_limit = self.sb_max_voltage.value
+            self.user_voltage_limit = self.sb_max_voltage.value()
 
     @property
     def value(self) -> IVCurveParameters:
         """
-        :reutrns: Values of the measurement parameters.
+        :returns: Values of the measurement parameters.
         """
-        use_auto_lims = self.sb_use_auto_limits.isChecked()
-
         params = IVCurveParameters()
-        params.use_automatic_limits = use_auto_lims
-        
-        if use_auto_lims:
-            params.current_limit = self.sb_max_voltage.value()
+
+        # sweep direction
+        sweep_dir = (
+            SweepDirection.Forward
+            if self.cb_sweep_direction.currentText() == 'Forward' else
+            SweepDirection.Reverse
+        )
+
+        # auto limits
+        auto_lims = self.sb_auto_limits.isChecked()
+        params.automatic_limits = auto_lims
+
+        if auto_lims:
+            # @todo
+            raise NotImplementedError('Automatic limits not yet implmented')
 
         else:
-            params.min_voltage = self.sb_min_voltage.value()
-            params.max_voltage = self.sb_max_voltage.value()
+            if sweep_dir is SweepDirection.Forward:
+                params.start_voltage = self.sb_min_voltage.value()
+                params.stop_voltage = self.sb_max_voltage.value()
+
+            else:
+                params.start_voltage = self.sb_max_voltage.value()
+                params.stop_voltage = self.sb_min_voltage.value()
 
         params.voltage_step = self.sb_voltage_step.value() * 1000
         params.sweep_rate = self.sb_sweep_rate.value() * 1000
-        params.stabilization_time = self.sb_stabilization_time.value()
-
-        sweep_dir = 1 if (self.cb_sweep_direction.currentText() == 'Forward') else -1
-        params.direction = sweep_dir
+        params.settling_time = self.sb_settling_time.value()
 
         return params
-
 
     def reset_fields(self):
         """
         Reset field values to default.
         """
-        self.sb_use_auto_limits.setChecked(False)
+        self.sb_auto_limits.setChecked(False)
         self.sb_min_voltage.setValue(0)
         self.sb_max_voltage.setValue(self.user_voltage_limit)
         self.sb_voltage_step.setValue(5)
         self.sb_sweep_rate.setValue(20)
-        self.sb_stabilization_time.setValue(5)
+        self.sb_settling_time.setValue(5)
         self.cb_sweep_direction.setCurrentIndex(0)

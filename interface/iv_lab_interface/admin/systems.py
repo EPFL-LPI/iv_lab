@@ -146,17 +146,23 @@ class SystemsDialog(QDialog):
 
         sys_name = sys_name[0].text()
         sys_path = os.path.join(self.systems_dir, f'{sys_name}.py')
+
+        if sys_path == ctrl.system_path():
+            # no change
+            return
+
         try:
             ctrl.set_system_path(sys_path)
 
         except Exception as err:
+            common.debug(err)
             common.show_message_box(
                 'Error saving system',
                 f'An error occurred when saving the system.\n{err}',
                 icon=QMessageBox.Icon.Critical
             )
 
-        Store.set('system_path', sys_path)
+        Store.set('system', None)
 
     @property
     def systems_dir(self) -> str:

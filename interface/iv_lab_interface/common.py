@@ -46,8 +46,7 @@ def debug(err: Exception, msg: Union[str, None] = None):
     preamble = ''
     try:
         curr_frame = inspect.currentframe()
-        caller_frame = inspect.getouterframes(curr_frame)[1]
-        frame_info = inspect.getframeinfo(caller_frame)
+        frame_info = inspect.getouterframes(curr_frame)[1]
 
     except Exception:
         # ignore stack trace info

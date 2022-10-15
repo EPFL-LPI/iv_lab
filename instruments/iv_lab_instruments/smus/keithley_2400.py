@@ -8,15 +8,17 @@ from iv_lab_controller.base_classes.smu import SMU, RangeValue
 class Keithley2400(SMU, Keithley2400Base):
     def __init__(self, adapter: Adapter, **kwargs):
         # copy and remove emulate, if needed
-        emulate = None
+        emulate = False
         if "emulate" in kwargs:
             emulate = kwargs['emulate']
             del kwargs['emulate']
-        
-        Keithley2400Base.__init__(self, adapter, **kwargs)
-        if emulate is not None:
-            self.emulate = emulate
-        
+
+        # initialize smu interface
+        SMU.__init__(self, emulate=emulate)
+
+        if not self.emulate:
+            Keithley2400Base.__init__(self, adapter, **kwargs)
+
     @property
     def name(self) -> str:
         return "Keithley 2400"
@@ -34,13 +36,14 @@ class Keithley2400(SMU, Keithley2400Base):
         :returns: Min and max voltage values.
         """
         return self.source_voltage_range
-    
+
     def _connect(self):
         pass
-        
+
     def _disconnect(self):
-        super(Keithley2400Base, self).shutdown()
-        
+        if not self.emulate:
+            super(Keithley2400Base, self).shutdown()
+
     @property
     def compliance_current(self) -> float:
         """
@@ -137,7 +140,7 @@ class Keithley2400(SMU, Keithley2400Base):
         :param stop: Stop voltage.
         :param step: Absolute voltage step size.
         :param rate: Scan rate.
-        :returns: numpy.array of measured values.  
+        :returns: numpy.array of measured values.
         """
         raise NotImplementedError()
 
@@ -155,7 +158,7 @@ class Keithley2400(SMU, Keithley2400Base):
         :param stop: Stop voltage.
         :param step: Absolute voltage step size.
         :param rate: Scan rate.
-        :returns: numpy.array of measured values.  
+        :returns: numpy.array of measured values.
         """
         raise NotImplementedError()
 
@@ -169,7 +172,7 @@ class Keithley2400(SMU, Keithley2400Base):
 
         :param current: Set point current.
         :param time: Run time.
-        :returns: numpy.array of measured values.  
+        :returns: numpy.array of measured values.
         """
         raise NotImplementedError()
 
@@ -183,6 +186,6 @@ class Keithley2400(SMU, Keithley2400Base):
 
         :param voltage: Set point voltage.
         :param time: Run time.
-        :returns: numpy.array of measured values.  
+        :returns: numpy.array of measured values.
         """
         raise NotImplementedError()

@@ -1,4 +1,4 @@
-from typing import Union
+import logging
 
 from PyQt6.QtWidgets import (
     QWidget,
@@ -7,14 +7,17 @@ from PyQt6.QtWidgets import (
     QMessageBox,
 )
 
-from iv_lab_controller import Store
-from iv_lab_controller.store import Observer
 from iv_lab_controller import system as SystemCtrl
 from iv_lab_controller import common as ctrl_common
+from iv_lab_controller.base_classes import System
+from iv_lab_controller.store import Store, Observer
 
 from .. import common
 from ..base_classes import ToggleUiInterface
 from ..types import HardwareState, ApplicationState
+
+
+logger = logging.getLogger('iv_lab')
 
 
 class HardwareInitializationWidget(QWidget, ToggleUiInterface):
@@ -64,7 +67,7 @@ class HardwareInitializationWidget(QWidget, ToggleUiInterface):
 
         hardware_state_observer = Observer(changed=hardware_state_changed)
         Store.subscribe('hardware_state', hardware_state_observer)
-    
+
         # application state
         def app_state_changed(state: ApplicationState, o_state: ApplicationState):
             if state is ApplicationState.Disabled:
@@ -83,16 +86,14 @@ class HardwareInitializationWidget(QWidget, ToggleUiInterface):
         app_state_observer = Observer(changed=app_state_changed)
         Store.subscribe('application_state', app_state_observer)
 
-        # system path
-        def system_path_changed(path: str, o_path: str):
-            if path == o_path:
-                return
+        # system
+        def system_changed(system: System, o_sys: System):
+            if system != o_sys:
+                # deactivate hardware
+                Store.set('hardware_state', HardwareState.Uninitialized)
 
-            # deactivate hardware
-            Store.set('hardware_state', HardwareState.Uninitialized)
-
-        sys_path_observer = Observer(changed=system_path_changed)
-        Store.subscribe('system_path', sys_path_observer)
+        system_observer = Observer(changed=system_changed)
+        Store.subscribe('system', system_observer)
 
     def enable_ui(self):
         self.btn_initialize.setEnabled(True)
@@ -111,9 +112,13 @@ class HardwareInitializationWidget(QWidget, ToggleUiInterface):
             # load system
             try:
                 system_file = ctrl_common.system_path()
-                _system_name, system_cls = SystemCtrl.load_system(system_file, emulate=emulate)
-            
-            except FileNotFoundError:
+                _system_name, system_cls = SystemCtrl.load_system(
+                    system_file,
+                    emulate=emulate
+                )
+
+            except FileNotFoundError as err:
+                common.debug(err)
                 common.show_message_box(
                     'Could not load System',
                     f'Could not find System file\nPlease contact an administrator.',
@@ -122,6 +127,7 @@ class HardwareInitializationWidget(QWidget, ToggleUiInterface):
                 return
 
             except RuntimeError as err:
+                common.debug(err)
                 common.show_message_box(
                     'Could not load System',
                     f'Could not load System due to the following error:\n{err}\nPlease contact an administrator.',
@@ -140,6 +146,7 @@ class HardwareInitializationWidget(QWidget, ToggleUiInterface):
             system.connect()
 
         except Exception as err:
+            common.debug(err)
             common.show_message_box(
                 'Could not initialize hardware',
                 f'Could not initialize hardware due to the following error.\n{err}',

@@ -7,7 +7,17 @@ from iv_lab_controller.base_classes.smu import SMU, RangeValue
 
 class Keithley2600(SMU, Keithley2600Base):
     def __init__(self, adapter: Adapter, **kwargs):
-        Keithley2600Base.__init__(self, adapter, **kwargs)
+        # copy and remove emulate, if needed
+        emulate = False
+        if "emulate" in kwargs:
+            emulate = kwargs['emulate']
+            del kwargs['emulate']
+
+        # initialize smu interface
+        SMU.__init__(self, emulate=emulate)
+
+        if not self.emulate:
+            Keithley2600Base.__init__(self, adapter, **kwargs)
 
     @property
     def current_range(self) -> RangeValue:

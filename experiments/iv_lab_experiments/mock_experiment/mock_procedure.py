@@ -12,13 +12,13 @@ class MockProcedure(Procedure):
 
     Data consists of [`index`, `value`] where `value` is between 0 and 100.
     """
+    DATA_COLUMNS = ['index', 'value']
+
     iterations = IntegerParameter('Iterations')
     log = BooleanParameter('Log', default=False)
     min_value = IntegerParameter('Minimum value', default=0)
     max_value = IntegerParameter('Maximum value', default=100)
     sleep = FloatParameter('Sleep', default = 0.1)
-
-    DATA_COLUMNS = ['index', 'value']
 
     def execute(self):
         if self.log:

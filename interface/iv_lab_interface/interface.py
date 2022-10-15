@@ -107,7 +107,6 @@ class IVLabInterface(QWidget):
         Store.set('system', None)  # Union[System, None]
         Store.set('experiment_results', [])  # List[Results]
         Store.set('autosave', True)  # bool
-        Store.set('system_path', ctrl_common.system_path())  # str
         Store.set('cell_name', None)  # Union[str, None]
 
         # --- init UI ---

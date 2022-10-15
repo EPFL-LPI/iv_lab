@@ -1,3 +1,4 @@
+import logging
 from typing import List, Union
 
 from PyQt6.QtCore import pyqtSignal
@@ -19,6 +20,9 @@ from iv_lab_controller.base_classes import (
 from .parameters_widget_base import ParametersWidgetBase
 
 
+logger = logging.getLogger('iv_lab')
+
+
 class ExperimentParametersWidget(QGroupBox, ParametersWidgetBase):
     queue_experiment = pyqtSignal(type(Experiment), ExperimentParametersInterface)
 
@@ -26,7 +30,7 @@ class ExperimentParametersWidget(QGroupBox, ParametersWidgetBase):
         super().__init__("Measurement")
 
         self._experiments: List[Experiment] = []
-        
+
         self.init_ui()
         self.register_connections()
         self.init_observers()
@@ -40,7 +44,6 @@ class ExperimentParametersWidget(QGroupBox, ParametersWidgetBase):
             Updates the UI to match the system's experiments.
             """
             self._experiments = []
-
             # collect experiments
             if system is not None:
                 user = Store.get('user')
@@ -49,8 +52,11 @@ class ExperimentParametersWidget(QGroupBox, ParametersWidgetBase):
 
             # clear holders
             self.cb_measurement_select.clear()
-            for i in range(self.stk_experiments.count()):
-                wgt = self.stk_experiments.widget(i)
+            while True:
+                wgt = self.stk_experiments.widget(0)
+                if wgt is None:
+                    break
+
                 self.stk_experiments.removeWidget(wgt)
 
             # load experiments
@@ -59,11 +65,14 @@ class ExperimentParametersWidget(QGroupBox, ParametersWidgetBase):
 
                 e_ui = exp.ui()
                 self.stk_experiments.addWidget(e_ui)
+
+                # @note: Queueing functionality not implemented but
+                #   placeholders left in for future use.
                 e_ui.queue.connect(lambda: self.queue_experiment.emit(exp, e_ui.value))
 
         sys_observer = Observer(changed=system_changed)
         Store.subscribe('system', sys_observer)
-                
+
     @property
     def experiments(self) -> List[Experiment]:
         """

@@ -1,5 +1,10 @@
+import time
+
 import numpy as np
-from pymeasure.experiment import FloatParameter, BooleanParameter
+from pymeasure.experiment import (
+    FloatParameter,
+    BooleanParameter,
+)
 
 from iv_lab_controller.base_classes.procedure import Procedure
 
@@ -8,8 +13,15 @@ class IVCurveProcedure(Procedure):
     """
     IV curve sweep.
     """
-    current_limit = FloatParameter(
-        'Current limit',
+    DATA_COLUMNS = ['time elapsed', 'voltage', 'current', 'reference current']
+
+    automatic_limits = BooleanParameter(
+        'Automatic limits',
+        default=False
+    )
+
+    compliance_current = FloatParameter(
+        'Compliance current',
         units='A',
         default=0.05
     )
@@ -47,13 +59,8 @@ class IVCurveProcedure(Procedure):
         default=0.1
     )
 
-    use_reference_diode = BooleanParameter(
-        'Use reference diode',
-        default=False
-    )
-
-    check_voc_before_scan = BooleanParameter(
-        'Check Voc before scan',
+    check_polarity = BooleanParameter(
+        'Check polarity',
         default=False
     )
 
@@ -97,14 +104,14 @@ class IVCurveProcedure(Procedure):
                 )
 
         # check Voc polarity only when light is on
-        if self.check_voc_before_scan and self.light_intensity > 0: 
+        if self.check_polarity and self.light_intensity > 0: 
             self.show_status('status', 'Checking Voc Polarity...')
 
             # @todo: check this smu function
-            voc_polarity_ok = self.smu.checkVOCPolarity(IV_param)
-            if not voc_polarity_ok:
+            polarity_ok = self.smu.checkVOCPolarity(IV_param)
+            if not polarity_ok:
                 raise ValueError(
-                    'Incorrect polarity detected for Voc.' +
+                    'Incorrect polarity detected.' +
                     'This could be due to wires plugged incorrectly or light source not turning on.'
                 )
          
@@ -129,15 +136,19 @@ class IVCurveProcedure(Procedure):
         )
         stop_voltage = self.stop_voltage + step
         voltages = np.arange(self.start_voltage, stop_voltage, step)
+
+        start_time = time.time()
         for v in voltages:
             if self.should_stop():
                 self.emit('status', 'Aborting experiment...')
                 break
-            
+
             # measure current at voltage, save result
             self.smu.set_voltage(v)
             current = self.smu.measure_current()
+            elapsed_time = time.time() - start_time
             data = {
+                'time': elapsed_time,
                 'voltage': v,
                 'current': current,
                 'reference diode current': 0
@@ -157,7 +168,7 @@ class IVCurveProcedure(Procedure):
             else:
                 lightLevelCorrectionFactor = 1.0
                 avgLightLevel = IV_param['light_int']
-            
+
             self.emit('results', data)
 
             # if len(v_smu) > 1:
