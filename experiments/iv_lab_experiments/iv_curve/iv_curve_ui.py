@@ -54,7 +54,7 @@ class IVCurveParametersWidget(ExperimentParametersWidget):
         self.sb_voltage_step.setDecimals(2)
         self.sb_voltage_step.setSingleStep(1)
         self.sb_voltage_step.setMinimum(0)
-        self.sb_voltage_step.setMaximum(self.user_voltage_limit* 1000)
+        self.sb_voltage_step.setMaximum(self.user_voltage_limit * 1e3)
 
         lbl_sweep_rate = QLabel("Sweep Rate")
         self.sb_sweep_rate = QDoubleSpinBox()
@@ -162,8 +162,8 @@ class IVCurveParametersWidget(ExperimentParametersWidget):
                 params.start_voltage = self.sb_max_voltage.value()
                 params.stop_voltage = self.sb_min_voltage.value()
 
-        params.voltage_step = self.sb_voltage_step.value() * 1000
-        params.sweep_rate = self.sb_sweep_rate.value() * 1000
+        params.voltage_step = self.sb_voltage_step.value() * 1e-3
+        params.sweep_rate = self.sb_sweep_rate.value() * 1e-3
         params.settling_time = self.sb_settling_time.value()
 
         return params

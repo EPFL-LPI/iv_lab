@@ -18,10 +18,8 @@ class Keithley2400(SMU, Keithley2400Base):
 
         if not self.emulate:
             Keithley2400Base.__init__(self, adapter, **kwargs)
-
-    @property
-    def name(self) -> str:
-        return "Keithley 2400"
+            
+        self.name = "Keithley 2400"
 
     @property
     def current_range(self) -> RangeValue:
@@ -42,14 +40,14 @@ class Keithley2400(SMU, Keithley2400Base):
 
     def _disconnect(self):
         if not self.emulate:
-            super(Keithley2400Base, self).shutdown()
+            Keithley2400Base.shutdown(self)
 
     @property
     def compliance_current(self) -> float:
         """
         :returns: Compliance current.
         """
-        return super(Keithley2400Base, self).compliance_current
+        return Keithley2400Base.compliance_current.fget(self)
 
     @compliance_current.setter
     def compliance_current(self, i: float):
@@ -58,14 +56,14 @@ class Keithley2400(SMU, Keithley2400Base):
 
         :param: Desired compliance current.
         """
-        super(Keithley2400Base, self).compliance_current = i
+        Keithley2400Base.compliance_current.fset(self, i)
 
     @property
     def compliance_voltage(self) -> float:
         """
         :returns: Compliance voltage.
         """
-        return super(Keithley2400Base, self).compliance_voltage
+        return Keithley2400Base.compliance_voltage.fget(self)
 
     @compliance_voltage.setter
     def compliance_voltage(self, v: float):
@@ -74,7 +72,7 @@ class Keithley2400(SMU, Keithley2400Base):
 
         :param v: Desired compliance voltage.
         """
-        super(Keithley2400Base, self).compliance_voltage = v
+        Keithley2400Base.compliance_voltage.fset(self, v)
 
     def set_voltage(
         self,
@@ -110,21 +108,21 @@ class Keithley2400(SMU, Keithley2400Base):
         """
         self.disable_source()
 
-    def measure_voltage(self) -> float:
+    def measure_voltage(self, **kwargs) -> float:
         """
         Measure the voltage.
 
         :returns: Measured voltage.
         """
-        return self.voltage
+        return Keithley2400Base.measure_voltage(self, **kwargs)
 
-    def measure_current(self) -> float:
+    def measure_current(self, **kwargs) -> float:
         """
         Measure the current.
 
         :returns: Measured current.
         """
-        return self.current
+        return Keithley2400Base.measure_current(self, **kwargs)
 
     def measure_iv_curve(
         self,

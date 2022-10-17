@@ -4,6 +4,8 @@ from abc import ABC, abstractmethod
 from pyee import EventEmitter
 from pymeasure.instruments.instrument import Instrument
 
+logger = logging.getLogger('iv_lab')
+
 
 class HardwareBase(ABC, EventEmitter, Instrument):
     """
@@ -15,15 +17,6 @@ class HardwareBase(ABC, EventEmitter, Instrument):
         super().__init__()
         self._emulate = emulate
         self._connected = False
-
-    @property
-    @abstractmethod
-    def name(self) -> str:
-        """
-        :returns: Name of the hardware.
-            The name should be a unique static string that references the particular class.
-        """
-        raise NotImplementedError()
 
     @property
     def emulate(self) -> bool:
@@ -85,5 +78,5 @@ class HardwareBase(ABC, EventEmitter, Instrument):
         :param msg: Message to be emitted and logged.
         """
         self.emit('status_update', msg)
-        logging.debug(msg)
+        logger.debug(msg)
 

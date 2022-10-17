@@ -27,6 +27,7 @@ setuptools.setup(
         'pyvisa',  # only required for lamps.oriel*
         'pymeasure',
         'pytrinamic',  # only required for lamps.trinamic*
+        'iv_lab_controller'
     ],
     package_data={
     }

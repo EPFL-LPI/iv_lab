@@ -36,14 +36,6 @@ else:
 logger = logging.getLogger('iv_lab')
 
 
-# @note: Type support for annotations is only included in the `typing`
-#   package since Python 3.9. Because of this the type annotations of Deques
-#   in these classes will raise errors. To prevent this use the `Annotation`
-#   typing in the [`typing_extensions`](https://pypi.org/project/typing-extensions/)
-#   package, or remove the annotations.
-#
-#   e.g.
-#   `deque[Results]` -> `deque`
 class ResultsRunner(QThread):
     """
     Runs `Results` in a separate thread to allow the UI to remian unblocked.

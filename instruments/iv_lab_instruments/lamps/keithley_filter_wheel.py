@@ -1,7 +1,10 @@
 import time
+import logging
 
 from iv_lab_controller.base_classes import Lamp, SMU
 
+
+logger = logging.getLogger('iv_lab')
 
 class KeithleyFilterWheel(Lamp):
     """
@@ -12,14 +15,15 @@ class KeithleyFilterWheel(Lamp):
         :param emulate: Whether to emulate the lamp or not. [Default: False]
         """
         super().__init__(emulate=emulate)
+        self.sleep_time = 0
 
         self.smu = smu
         self.filter_wheel_map = {
             # map of intensities to filter wheel angles
             100: 0,
-            50: 5,
-            20: 4,
-            10: 3,
+            55: 5,
+            10: 4,
+            1: 3,
             0: 2
         }
 
@@ -43,14 +47,14 @@ class KeithleyFilterWheel(Lamp):
         pass
 
     def _light_on(self):
-        angle_code = self.filterWheelDict[self.intensity]
-        self.smu.set_TTL_level(angle_code)
-        time.sleep(8.0) # wait 8 seconds for filter wheel to reach position
+        angle_code = self.filter_wheel_map[self.intensity]
+        self.smu.write(f":SOUR2:TTL:LEV {angle_code}")
+        time.sleep(self.sleep_time) # wait 8 seconds for filter wheel to reach position
 
     def _light_off(self):
-        angle_code = self.filterWheelDict[0]
-        self.smu.set_TTL_level(angle_code)
-        time.sleep(8.0) # wait 8 seconds for filter wheel to reach position
+        angle_code = self.filter_wheel_map[0]
+        self.smu.write(f":SOUR2:TTL:LEV {angle_code}")
+        time.sleep(self.sleep_time) # wait 8 seconds for filter wheel to reach position
 
     def _turn_off(self):
         """

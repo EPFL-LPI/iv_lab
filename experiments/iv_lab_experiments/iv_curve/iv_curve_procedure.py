@@ -84,17 +84,19 @@ class IVCurveProcedure(Procedure):
         """
         self.validate_parameters()
 
-        # set current and voltage
+        # initialize smu
+        self.smu.reset()
         self.smu.compliance_voltage = self.compliance_voltage
         self.smu.compliance_current = self.compliance_current
+        self.smu.measure_current()
 
         # initialize lamp
-        self.status.emit('status', 'Turning lamp on...')
+        # self.status.emit('status', 'Turning lamp on...')
         self.lamp.intensity = self.light_intensity
-        self.light_on()
+        self.lamp.light_on()
 
         # measure light intensity on the reference diode if configured
-        if self.use_reference_diode.value:
+        if False: # self.smu.use_reference_diode:
             ref_intensity = self.measure_light_intensity()
             intensity_err = abs(ref_intensity - self.light_intensity)/ self.light_intensity
             if intensity_err > self.light_intensity_error:
@@ -104,7 +106,7 @@ class IVCurveProcedure(Procedure):
                 )
 
         # check Voc polarity only when light is on
-        if self.check_polarity and self.light_intensity > 0: 
+        if self.check_polarity and self.light_intensity > 0:
             self.show_status('status', 'Checking Voc Polarity...')
 
             # @todo: check this smu function
@@ -137,6 +139,8 @@ class IVCurveProcedure(Procedure):
         stop_voltage = self.stop_voltage + step
         voltages = np.arange(self.start_voltage, stop_voltage, step)
 
+        self.smu.enable_output()
+
         start_time = time.time()
         for v in voltages:
             if self.should_stop():
@@ -145,29 +149,29 @@ class IVCurveProcedure(Procedure):
 
             # measure current at voltage, save result
             self.smu.set_voltage(v)
-            current = self.smu.measure_current()
+            current = self.smu.current
             elapsed_time = time.time() - start_time
             data = {
-                'time': elapsed_time,
+                'time elapsed': elapsed_time,
                 'voltage': v,
                 'current': current,
-                'reference diode current': 0
+                'reference current': 0
             }
 
-            if self.use_reference_diode:
-                if self.smu.referenceDiodeParallel: # light level was measured real-time during scan
-                    avgRefCurrent = sum(i_ref)/len(i_ref)
-                    avgLightLevel = abs(100. * avgRefCurrent / self.smu.fullSunReferenceCurrent)
-                    if self.app != None:
-                        self.win.updateMeasuredLightIntensity(avgLightLevel)
-                        self.app.processEvents()
-                    lightLevelCorrectionFactor = IV_param['light_int'] / avgLightLevel
-                else: #light level was only measured once at the beginning
-                    avgLightLevel = lightIntensity
-                    lightLevelCorrectionFactor = IV_param['light_int'] / avgLightLevel
-            else:
-                lightLevelCorrectionFactor = 1.0
-                avgLightLevel = IV_param['light_int']
+            # if False: # self.use_reference_diode:
+            #     if self.smu.referenceDiodeParallel: # light level was measured real-time during scan
+            #         avgRefCurrent = sum(i_ref)/len(i_ref)
+            #         avgLightLevel = abs(100. * avgRefCurrent / self.smu.fullSunReferenceCurrent)
+            #         if self.app != None:
+            #             self.win.updateMeasuredLightIntensity(avgLightLevel)
+            #             self.app.processEvents()
+            #         lightLevelCorrectionFactor = IV_param['light_int'] / avgLightLevel
+            #     else: #light level was only measured once at the beginning
+            #         avgLightLevel = lightIntensity
+            #         lightLevelCorrectionFactor = IV_param['light_int'] / avgLightLevel
+            # else:
+            #     lightLevelCorrectionFactor = 1.0
+            #     avgLightLevel = IV_param['light_int']
 
             self.emit('results', data)
 
