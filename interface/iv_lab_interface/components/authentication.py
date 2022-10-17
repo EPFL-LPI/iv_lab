@@ -20,7 +20,7 @@ import iv_lab_controller.authentication as auth_ctrl
 from .. import common
 
 
-# logger 
+# logger
 logger = logging.getLogger('iv_lab')
 
 
@@ -50,7 +50,8 @@ class AuthenticationWidget(QStackedWidget):
         self.in_password.setMinimumWidth(100)
 
         self.btn_log_in = QPushButton("Log In")
-        
+        self.btn_log_in.setAutoDefault(True)
+
         lo_log_in = QHBoxLayout()
         lo_log_in.addWidget(self.in_username)
         lo_log_in.addWidget(self.in_password)
@@ -58,12 +59,12 @@ class AuthenticationWidget(QStackedWidget):
 
         self.wgt_log_in = QWidget()
         self.wgt_log_in.setLayout(lo_log_in)
-        
+
         # logout
         lbl_username_title = QLabel("Logged in as:")
         self.lbl_username = QLabel("guest")
         self.btn_log_out = QPushButton("Log Out")
-        
+
         lo_log_out = QHBoxLayout()
         lo_log_out.addWidget(lbl_username_title)
         lo_log_out.addWidget(self.lbl_username)
@@ -71,7 +72,7 @@ class AuthenticationWidget(QStackedWidget):
 
         self.wgt_log_out = QWidget()
         self.wgt_log_out.setLayout(lo_log_out)
-        
+
         # main
         self.addWidget(self.wgt_log_in)
         self.addWidget(self.wgt_log_out)
@@ -101,7 +102,7 @@ class AuthenticationWidget(QStackedWidget):
         def runner_state_changed(state: RunnerState, o_state: RunnerState):
             if state is RunnerState.Standby:
                 self.setEnabled(True)
-        
+
             elif state is RunnerState.Running:
                 self.setEnabled(False)
 
