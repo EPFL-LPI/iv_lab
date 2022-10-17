@@ -22,7 +22,7 @@ setuptools.setup(
         "Operating System :: OS Independent",
         "Development Status :: 3 - Alpha"
     ],
-    python_requires=">=3.6.8",
+    python_requires=">=3.7.0",
     install_requires=[
         'PyQt6>=6.3',
         'pyee>=9.0.0',

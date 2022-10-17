@@ -2,9 +2,11 @@
 Functionality related to running experiments.
 """
 import os
+import sys
 import logging
 from collections import deque
 from typing import Union, Tuple, Type
+
 
 from PyQt6.QtCore import QThread, pyqtSignal
 from pymeasure.experiment import Worker
@@ -20,6 +22,16 @@ from .parameters import CompleteParameters
 
 
 ExperimentInfo = Tuple[Type[Experiment], CompleteParameters]
+
+# create typing for dequeue[Results] based on python version
+if sys.version_info < (3, 9, 0):
+    from typing_extensions import Annotated
+    ResultsDeque = Annotated[deque, Results]
+    ExperimentInfoDeque = Annotated[deque, ExperimentInfo]
+
+else:
+    ResultsDeque = deque[Results]
+    ExperimentInfoDeque = deque[ExperimentInfo]
 
 logger = logging.getLogger('iv_lab')
 
@@ -38,7 +50,7 @@ class ResultsRunner(QThread):
     """
     progress = pyqtSignal(Results, int, int)  # current results, index, total
 
-    def __init__(self, results_queue: deque[Results]):
+    def __init__(self, results_queue: ResultsDeque):
         super().__init__()
 
         self.active_worker: Union[Worker, None] = None
@@ -88,7 +100,7 @@ class Runner():
         """
         self._state: RunnerState = RunnerState.Standby
         self._queue: deque[ExperimentInfo] = deque()
-        self._results_queue: deque[Results] = deque()
+        self._results_queue: ResultsDeque = deque()
         self._results_runner: Union[ResultsRunner, None] = None
 
     @property
@@ -103,7 +115,7 @@ class Runner():
         Store.set('runner_state', self.state)
 
     @property
-    def queue(self) -> deque[ExperimentInfo]:
+    def queue(self) -> ExperimentInfoDeque:
         """
         :returns: The procedure queue.
         """

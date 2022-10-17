@@ -22,7 +22,6 @@ setuptools.setup(
         "Operating System :: OS Independent",
         "Development Status :: 3 - Alpha"
     ],
-    python_requires=">=3.6.8",
     install_requires=[
         'PyQt6>=6.3',
         'pandas',
