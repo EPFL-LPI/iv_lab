@@ -6,6 +6,9 @@ from iv_lab_controller.base_classes.smu import SMU, RangeValue
 
 
 class Keithley2400(SMU, Keithley2400Base):
+    """
+    Keithley 2400 controller.
+    """
     def __init__(self, adapter: Adapter, **kwargs):
         # copy and remove emulate, if needed
         emulate = False
@@ -18,8 +21,13 @@ class Keithley2400(SMU, Keithley2400Base):
 
         if not self.emulate:
             Keithley2400Base.__init__(self, adapter, **kwargs)
-            
-        self.name = "Keithley 2400"
+
+    @property
+    def name(self) -> str:
+        """
+        :returns: Name of the instrument.
+        """
+        return "Keithley 2400"
 
     @property
     def current_range(self) -> RangeValue:

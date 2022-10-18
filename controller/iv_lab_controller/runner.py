@@ -23,7 +23,7 @@ from .parameters import CompleteParameters
 
 ExperimentInfo = Tuple[Type[Experiment], CompleteParameters]
 
-# create typing for dequeue[Results] based on python version
+# create typing for annotated deque based on python version
 if sys.version_info < (3, 9, 0):
     from typing_extensions import Annotated
     ResultsDeque = Annotated[deque, Results]
@@ -32,6 +32,7 @@ if sys.version_info < (3, 9, 0):
 else:
     ResultsDeque = deque[Results]
     ExperimentInfoDeque = deque[ExperimentInfo]
+
 
 logger = logging.getLogger('iv_lab')
 

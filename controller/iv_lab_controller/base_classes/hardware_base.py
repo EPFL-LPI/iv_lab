@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 from pyee import EventEmitter
 from pymeasure.instruments.instrument import Instrument
 
+
 logger = logging.getLogger('iv_lab')
 
 
@@ -17,6 +18,16 @@ class HardwareBase(ABC, EventEmitter, Instrument):
         super().__init__()
         self._emulate = emulate
         self._connected = False
+
+    @property
+    @abstractmethod
+    def name(self) -> str:
+        """
+        :returns: Name of the hardware.
+            The name should be a unique static string
+            that references the particular class.
+        """
+        raise NotImplementedError('`name` must be implemented')
 
     @property
     def emulate(self) -> bool:
@@ -37,14 +48,14 @@ class HardwareBase(ABC, EventEmitter, Instrument):
         """
         Connect to the hardware.
         """
-        raise NotImplementedError()
+        raise NotImplementedError('`_connect` must be implemented')
 
     @abstractmethod
     def _disconnect(self):
         """
         Disconnect from the hardware.
         """
-        raise NotImplementedError()
+        raise NotImplementedError('`_disconnect` must be implemented')
 
     def connect(self):
         """
@@ -52,9 +63,9 @@ class HardwareBase(ABC, EventEmitter, Instrument):
         """
         if (not self.emulate) and (not self.connected):
             self._connect()
-            
+
         self._connected = True
-    
+
     def disconnect(self):
         """
         Disconnects from the hardware.
@@ -68,7 +79,7 @@ class HardwareBase(ABC, EventEmitter, Instrument):
         """
         Shutdown the hardware.
         """
-        raise NotImplementedError()
+        raise NotImplementedError('`shutdown` must be implemented')
 
     def update_status(self, msg: str):
         """
@@ -79,4 +90,3 @@ class HardwareBase(ABC, EventEmitter, Instrument):
         """
         self.emit('status_update', msg)
         logger.debug(msg)
-

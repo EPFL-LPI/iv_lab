@@ -22,6 +22,7 @@ from iv_lab_controller import common as ctrl_common
 from iv_lab_controller import gui as gui_ctrl
 from iv_lab_controller.store import Store, Observer
 from iv_lab_controller.user import User, Permission
+from iv_lab_controller.types import RunnerState
 from iv_lab_controller.parameters.system_parameters import (
     SystemParameters,
     SystemParametersJSONEncoder,
@@ -55,6 +56,24 @@ class IVLabInterface(QWidget):
 
     # --- window close ---
     def closeEvent(self, event):
+        if Store.has('runner_state'):
+            runner_state = Store.get('runner_state')
+            if runner_state is RunnerState.Running:
+                common.show_message_box(
+                    'Can not quit program',
+                    'Can not quit program while an experiment is running.'
+                )
+                event.ignore()
+                return
+
+            elif runner_state is RunnerState.Aborting:
+                common.show_message_box(
+                    'Can not quit program',
+                    'Please wait for experiments to finish aborting, then try again.'
+                )
+                event.ignore()
+                return
+
         logger.info('Program closed')
         self.__delete_controllers()
         event.accept()
