@@ -27,7 +27,10 @@ class IlluminationMode(Enum):
 
 class IlluminationParametersWidget(QGroupBox, ParametersWidgetBase):
     intensities: Dict[str, float] = {
-        '1 Sun': 1,
+        '100% Sun': 100,
+        '55% Sun': 55,
+        '10% Sun': 10,
+        '1% Sun': 1,
         'Dark': 0
     }
 

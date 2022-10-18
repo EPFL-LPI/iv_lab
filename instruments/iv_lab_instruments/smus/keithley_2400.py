@@ -29,6 +29,12 @@ class Keithley2400(SMU, Keithley2400Base):
         """
         return "Keithley 2400"
 
+    @name.setter
+    def name(self, name: str):
+        """
+        """
+        pass
+
     @property
     def current_range(self) -> RangeValue:
         """

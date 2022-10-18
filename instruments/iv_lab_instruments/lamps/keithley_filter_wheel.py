@@ -15,7 +15,7 @@ class KeithleyFilterWheel(Lamp):
         :param emulate: Whether to emulate the lamp or not. [Default: False]
         """
         super().__init__(emulate=emulate)
-        self.sleep_time = 0
+        self.sleep_time = 8
 
         self.smu = smu
         self.filter_wheel_map = {

@@ -13,7 +13,13 @@ class IVCurveProcedure(Procedure):
     """
     IV curve sweep.
     """
-    DATA_COLUMNS = ['time elapsed', 'voltage', 'current', 'reference current']
+    DATA_COLUMNS = [
+                    'voltage (V)',
+                    'current density (mA/cm^2)',
+                    'current (mA)',
+                    'reference current',
+                    'time elapsed (s)'
+                    ]
 
     automatic_limits = BooleanParameter(
         'Automatic limits',
@@ -122,7 +128,7 @@ class IVCurveProcedure(Procedure):
         Place hardware in standby.
         """
         self.emit('status', 'Turning lamp off...')
-        self.lamp.turn_off()
+        self.lamp.light_off()
 
     def execute(self):
         """
@@ -152,9 +158,10 @@ class IVCurveProcedure(Procedure):
             current = self.smu.current
             elapsed_time = time.time() - start_time
             data = {
-                'time elapsed': elapsed_time,
-                'voltage': v,
-                'current': current,
+                'time elapsed (s)': elapsed_time,
+                'voltage (V)': v,
+                'current (mA)': 1e3*current,
+                'current density (mA/cm^2)': 1e3*current/self.active_area,
                 'reference current': 0
             }
 
