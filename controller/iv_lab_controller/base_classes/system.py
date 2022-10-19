@@ -1,12 +1,50 @@
 import os
 from datetime import datetime
-from typing import Dict, List
+from typing import Union, Dict, List, Callable, Type
 
 from .lamp import Lamp
 from .smu import SMU
 from .system_parameters import SystemParameters
 from .experiment import Experiment
 from ..user import Permission
+
+
+ProcedureFunction = Callable[[], None]
+
+
+class ProcedureFunctions:
+    """
+    Functions used by the `System` in an `Experiment`'s `Procedure`
+    for `System` specific initialization of the `Procedure`.
+    This is injectected into the `Procedure` as an instance variable.
+
+    # See also
+    + `iv_lab_controller.base_classes.procedure.Procedure`
+    """
+    def __init__(
+        self,
+        startup: Union[ProcedureFunction, None] = None,
+        shutdown: Union[ProcedureFunction, None] = None
+    ):
+        """
+        :param startup: Function to be run in `Procedure`'s `startup` method, or `None`.
+        :param shutdown: Function to be run in `Procedure`'s `shutdown` method, or `None`.
+        """
+        def _default_fcn():
+            """
+            Does nothing.
+            """
+            pass
+
+        if startup is None:
+            startup = _default_fcn
+
+        if shutdown is None:
+            shutdown = _default_fcn
+
+        self.startup = startup
+        self.shutdown = shutdown
+
 
 class System:
     """
@@ -32,9 +70,12 @@ class System:
         self._system_parameters = system_parameters
         self._emulate = emulate
 
-        self._experiments: Dict[Permission, List[Experiment]] = {}
+        self._experiments: Dict[Permission, List[Type[Experiment]]] = {}
         for perm in Permission:
             self._experiments[perm] = []
+
+        # setup procedure functions
+        self.procedure_functions: Dict[Type[Experiment], ProcedureFunctions] = {}
 
     @property
     def emulate(self) -> bool:
@@ -49,14 +90,14 @@ class System:
         :returns: The System's lamp controller.
         """
         return self._lamp
-    
+
     @property
     def smu(self) -> SMU:
         """
         :returns: The System's SMU controller.
         """
         return self._smu
-      
+
     @property
     def system_parameters(self) -> SystemParameters:
         """
@@ -65,24 +106,55 @@ class System:
         return self._system_parameters
 
     @property
-    def experiments(self) -> Dict[Permission, List[Experiment]]:
+    def experiments(self) -> Dict[Permission, List[Type[Experiment]]]:
         """
         :returns: Dictionary of permission-experiments pairs.
         """
         return self._experiments
 
-    def add_experiment(self, permission: Permission, experiment: Experiment):
+    def add_experiment(self, permission: Permission, experiment: Type[Experiment]):
         """
         Adds an experiment for the gievn permission.
+
+        :param permission: The permission to add the experiment to.
+        :param experiment: The experiment to add.
         """
         self._experiments[permission].append(experiment)
 
-    def experiments_for_permission(self, perm: Permission) -> List[Experiment]:
+    def experiments_for_permission(self, perm: Permission) -> List[Type[Experiment]]:
         """
         :param perm: Desired Permission.
         :returns: List of Experiments available to the given permission.
         """
         return self._experiments[perm]
+
+    def set_procedure_functions(
+        self,
+        exp: Type[Experiment],
+        startup: Union[ProcedureFunction, None] = None,
+        shutdown: Union[ProcedureFunction, None] = None
+    ):
+        """
+        Creates a `ProcedureFunctions` with the given startup and shutdown methods,
+        and sets it for the given experiment.
+
+        :parm exp: The `Experiment` to set the procedure functions for.
+        :param startup: The startup function.
+        :param shutdown: The shutdown function.
+        """
+        proc_fns = ProcedureFunctions(startup=startup, shutdown=shutdown)
+        self.procedure_functions[exp] = proc_fns
+
+    def procedure_functions_for_experiment(self, exp: Type[Experiment]) -> ProcedureFunctions:
+        """
+        :returns: `ProcedureFunctions` for the given experiment type, or
+            a default `ProcedureFunctions` if not set.
+        """
+        return (
+            self.procedure_functions[exp]
+            if exp in self.procedure_functions else
+            ProcedureFunctions()
+        )
 
     def connect(self):
         """
@@ -110,13 +182,13 @@ class System:
         Turn lamp on.
         """
         self.lamp.light_on()
-    
+
     def lamp_off(self):
         """
         Turn lamp off..
         """
         self.lamp.light_off()
-    
+
     def measure_light_intensity(self):
         raise NotImplementedError()
 
@@ -125,22 +197,21 @@ class System:
         """
         NotImplementedError()
 
-    def toggleAutoSave(self,autoSave):
+    def toggleAutoSave(self, autoSave):
         self.saveDataAutomatic = autoSave
-    
+
     # @todo
     def save_calibration_to_system_settings(self, calibration_params):
-        dateTimeString = datetime.datetime.now().strftime("%c") #"%Y%m%d_%H%M%S")
+        dateTimeString = datetime.datetime.now().strftime("%c")  # "%Y%m%d_%H%M%S")
         self.parameters.IVsys['fullSunReferenceCurrent'] = calibration_params['reference_current']
         self.smu.fullSunReferenceCurrent = calibration_params['reference_current']
         self.parameters.IVsys['calibrationDateTime'] = dateTimeString
         self.smu.calibrationDateTime = dateTimeString
-        settingsFilePath = os.path.join(os.getcwd() , "system_settings.json")
+        settingsFilePath = os.path.join(os.getcwd(), "system_settings.json")
         sys_params = {}
         sys_params['computer'] = self.parameters.computer
         sys_params['IVsys'] = self.parameters.IVsys
         sys_params['lamp'] = self.parameters.lamp
         sys_params['SMU'] = self.parameters.SMU
         with open(settingsFilePath, 'w') as outfile:
-            json.dump(sys_params, outfile)                        
-
+            json.dump(sys_params, outfile)

@@ -158,7 +158,7 @@ class IVLabInterface(QWidget):
         splitter.addWidget(self.wgt_experiment)
         splitter.addWidget(self.wgt_plot)
         splitter.setStretchFactor(1, 10)
-        
+ 
         layout = QHBoxLayout()
         layout.addWidget(splitter)
         layout.setContentsMargins(10, 10, 10, 10)

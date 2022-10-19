@@ -22,3 +22,19 @@ class MockSystem(System):
         super().__init__(lamp, smu, system_parameters, emulate=emulate)
 
         self.add_experiment(Permission.Basic, MockExperiment)
+
+        # procedure functions
+        def mock_startup():
+            print('startup')
+            self.lamp.light_on()
+            self.smu.connect()
+
+        def mock_shutdown():
+            self.lamp.light_off()
+            self.smu.disconnect()
+
+        self.set_procedure_functions(
+            MockExperiment,
+            startup=mock_startup,
+            shutdown=mock_shutdown
+        )

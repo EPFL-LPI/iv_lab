@@ -170,15 +170,13 @@ class Runner():
         """
         def on_finished():
             self._set_state(RunnerState.Standby)
-            msg = 'Experiments complete'
-            Store.set('status_msg', msg)
-            logger.info(msg)
+            Store.set('status_msg', 'Experiments complete')
             self._results_runner = None
 
         def on_progress(results: Results, index: int, total: int):
-            msg = f'Running experiment {index + 1} of {total}'
-            Store.set('status_msg', msg)
-            logger.info(msg)
+            Store.set('status_msg', f'Running experiment {index + 1} of {total}')
+            logger.info(f'Running {results.procedure.__class__.__name__}')
+            logger.debug('%s', results.procedure)
             self.add_results(results)
 
         self._results_runner = ResultsRunner(self._results_queue)
@@ -204,6 +202,7 @@ class Runner():
         procedure = exp.create_procedure(params.to_dict_parameters())
         procedure.lamp = system.lamp
         procedure.smu = system.smu
+        procedure.system_functions = system.procedure_functions_for_experiment(exp)
 
         data_path = self.data_file(cell_name, exp.name)
         results = Results(procedure, data_path)

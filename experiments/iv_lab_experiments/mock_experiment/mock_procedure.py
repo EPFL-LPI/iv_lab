@@ -18,7 +18,7 @@ class MockProcedure(Procedure):
     log = BooleanParameter('Log', default=False)
     min_value = IntegerParameter('Minimum value', default=0)
     max_value = IntegerParameter('Maximum value', default=100)
-    sleep = FloatParameter('Sleep', default = 0.1)
+    sleep = FloatParameter('Sleep', default=0.1)
 
     def execute(self):
         if self.log:
