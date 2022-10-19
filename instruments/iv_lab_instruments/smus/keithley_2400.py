@@ -122,21 +122,21 @@ class Keithley2400(SMU, Keithley2400Base):
         """
         self.disable_source()
 
-    def measure_voltage(self, **kwargs) -> float:
+    def get_voltage(self) -> float:
         """
         Measure the voltage.
 
         :returns: Measured voltage.
         """
-        return Keithley2400Base.measure_voltage(self, **kwargs)
+        return self.voltage
 
-    def measure_current(self, **kwargs) -> float:
+    def get_current(self) -> float:
         """
         Measure the current.
 
         :returns: Measured current.
         """
-        return Keithley2400Base.measure_current(self, **kwargs)
+        return self.current
 
     def measure_iv_curve(
         self,

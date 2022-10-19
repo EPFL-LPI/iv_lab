@@ -5,10 +5,10 @@ from typing import Union
 from .hardware_base import HardwareBase
 
 
+RangeValue = Union[float, Enum]
 """
 Value representing a voltage or current range.
 """
-RangeValue = Union[float, Enum]
 
 
 class SMU(HardwareBase):
@@ -132,7 +132,7 @@ class SMU(HardwareBase):
         raise NotImplementedError()
 
     @abstractmethod
-    def measure_voltage(self) -> float:
+    def get_voltage(self) -> float:
         """
         Measure the voltage.
 
@@ -141,7 +141,7 @@ class SMU(HardwareBase):
         raise NotImplementedError()
 
     @abstractmethod
-    def measure_current(self) -> float:
+    def get_current(self) -> float:
         """
         Measure the current.
 

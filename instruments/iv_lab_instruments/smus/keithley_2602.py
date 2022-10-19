@@ -67,7 +67,7 @@ class Keithley2600(SMU, Keithley2600Base):
         """
         self.disable_source()
 
-    def measure_voltage(self) -> float:
+    def get_voltage(self) -> float:
         """
         Measure the voltage.
 
@@ -75,7 +75,7 @@ class Keithley2600(SMU, Keithley2600Base):
         """
         return self.voltage
 
-    def measure_current(self) -> float:
+    def get_current(self) -> float:
         """
         Measure the current.
 
