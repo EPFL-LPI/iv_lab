@@ -20,7 +20,9 @@ class OrielIV(System):
         smu = Keithley2400(adapter=addr, emulate=emulate)
         lamp = KeithleyFilterWheel(smu=smu, emulate=emulate)
         system_parameters = MockSystemParameters()
-        super().__init__(lamp, smu, system_parameters, emulate=emulate)
+        is_reference_diode_enabled = True
+
+        super().__init__(lamp, smu, system_parameters, is_reference_diode_enabled, emulate=emulate)
 
         self.add_experiment(Permission.Basic, MockExperiment)
         self.add_experiment(Permission.Basic, IVCurve)

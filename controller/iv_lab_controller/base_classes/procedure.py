@@ -9,6 +9,8 @@ class Procedure(PyMeasProcedure):
     # Instance variables
     + `smu`: The `System`'s SMU. Conforms to the `SMU` interface.
     + `lamp`: The `System`'s lamp. Conforms to the `Lamp` inteface.
+    + `system_parameters`: Calibration information of the reference diode.
+    + `use_reference_diode`: User's choice whether the reference diode is used or not.
     + `system_functions`: The `ProcedureFunctions` corresponding to the
         associated `Experiment` on the `System`.
     """
@@ -50,6 +52,10 @@ class Procedure(PyMeasProcedure):
         default=0.1
     )
 
+    use_reference_diode = BooleanParameter(
+        'Use reference diode'
+    )
+
     def startup(self):
         """
         Calls the startup method defined by the `System`.
@@ -68,4 +74,7 @@ class Procedure(PyMeasProcedure):
         :raises ValueError: if a parameter or combination of parameters are
         invalid.
         """
-        raise NotImplementedError()
+        if (not use_reference_diode) and (not light_level_manual):
+            raise ValueError('Reference diode disabled but light level not manually provided.')
+            
+        return True
