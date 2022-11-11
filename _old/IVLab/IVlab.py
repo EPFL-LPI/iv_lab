@@ -2207,7 +2207,7 @@ class system:
         #check that the SMU can handle the requested measurement interval
         interval = abs(IV_param['dV'])/IV_param['sweep_rate']
         if interval < self.SMU.meas_period_min:
-            IV_param['dV'] = self.SMU.meas_period_min * IV_param['sweep_rate']
+            IV_param['dV'] = self.SMU.meas_period_min * IV_param['sweep_rate'] + 0.01
             errorMsg = "WARNING: the SMU is unable to provide the requested measurement rate.\n"
             errorMsg += "The voltage step size has been adjusted to assure the requested sweep rate is respected."
             self.error_window(errorMsg)
