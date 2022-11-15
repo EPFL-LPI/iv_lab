@@ -53,13 +53,15 @@ class System:
     + A `Lamp` controller
     + A `SMU`controller
     + System parameters describing the system
-    + Procedures the system can run.
+    + Whether reference diode enabled
+    + Procedures the system can run
     """
     def __init__(
         self,
         lamp: Lamp,
         smu: SMU,
         system_parameters: SystemParameters,
+        is_reference_diode_enabled: bool,
         emulate: bool = False
     ):
         """
@@ -68,6 +70,7 @@ class System:
         self._lamp = lamp
         self._smu = smu
         self._system_parameters = system_parameters
+        self._is_reference_diode_enabled = is_reference_diode_enabled
         self._emulate = emulate
 
         self._experiments: Dict[Permission, List[Type[Experiment]]] = {}
@@ -104,6 +107,15 @@ class System:
         :returns: The system's config parameters.
         """
         return self._system_parameters
+
+    @property
+    def is_reference_diode_enabled(self) -> bool:
+        """
+        Reference diode used to determine light intensity can be enabled (True) or disabled (False)
+
+        :returns: Whether reference diode is enabled.
+        """
+        return self._is_reference_diode_enabled
 
     @property
     def experiments(self) -> Dict[Permission, List[Type[Experiment]]]:
