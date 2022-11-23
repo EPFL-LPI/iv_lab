@@ -4,6 +4,7 @@ from typing import Dict
 from PyQt6.QtWidgets import (
     QHBoxLayout,
     QVBoxLayout,
+    QCheckBox,
     QWidget,
     QGroupBox,
     QComboBox,
@@ -71,6 +72,14 @@ class IlluminationParametersWidget(QGroupBox, ParametersWidgetBase):
         self.stk_intensity.setCurrentIndex(self.illumination_mode.value)
         self.manual_light_level = False
 
+        # reference diode
+        lbl_enable_reference_diode = QLabel('Enable Reference Diode')
+        self.cb_enable_reference_diode = QCheckBox()
+
+        lo_enable_reference_diode = QHBoxLayout()
+        lo_enable_reference_diode.addWidget(self.cb_enable_reference_diode)
+        lo_enable_reference_diode.addWidget(lbl_enable_reference_diode)
+
         # measured label
         lbl_measured_intensity_title = QLabel('Measured Light Intensity:')
         self.lbl_measured_intensity = QLabel('---.--')
@@ -83,6 +92,7 @@ class IlluminationParametersWidget(QGroupBox, ParametersWidgetBase):
 
         lo_main = QVBoxLayout()
         lo_main.addWidget(self.stk_intensity)
+        lo_main.addLayout(lo_enable_reference_diode)
         lo_main.addLayout(lo_measured_intensity)
         self.setLayout(lo_main)
         self.setMaximumWidth(300)
@@ -130,6 +140,7 @@ class IlluminationParametersWidget(QGroupBox, ParametersWidgetBase):
         else:
             inten = self.intensities[self.cb_intensity.currentText()]
             params.intensity = inten
+        params.reference_diode_enabled = self.cb_enable_reference_diode.isChecked()
 
         return params
 

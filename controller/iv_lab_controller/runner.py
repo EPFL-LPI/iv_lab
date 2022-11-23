@@ -203,7 +203,7 @@ class Runner():
         procedure.lamp = system.lamp
         procedure.smu = system.smu
         procedure.system_parameters = system.system_parameters
-        procedure.is_reference_diode_enabled = system.is_reference_diode_enabled
+        procedure.system_reference_diode_state = system.reference_diode_state
         procedure.system_functions = system.procedure_functions_for_experiment(exp)
 
         data_path = self.data_file(cell_name, exp.name)

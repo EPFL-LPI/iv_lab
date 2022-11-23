@@ -131,7 +131,7 @@ class MockSMU(SMU):
         logging.debug('disable_output')
         self._output_enabled = False
 
-    def measure_voltage(self) -> float:
+    def get_voltage(self) -> float:
         """
         :returns: Random float within compliance voltage.
         """
@@ -139,7 +139,7 @@ class MockSMU(SMU):
         v = random.uniform(-self.compliance_voltage, self.compiance_voltage)
         return v
 
-    def measure_current(self) -> float:
+    def get_current(self) -> float:
         """
         :returns: Random float within compliance current.
         """

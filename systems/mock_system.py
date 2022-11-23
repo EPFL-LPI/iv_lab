@@ -1,5 +1,5 @@
 from iv_lab_controller.user import Permission
-from iv_lab_controller.base_classes import System
+from iv_lab_controller.base_classes import System, ReferenceDiodeState
 
 from iv_lab_instruments.lamps.mock_lamp import MockLamp
 from iv_lab_instruments.smus.mock_smu import MockSMU
@@ -19,7 +19,8 @@ class MockSystem(System):
         lamp = MockLamp(emulate=emulate)
         smu = MockSMU(emulate=emulate)
         system_parameters = MockSystemParameters()
-        super().__init__(lamp, smu, system_parameters, emulate=emulate)
+        reference_diode_state = ReferenceDiodeState.InSeries
+        super().__init__(lamp, smu, system_parameters, reference_diode_state, emulate=emulate)
 
         self.add_experiment(Permission.Basic, MockExperiment)
 

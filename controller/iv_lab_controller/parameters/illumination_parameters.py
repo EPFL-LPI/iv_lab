@@ -11,3 +11,4 @@ class IlluminationParameters(ExperimentParametersInterface):
     """
     manual: Union[BooleanParameter, None] = BooleanParameter('manual_light_level', default=False)
     intensity: Union[FloatParameter, None] = FloatParameter('light_intensity', units='suns', minimum=0)
+    reference_diode_enabled: Union[BooleanParameter, None] = BooleanParameter('reference_diode_enabled', default=True)

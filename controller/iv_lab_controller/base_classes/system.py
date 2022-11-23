@@ -1,6 +1,7 @@
 import os
 from datetime import datetime
 from typing import Union, Dict, List, Callable, Type
+from enum import Enum
 
 from .lamp import Lamp
 from .smu import SMU
@@ -8,6 +9,14 @@ from .system_parameters import SystemParameters
 from .experiment import Experiment
 from ..user import Permission
 
+class ReferenceDiodeState(Enum):
+    """
+    InSeries: Used mainly for single channel SMUs where reference cell is measured before and/or after test cell on the same channel
+    InParallel: Only works with multi channel SMUs, reference cell is measured in parallel with test cell on a different channel  
+    """
+    NotPresent = 0
+    InSeries = 1
+    InParallel = 2
 
 ProcedureFunction = Callable[[], None]
 
@@ -53,7 +62,7 @@ class System:
     + A `Lamp` controller
     + A `SMU`controller
     + System parameters describing the system
-    + Whether reference diode enabled
+    + State of the reference diode
     + Procedures the system can run
     """
     def __init__(
@@ -61,7 +70,7 @@ class System:
         lamp: Lamp,
         smu: SMU,
         system_parameters: SystemParameters,
-        is_reference_diode_enabled: bool,
+        reference_diode_state: ReferenceDiodeState,
         emulate: bool = False
     ):
         """
@@ -70,7 +79,7 @@ class System:
         self._lamp = lamp
         self._smu = smu
         self._system_parameters = system_parameters
-        self._is_reference_diode_enabled = is_reference_diode_enabled
+        self._reference_diode_state = reference_diode_state
         self._emulate = emulate
 
         self._experiments: Dict[Permission, List[Type[Experiment]]] = {}
@@ -109,13 +118,13 @@ class System:
         return self._system_parameters
 
     @property
-    def is_reference_diode_enabled(self) -> bool:
+    def reference_diode_state(self) -> ReferenceDiodeState:
         """
-        Reference diode used to determine light intensity can be enabled (True) or disabled (False)
+        State of the reference diode (NotPresent, InSeries, InParallel)
 
-        :returns: Whether reference diode is enabled.
+        :returns: State of reference diode.
         """
-        return self._is_reference_diode_enabled
+        return self._reference_diode_state
 
     @property
     def experiments(self) -> Dict[Permission, List[Type[Experiment]]]:

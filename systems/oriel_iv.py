@@ -1,5 +1,5 @@
 from iv_lab_controller.user import Permission
-from iv_lab_controller.base_classes import System
+from iv_lab_controller.base_classes import System, ReferenceDiodeState
 
 from iv_lab_instruments.lamps.keithley_filter_wheel import KeithleyFilterWheel
 from iv_lab_instruments.smus.keithley_2400 import Keithley2400
@@ -20,9 +20,9 @@ class OrielIV(System):
         smu = Keithley2400(adapter=addr, emulate=emulate)
         lamp = KeithleyFilterWheel(smu=smu, emulate=emulate)
         system_parameters = MockSystemParameters()
-        is_reference_diode_enabled = True
+        reference_diode_state = ReferenceDiodeState.InSeries
 
-        super().__init__(lamp, smu, system_parameters, is_reference_diode_enabled, emulate=emulate)
+        super().__init__(lamp, smu, system_parameters, reference_diode_state, emulate=emulate)
 
         self.add_experiment(Permission.Basic, MockExperiment)
         self.add_experiment(Permission.Basic, IVCurve)

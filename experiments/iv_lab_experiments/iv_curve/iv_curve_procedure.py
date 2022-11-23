@@ -102,7 +102,15 @@ class IVCurveProcedure(Procedure):
         self.lamp.light_on()
 
         # measure light intensity on the reference diode if configured
-        if False: # self.smu.use_reference_diode:
+        if self.reference_diode_enabled:
+            if self.system_reference_diode_state is ReferenceDiodeState.NotPresent:
+                raise RuntimeError('Reference diode not present')
+            elif self.system_reference_diode_state is ReferenceDiodeState.InSeries:
+                pass
+            elif self.system_reference_diode_state is ReferenceDiodeState.InParallel:
+                pass
+            else:
+                raise ValueError('Unknown reference diode state')
             ref_intensity = self.measure_light_intensity()
             intensity_err = abs(ref_intensity - self.light_intensity)/ self.light_intensity
             if intensity_err > self.light_intensity_error:
