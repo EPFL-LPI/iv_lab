@@ -23,7 +23,9 @@
     {
         "brand": "keithley",
         "model": "filter wheel",
-        "emulate": false
+		"display name": "Newport SOL3A 94043A",
+        "emulate": false,
+		"lightLevelDict" : {"100" : 0, "50" : 5, "20" : 4, "10" : 3,  "0" : 2} 
     },
     "SMU":
     {
@@ -32,7 +34,7 @@
         "visa_address": "GPIB0::24::INSTR",
         "visa_library": "/Library/Frameworks/VISA.framework/Versions/A/Headers/visa.h",
         "emulate": false,
-		"senseMode" : "2wire",
+		"referenceDiodeSenseMode" : "2wire",
 		"autorange" : true,
 		"useReferenceDiode" : true
     }

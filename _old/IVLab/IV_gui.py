@@ -15,6 +15,7 @@ from PyQt5.QtWidgets import (
     QPushButton,
     QComboBox,
     QLineEdit,
+    QTextEdit,
     QCheckBox,
     QVBoxLayout,
     QHBoxLayout,
@@ -27,15 +28,46 @@ from PyQt5.QtWidgets import (
     QFrame,
     QFileDialog,
     QMessageBox,
+    QDialogButtonBox,
+    QDialog,
     QStatusBar,
 )
 from pyqtgraph import PlotWidget, plot
 import pyqtgraph as pg
 import numpy as np
 
+class LogOffDialog(QDialog):
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        
+        self.win = parent
+        
+        self.setWindowTitle("Confirm Log Off")
+
+        QBtn = QDialogButtonBox.Ok | QDialogButtonBox.Cancel
+
+        self.buttonBox = QDialogButtonBox(QBtn)
+        self.buttonBox.accepted.connect(self.OKButtonPressed)
+        self.buttonBox.rejected.connect(self.reject)
+
+        self.layout = QVBoxLayout()
+        message = QLabel("Logbook Entry:")
+        self.textEdit = QTextEdit()
+        self.textEdit.setMaximumHeight(100)
+        
+        self.layout.addWidget(message)
+        self.layout.addWidget(self.textEdit)
+        self.layout.addWidget(self.buttonBox)
+        self.setLayout(self.layout)
+        
+    def OKButtonPressed(self):
+        self.win.signal_log_out.emit(self.textEdit.toPlainText())
+        self.accept()
+
 class Window(QMainWindow):
     signal_initialize_hardware = pyqtSignal()
-    signal_log_out = pyqtSignal()
+    signal_log_out = pyqtSignal(str)
     signal_log_in = pyqtSignal(str,str)
     signal_runIV = pyqtSignal(object)
     signal_runConstantV = pyqtSignal(object)
@@ -152,6 +184,7 @@ class Window(QMainWindow):
                          'CellActiveArea': self.fieldCellActiveArea}
         self.UIDropDowns = {'lightLevel': self.menuSelectLightLevel,
                             'measurementType': self.menuSelectMeasurement,
+                            '2wire4wire': self.menu2wire4wire,
                             'sweepDirection': self.menuIVSweepDirection}
         #self.resize(1200, 600)
     
@@ -169,7 +202,7 @@ class Window(QMainWindow):
         #self.labelLightLevelMenu = QLabel("Select Light Level")
         self.menuSelectLightLevel = QComboBox()
         self.menuSelectLightLevel.setMaximumWidth(300)
-        self.lightLevelStringList = ['1 Sun','Dark']
+        self.lightLevelStringList = ['100% Sun','Dark']
         self.lightLevelPercentList = [100,0]
         for light in self.lightLevelStringList:
             self.menuSelectLightLevel.addItem(light)
@@ -184,7 +217,7 @@ class Window(QMainWindow):
         self.ManualLightLevelValidator = QDoubleValidator()
         self.fieldManualLightLevel.setValidator(self.ManualLightLevelValidator)
         self.labelManualLightLevel = QLabel("Manual Light Level: ")
-        self.labelManualLightLevelUnits = QLabel("mW/cm^2")
+        self.labelManualLightLevelUnits = QLabel("% sun")
         
         lightLevelManualFieldLayout = QHBoxLayout()
         lightLevelManualFieldLayout.addWidget(self.labelManualLightLevel)
@@ -198,7 +231,7 @@ class Window(QMainWindow):
         self.lightLevelStack.setCurrentIndex(0)
         self.lightLevelModeManual = False
         
-        self.labelMeasuredLightIntensity = QLabel("Measured Light Intensity: ---.-- mW/cm^2")
+        self.labelMeasuredLightIntensity = QLabel("Measured Light Intensity: ---.--% sun")
         
         lightLevelLayout = QVBoxLayout()
         lightLevelLayout.addWidget(self.lightLevelStack)
@@ -216,7 +249,7 @@ class Window(QMainWindow):
         self.lightLevelModeManual = False
     
     def updateMeasuredLightIntensity(self,intensity):
-        self.labelMeasuredLightIntensity.setText("Measured Light Intensity: " + "{:6.2f}".format(intensity) + " mW/cm^2")
+        self.labelMeasuredLightIntensity.setText("Measured Light Intensity: " + "{:6.2f}".format(intensity) + "% sun")
     
     def setLightLevelList(self,lightLevelDict):
         self.menuSelectLightLevel.clear()
@@ -555,8 +588,14 @@ class Window(QMainWindow):
     
     def createComplianceGroupBox(self):
         #Compliance Voltage and current
-        self.ComplianceGroupBox = QGroupBox("Compliance")
+        self.ComplianceGroupBox = QGroupBox("SMU Configuration")
         ComplianceLayout = QGridLayout()
+        
+        self.label2wire4wire = QLabel("Measurement mode")
+        self.menu2wire4wire = QComboBox()
+        self.menu2wire4wire.setMaximumWidth(300)
+        self.menu2wire4wire.addItem("2 wire")
+        self.menu2wire4wire.addItem("4 wire")
         
         self.labelVoltageLimit = QLabel("Voltage Limit")
         self.fieldVoltageLimit = QLineEdit("2.00")
@@ -571,12 +610,14 @@ class Window(QMainWindow):
         self.fieldCurrentLimit.setMaximumWidth(75)
         self.labelCurrentLimitUnits = QLabel("mA")
         
-        ComplianceLayout.addWidget(self.labelVoltageLimit,0,0)
-        ComplianceLayout.addWidget(self.fieldVoltageLimit,0,1)
-        ComplianceLayout.addWidget(self.labelVoltageLimitUnits,0,2)
-        ComplianceLayout.addWidget(self.labelCurrentLimit,1,0)
-        ComplianceLayout.addWidget(self.fieldCurrentLimit,1,1)
-        ComplianceLayout.addWidget(self.labelCurrentLimitUnits,1,2)
+        ComplianceLayout.addWidget(self.label2wire4wire,0,0)
+        ComplianceLayout.addWidget(self.menu2wire4wire,0,1)
+        ComplianceLayout.addWidget(self.labelVoltageLimit,1,0)
+        ComplianceLayout.addWidget(self.fieldVoltageLimit,1,1)
+        ComplianceLayout.addWidget(self.labelVoltageLimitUnits,1,2)
+        ComplianceLayout.addWidget(self.labelCurrentLimit,2,0)
+        ComplianceLayout.addWidget(self.fieldCurrentLimit,2,1)
+        ComplianceLayout.addWidget(self.labelCurrentLimitUnits,2,2)
         
         self.ComplianceGroupBox.setLayout(ComplianceLayout)
         self.ComplianceGroupBox.setMaximumWidth(300)
@@ -591,7 +632,7 @@ class Window(QMainWindow):
         self.CellActiveAreaValidator = QDoubleValidator()
         self.fieldCellActiveArea.setValidator(self.CellActiveAreaValidator)
         self.fieldCellActiveArea.setMaximumWidth(75)
-        self.labelCellActiveAreaUnits = QLabel("cm^2")
+        self.labelCellActiveAreaUnits = QLabel("cm<sup>2<\sup>")
         cellSizeLayout.addWidget(self.labelCellActiveArea)
         cellSizeLayout.addWidget(self.fieldCellActiveArea)
         cellSizeLayout.addWidget(self.labelCellActiveAreaUnits)
@@ -697,7 +738,7 @@ class Window(QMainWindow):
         #self.graphWidget.setMinimumSize(800,600)  # does not appear to do anything
         self.graphWidgetIV.setBackground('w')
         self.graphWidgetIV.showGrid(x = True, y = True, alpha = 0.3)
-        self.graphWidgetIV.setLabel('left','Current (mA/cm^2)')
+        self.graphWidgetIV.setLabel('left','Current (mA/cm<sup>2<\sup>)')
         self.graphWidgetIV.setLabel('bottom','Voltage (V)')
         self.curve_IV_valid = False
         #self.curve = self.graphWidget.plot([1,2,3],[1,2,3],pen=pg.mkPen('r', width=2))
@@ -710,7 +751,7 @@ class Window(QMainWindow):
         
         self.labelJsc = QLabel("Jsc:")
         self.fieldJsc = QLabel("-----")
-        self.labelJscUnits = QLabel("mA/cm^2")
+        self.labelJscUnits = QLabel("mA/cm<sup>2<\sup>")
         
         self.labelVoc = QLabel("Voc:")
         self.fieldVoc = QLabel("-----")
@@ -726,7 +767,7 @@ class Window(QMainWindow):
         
         self.labelJmpp = QLabel("Jmpp:")
         self.fieldJmpp = QLabel("-----")
-        self.labelJmppUnits = QLabel("mA/cm^2")
+        self.labelJmppUnits = QLabel("mA/cm<sup>2<\sup>")
         
         self.labelVmpp = QLabel("Vmpp:")
         self.fieldVmpp = QLabel("-----")
@@ -734,7 +775,7 @@ class Window(QMainWindow):
         
         self.labelPmpp = QLabel("Pmpp:")
         self.fieldPmpp = QLabel("-----")
-        self.labelPmppUnits = QLabel("mW/cm^2")
+        self.labelPmppUnits = QLabel("mW/cm<sup>2<\sup>")
         
         self.labelLightInt = QLabel("Light Intensity:")
         self.fieldLightInt = QLabel("-----")
@@ -806,7 +847,7 @@ class Window(QMainWindow):
         self.graphWidgetConstantV = pg.PlotWidget()
         self.graphWidgetConstantV.setBackground('w')
         self.graphWidgetConstantV.showGrid(x = True, y = True, alpha = 0.3)
-        self.graphWidgetConstantV.setLabel('left','Current (mA/cm^2)')
+        self.graphWidgetConstantV.setLabel('left','Current (mA/cm<sup>2<\sup>)')
         self.graphWidgetConstantV.setLabel('bottom','Time (sec)')
         self.curve_ConstantV_valid = False
         
@@ -834,7 +875,7 @@ class Window(QMainWindow):
         self.graphWidgetMPP = pg.PlotWidget()
         self.graphWidgetMPP.setBackground('w')
         self.graphWidgetMPP.showGrid(x = True, y = True, alpha = 0.3)
-        self.graphWidgetMPP.setLabel('left','Power (mW/cm^2)')
+        self.graphWidgetMPP.setLabel('left','Power (mW/cm<sup>2<\sup>)')
         self.graphWidgetMPP.setLabel('bottom','Time (sec)')
         self.curve_MPP_valid = False
         
@@ -845,7 +886,7 @@ class Window(QMainWindow):
         self.plotItemMPPIV.setLabel('left','MPP Voltage (V)',color='#ff0000')
         self.plotItemMPPIV.showGrid(x = True, y = True, alpha = 0.3)
         self.plotItemMPPIV.setLabel('bottom','Time (sec)')
-        self.plotItemMPPIV.setLabel('right','MPP Current (mA/cm^2)', color='#0000ff')
+        self.plotItemMPPIV.setLabel('right','MPP Current (mA/cm<sup>2<\sup>)', color='#0000ff')
         self.curveMPPV = self.plotItemMPPIV.plot(x=[], y=[], pen=pg.mkPen('r', width=2))
    
         #create new viewbox to contain second plot, link it to the plot item, and add a curve to it
@@ -904,7 +945,11 @@ class Window(QMainWindow):
         self.StackGraphPanels.setCurrentIndex(i)
     
     def logOut(self):
-        self.signal_log_out.emit()
+        dlg = LogOffDialog(self)
+        if not dlg.exec():
+            return
+        
+        #self.signal_log_out.emit() - this signal is now emitted by the LogOffDialog
         self.setHardwareActive(False)
         self.buttonInitialize.setEnabled(False)
         self.fieldCellName.setEnabled(False)
@@ -948,10 +993,10 @@ class Window(QMainWindow):
         #with a dot at the start, move the cursor to the start, and delete
         #otherwise if we put this string in directly the cursorPositionChanged callback
         #is activated and our default string is deleted.
-        self.fieldUserName.setText(".Username")
+        self.fieldUserName.setText("")
         self.fieldUserName.setCursorPosition(0)
         self.fieldUserName.del_()
-        self.fieldUserSciper.setText(".Sciper")
+        self.fieldUserSciper.setText("")
         self.fieldUserSciper.setCursorPosition(0)
         self.fieldUserSciper.del_()
     
@@ -990,7 +1035,7 @@ class Window(QMainWindow):
             #self.fieldIVMaxV.setEnabled(False)
             self.fieldIVMaxV.setText(str(self.IVFwdLimitUser))
             self.labelIVMaxV.setText("Fwd Current Limit")
-            self.labelIVMaxVUnits.setText("mA/cm^2")
+            self.labelIVMaxVUnits.setText("mA/cm<sup>2<\sup>")
         else:
             self.fieldIVMinV.setEnabled(True)
             #self.fieldIVMaxV.setEnabled(True)
@@ -1066,6 +1111,7 @@ class Window(QMainWindow):
         IV_params['dV'] = dV
         IV_params['sweep_rate'] = abs(float(self.fieldIVSweepRate.text())/1000.)
         IV_params['Dwell'] = abs(float(self.fieldIVStabilizationTime.text()))
+        IV_params['Nwire'] = str(self.menu2wire4wire.currentText())
         IV_params['Imax'] = Icompliance
         IV_params['Vmax'] = Vcompliance
         
@@ -1103,6 +1149,7 @@ class Window(QMainWindow):
         params['Dwell'] = float(self.fieldConstantVStabilizationTime.text())
         params['interval'] = float(self.fieldConstantVInterval.text())
         params['duration'] = float(self.fieldConstantVDuration.text())
+        params['Nwire'] = str(self.menu2wire4wire.currentText())
         params['Imax'] = abs(float(self.fieldCurrentLimit.text())/1000.)
         params['Vmax'] = Vcompliance
         params['active_area'] = float(self.fieldCellActiveArea.text())
@@ -1136,6 +1183,7 @@ class Window(QMainWindow):
         params['Dwell'] = float(self.fieldConstantIStabilizationTime.text())
         params['interval'] = float(self.fieldConstantIInterval.text())
         params['duration'] = float(self.fieldConstantIDuration.text())
+        params['Nwire'] = str(self.menu2wire4wire.currentText())
         params['Imax'] = Icompliance
         params['Vmax'] = abs(float(self.fieldVoltageLimit.text()))
         params['active_area'] = float(self.fieldCellActiveArea.text())
@@ -1172,6 +1220,7 @@ class Window(QMainWindow):
         params['Dwell'] = float(self.fieldMaxPPStabilizationTime.text())
         params['interval'] = float(self.fieldMaxPPInterval.text())
         params['duration'] = float(self.fieldMaxPPDuration.text())
+        params['Nwire'] = str(self.menu2wire4wire.currentText())
         params['Imax'] = abs(float(self.fieldCurrentLimit.text())/1000.)
         params['Vmax'] = Vcompliance
         params['active_area'] = float(self.fieldCellActiveArea.text())
@@ -1206,6 +1255,7 @@ class Window(QMainWindow):
         params['interval'] = float(self.fieldCalibrationInterval.text())
         params['duration'] = float(self.fieldCalibrationDuration.text())
         params['reference_current'] = abs(float(self.fieldCalibrationDiodeReferenceCurrent.text())/1000.)
+        params['Nwire'] = str(self.menu2wire4wire.currentText())
         params['Imax'] = abs(float(self.fieldCurrentLimit.text())/1000.)
         params['Vmax'] = Vcompliance
         params['active_area'] = float(self.fieldCellActiveArea.text())
@@ -1456,6 +1506,7 @@ class Window(QMainWindow):
         self.fieldMaxPPInterval.setText('0.50')
         self.fieldMaxPPDuration.setText('60.0')
         self.fieldCellActiveArea.setText('0.16')
+        self.menu2wire4wire.setCurrentIndex(0)
         self.fieldVoltageLimit.setText('2.00')
         self.fieldCurrentLimit.setText('5.0')
         self.menuSelectLightLevel.setCurrentIndex(0)

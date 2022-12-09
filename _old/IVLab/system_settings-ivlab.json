@@ -23,7 +23,8 @@
     {
         "brand": "Wavelabs",
         "model": "Sinus70",
-		"emulate": false
+		"emulate": false,
+		"lightLevelDict" : {"100" : "1 sun, 1 h", "50" : "0.5 sun, 1 h", "20" : "0.2 sun, 1 h", "10" : "0.1 sun, 1 h",  "0" : "dummy"}
     },
     "SMU":
     {
@@ -32,7 +33,7 @@
         "visa_address": "GPIB0::24::INSTR",
         "visa_library": "C:\\Windows\\System32\\visa32.dll",
 		"emulate": false,
-		"senseMode" : "2wire",
+		"referenceDiodeSenseMode" : "2wire",
 		"autorange" : true,
 		"useReferenceDiode" : true
     }

@@ -32,7 +32,7 @@
         "visa_address": "GPIB0::24::INSTR",
         "visa_library": "C:\\Windows\\System32\\visa32.dll",
 		"emulate": false,
-		"senseMode" : "2wire",
+		"referenceDiodeSenseMode" : "2wire",
 		"autorange" : true,
 		"useReferenceDiode" : true
     }

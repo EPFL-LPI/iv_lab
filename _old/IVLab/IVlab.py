@@ -17,6 +17,7 @@ import sys
 import bric_analysis_libraries.jv.jv_analysis as bric_jv
 
 
+
 class syst_param:
     #This class contains all the system parameters, i.e. computer, operating system, lamp, SMU, filters, shutter...    
     def __init__(self, **kwargs):
@@ -32,6 +33,11 @@ class syst_param:
                 self.IVsys = value
             elif key == 'lamp':
                 self.lamp = value
+                if 'display name' not in self.lamp:
+                    if ('brand' in self.lamp) and ('model' in self.lamp):
+                        self.lamp['display name'] = self.lamp['brand'] + " " + self.lamp['model']
+                    else:
+                        self.lamp['display name'] = 'Undefined'
                 #self.lamp['emulate'] = False
             elif key == 'arduino':
                 self.arduino = value
@@ -177,7 +183,8 @@ class SMU:
         #configuration variable forward declarations.
         #These should all be overwritten during initialization.
         self.autorange = True 
-        self.senseMode = '2wire'
+        self.senseModeA = '2 wire'
+        self.senseModeB = '2 wire'
         self.measSpeed = "normal"
         self.useReferenceDiode = True
         # these three are overwritten from config file values in the 'system' initialization 
@@ -187,8 +194,8 @@ class SMU:
         
         self.meas_period_min = 1/16 # this value is overwritten in 'connect' based on the type of SMU selected
 
-        if "senseMode" in SMU_details:
-            self.senseMode = SMU_details["senseMode"]
+        if "referenceDiodeSenseMode" in SMU_details:
+            self.senseModeB = SMU_details["referenceDiodeSenseMode"]
         if "autorange" in SMU_details:
             self.autorange = SMU_details["autorange"]
         if "measSpeed" in SMU_details:
@@ -259,12 +266,16 @@ class SMU:
                 self.kb.set_voltage_range(2)
                 self.kb.set_current_range(0.01)
                 
-                #2nd channel (reference diode) is always used in 2-wire mode.
-                self.kb.set_sense_2wire()
-                if self.senseMode == '4wire':
+                #set default sense mode.  b-channel sense mode (reference diode) is set in system settings file
+                if self.senseModeA == '4 wire':
                     self.k.set_sense_4wire()
                 else:
                     self.k.set_sense_2wire()
+                
+                if self.senseModeB == '4 wire':
+                    self.kb.set_sense_4wire()
+                else:
+                    self.kb.set_sense_2wire()
                 
                 if self.measSpeed == 'fast':
                     self.k.set_measurement_speed_fast() # 200µs integration time
@@ -300,7 +311,7 @@ class SMU:
                 self.smu.reset()
                 self.smu.use_front_terminals()
                 
-                if self.senseMode == '4wire':
+                if self.senseModeA == '4 wire':
                     self.smu.wires = 4
                 else:
                     self.smu.wires = 2
@@ -663,6 +674,37 @@ class SMU:
                 self.smu.disable_source()
                 self.smu_output[channel] = 'OFF'
     
+    #mode should be a string, either '2 wire' or '4 wire'
+    def set_sense_mode(self,channel,mode):
+        if not self.emulate:
+            if (self.brand == 'Keithley') and (self.model == '2602'):
+                if channel == 'CHAN_A' or channel == 'CHAN_BOTH':
+                    if mode == '4 wire':
+                        self.k.set_sense_4wire()
+                    elif mode == '2 wire':
+                        self.k.set_sense_2wire()
+                    else:
+                        raise ValueError("sense mode " + str(mode) + " is not supported.  Valid values are '2 wire' and '4 wire'")
+                if channel == 'CHAN_B' or channel == 'CHAN_BOTH':
+                    if mode == '4 wire':
+                        self.kb.set_sense_4wire()
+                    elif mode == '2 wire':
+                        self.kb.set_sense_2wire()
+                    else:
+                        raise ValueError("sense mode " + str(mode) + " is not supported.  Valid values are '2 wire' and '4 wire'")
+            
+            if (self.brand == 'Keithley') and (self.model == '2400' or self.model == '2401'):
+                if channel != self.smu_current_channel:
+                    self.smu_current_channel = channel
+                    self.toggle_output_2400(channel)
+                
+                if mode == '4 wire':
+                    self.smu.wires = 4
+                elif mode == '2 wire':
+                    self.smu.wires = 2
+                else:
+                    raise ValueError("sense mode " + str(mode) + " is not supported.  Valid values are '2 wire' and '4 wire'")
+    
     #this function is only intended to be used with keithley 2400 sourcemeters.
     #it handles the change from front to back inputs, allowing them to be implemented in 
     #software as 2 separate channels.
@@ -672,13 +714,16 @@ class SMU:
         #apply the relevant settings
         if channel == 'CHAN_A':
             self.smu.use_front_terminals()
-            if self.senseMode == '4wire':
+            if self.senseModeA == '4 wire':
                 self.smu.wires = 4
             else:
                 self.smu.wires = 2
         else:
             self.smu.use_rear_terminals()
-            self.smu.wires = 2 #rear terminal always uses 2-wire
+            if self.senseModeB == '4 wire':
+                self.smu.wires = 4
+            else:
+                self.smu.wires = 2
         
         #set the current channel to the new one so that the following
         #function calls will not re-call this function.
@@ -869,6 +914,8 @@ class SMU:
             self.setup_reference_diode() #This will probably have already been called before during the 
                                      #light level check but we don't lose anything by calling it again.
         
+        self.set_sense_mode("CHAN_A",IV_param['Nwire'])
+        
         if IV_param['start_V'] == 'Voc':
             self.setup_current_output("CHAN_A",IV_param['Vmax'])
             self.set_current("CHAN_A",IV_param['Fwd_current_limit'])
@@ -979,6 +1026,7 @@ class SMU:
         if abs(param['set_current']) > abs(param['Imax']):
             raise ValueError("ERROR: measure_V_time_dependent set voltage outside of compliance range")
             
+        self.set_sense_mode("CHAN_A",param['Nwire'])
         self.setup_current_output("CHAN_A",param['Vmax'])
         self.set_current("CHAN_A",param['set_current'])
         self.enable_output("CHAN_A")
@@ -1042,6 +1090,7 @@ class SMU:
         if abs(param['set_voltage']) > abs(param['Vmax']):
             raise ValueError("ERROR: measure_I_time_dependent set voltage outside of compliance range")
             
+        self.set_sense_mode("CHAN_A",param['Nwire'])
         self.setup_voltage_output("CHAN_A",param['Imax'])
         self.set_voltage("CHAN_A",param['set_voltage'])
         self.enable_output("CHAN_A")
@@ -1137,6 +1186,7 @@ class SMU:
             IV_params['dV'] = 0.005
             IV_params['sweep_rate'] = 0.02
             IV_params["Dwell"] = param['Dwell']
+            IV_params['Nwire'] = param['Nwire']
             IV_params['Imax'] = param['Imax']
             IV_params['Vmax'] = param['Vmax']
             IV_params['active_area'] = param['active_area']
@@ -1168,7 +1218,8 @@ class SMU:
         steps = []
         last_power = 0.0
         #param: light int, start voltage, time, interval
-    
+        
+        self.set_sense_mode("CHAN_A",param['Nwire'])
         self.setup_voltage_output("CHAN_A",param['Imax'])
         self.set_voltage("CHAN_A",V_MPP)
         self.enable_output("CHAN_A")
@@ -1492,7 +1543,7 @@ class SMU:
         if self.win != None:
             self.win.updateMeasuredLightIntensity(lightLevel)
         else:
-            print("Measured light intensity: " + str(lightLevel) + "mW/cm^2")
+            print("Measured light intensity: " + str(lightLevel) + "% sun")
         
         return lightLevel
         #else:
@@ -1526,17 +1577,33 @@ class lamp:
         self.model = hardware['model']
         self.emulate = hardware['emulate']
         #dictionary of recipies must be loaded if using wavelabs.  Currently set at top level.
-        self.recipeDict = {} #hardware['recipeDict'] 
+        self.lightLevelDict = hardware['lightLevelDict'] 
         self.light_int = 100
         self.connection_open = False
         self.connected = False
         #if (self.brand == 'Wavelabs') and (self.model == 'Sinus70'):
             #if not self.emulate:
+        
+        self.TrinamicHomingTimeout = 15
+        self.TrinamicMoveTimeout = 12
             
         if self.brand == 'Oriel' and self.model == 'LSS-7120':
             #import pyvisa
             self.visa_address = hardware['visa_address']
             #self.visa_library = hardware['visa_library']
+        
+        if self.brand == 'Trinamic':
+            import pytrinamic
+            from pytrinamic.connections import ConnectionManager as pytri_cm
+            self.pytrinamic_ConnectionManager = pytri_cm
+            if self.model == 'TMCM-1260':
+                from pytrinamic.modules import TMCM1260 as pytri_module
+                self.trinamic_module = pytri_module
+            elif self.model == 'TMCM-3110':
+                from pytrinamic.modules import TMCM3110 as pytri_module
+                self.trinamic_module = pytri_module
+            else:
+                raise ValueError("Trinamic module " + self.model + " is not supported")
                
     def show_status(self,msg):
         if self.app != None:
@@ -1578,35 +1645,86 @@ class lamp:
                 if lss_idn[0:27] != "Newport Corporation,LSS-7120":
                     raise ValueError("Oriel lamp IDN incorrect: " + lss_idn)
             
-            if self.brand == 'Trinamic' and self.model == 'TMCM-3110':
-                from PyTrinamic.connections.ConnectionManager import ConnectionManager
-                from PyTrinamic.modules.TMCM3110.TMCM_3110 import TMCM_3110
+            if self.brand == 'Trinamic': 
+                with self.pytrinamic_ConnectionManager().connect() as my_interface:
+                    
+                    module = self.trinamic_module(my_interface)
+                    
+                    motor = module.motors[0]
+                    motor.drive_settings.max_current = 128
+                    motor.drive_settings.standby_current = 32
+                    motor.drive_settings.boost_current = 0
+                    self.microstepResolution = motor.ENUM.MicrostepResolution256Microsteps
+                    self.stepsPerRevolution = 200
+                    motor.drive_settings.microstep_resolution = self.microstepResolution
+                    
+                    if self.model == 'TMCM-1260':
+                        motor.linear_ramp.max_velocity = 5000
+                        motor.linear_ramp.max_acceleration = 10000
+                        motor.set_axis_parameter(193,135) #reference search mode 7 (search home switch in positive direction), switch polarity inverted by or'ing in 128.
+                        motor.set_axis_parameter(194,5000) #reference search rough search speed
+                        motor.set_axis_parameter(195,2000) #reference search fine search speed
+                    elif self.model == 'TMCM-3110':
+                        motor.linear_ramp.max_velocity = 500
+                        motor.linear_ramp.max_acceleration = 200
+                        motor.set_axis_parameter(193,135) #reference search mode 7 (search home switch in positive direction), switch polarity inverted by or'ing in 128.
+                        motor.set_axis_parameter(194,500) #reference search rough search speed
+                        motor.set_axis_parameter(195,200) #reference search fine search speed
+                    else:
+                        raise ValueError("ERROR: Trinamic model " + self.model + " is not configured")
+                    
+                    self.show_status("Referencing Filter Wheel...")
+                    #home the motor
+                    my_interface.reference_search(0, 0) # arguments are type, motor, module_id(=None)
+                    
+                    #grab the current timestamp as a reference for homing timeout
+                    now = datetime.datetime.now()
+                    timeNow = datetime.datetime.timestamp(now)
+                    timeout = timeNow + self.TrinamicHomingTimeout
+                    
+                    while (timeNow < timeout):
+                        if my_interface.reference_search(2, 0) == 0:
+                            break
+                        else: 
+                            time.sleep(0.1)
+                            now = datetime.datetime.now()
+                            timeNow = datetime.datetime.timestamp(now)
+                            if self.app != None:
+                                self.app.processEvents()
+                    
+                    #is the motor properly homed?
+                    if my_interface.reference_search(2, 0) != 0:
+                        #stop the search
+                        my_interface.reference_search(1, 0)
+                        self.show_status("ERROR: Filter Wheel")
+                        raise ValueError("ERROR: Unable to reference filter wheel")
+                    
+                    #move the filter wheel to the 'off' position.
+                    angle = self.lightLevelDict[0]
+                    motor.move_to(self.convert_angle_to_microsteps(angle))
+                    
+                    #grab the current timestamp as a reference move timeout
+                    now = datetime.datetime.now()
+                    timeNow = datetime.datetime.timestamp(now)
+                    timeout = timeNow + self.TrinamicMoveTimeout
+                    
+                    while (timeNow < timeout):
+                        if motor.get_position_reached():
+                            break
+                        else: 
+                            time.sleep(0.1)
+                            now = datetime.datetime.now()
+                            timeNow = datetime.datetime.timestamp(now)
+                            if self.app != None:
+                                self.app.processEvents()
+                    
+                    if not(motor.get_position_reached()):
+                        motor.stop()
+                        self.show_status("ERROR: Filter Wheel")
+                        raise ValueError("ERROR: Could not move motor to off position")
+                    
+                    self.show_status("Filter wheel initialized.")
                 
-                connectionManager = ConnectionManager()
-                myInterface = connectionManager.connect()
-                self.motor = TMCM_3110(myInterface)
-                
-                self.motor.setMaxAcceleration(0,1000)
-                self.motor.setMaxVelocity(0,1000)
-                self.motor.setMaxCurrent(0,50)
-                self.microstepResolution = 8
-                self.stepsPerRevolution = 200
-                self.motor.setAxisParameter(self.motor.APs.MicrostepResolution,0,self.microstepResolution)
-            
-            if self.brand == 'Trinamic' and self.model == 'TMCM-1260':
-                from PyTrinamic.connections.ConnectionManager import ConnectionManager
-                from PyTrinamic.modules.TMCM1260.TMCM_1260 import TMCM_1260
-
-                connectionManager = ConnectionManager()
-                self.myInterface = connectionManager.connect()
-                self.motor = TMCM_1260(self.myInterface)
-                
-                self.motor.setMaxAcceleration(40000)
-                self.motor.setMaxVelocity(20000)
-                self.motor.setMaxCurrent(50)
-                self.microstepResolution = 8
-                self.stepsPerRevolution = 200
-                self.motor.setAxisParameter(self.motor.APs.MicrostepResolution,self.microstepResolution)
                 
             if self.brand == 'Manual':
                 pass
@@ -1623,11 +1741,10 @@ class lamp:
             if self.brand == 'Oriel' and self.model == 'LSS-7120':
                 self.lss.close()
                 
-            if self.brand == 'Trinamic' and self.model == 'TMCM-3110':
-                self.myInterface.close()
+            if self.brand == 'Trinamic':
+                #trinamic connections are not kept open so there is nothing to close here.
+                pass
                 
-            if self.brand == 'Trinamic' and self.model == 'TMCM-1260':
-                self.myInterface.close()
                 
     #helper function for use with trinamic motors
     def convert_angle_to_microsteps(self,angle):
@@ -1689,30 +1806,18 @@ class lamp:
             pass
         
         if self.brand == 'keithley' and self.model == 'filter wheel':
-            angle_code = self.filterWheelDict[light_int]
+            angle_code = self.lightLevelDict[light_int]
             self.smu.set_TTL_level(angle_code)
-            time.sleep(12.0) #wait 8 seconds for filter wheel to reach position
+            for i in range(1,12):
+                time.sleep(1.0) #wait 12 seconds for filter wheel to reach position
+                if self.abortRunFlag():
+                    break
         
-        if self.brand == 'Trinamic' and self.model == 'TMCM-3110':
+        if self.brand == 'Trinamic':
             if not self.emulate:
-                angle = self.filterWheelDict[light_int]
-                self.motor.moveTo(0,self.convert_angle_to_microsteps(angle))
+                angle = self.lightLevelDict[light_int]
+                self.trinamic_move_to_position(angle)
 
-                while not(self.motor.positionReached(0)):
-                    if self.abortRunFlag():
-                        break
-
-                
-        if self.brand == 'Trinamic' and self.model == 'TMCM-1260':
-            if not self.emulate:
-                angle = self.filterWheelDict[light_int]
-                self.motor.moveTo(self.convert_angle_to_microsteps(angle))
-
-                while not(self.motor.positionReached()):
-                    if self.abortRunFlag():
-                        break
-
-        
         if self.brand == 'Oriel' and self.model == 'LSS-7120':
             if not self.emulate:
                 self.lss.write("AMPL " + str(light_int/100))
@@ -1736,13 +1841,13 @@ class lamp:
         if (self.brand == 'Wavelabs') and (self.model == 'Sinus70'):
             if not self.emulate:
                 light_int_defined = False
-                if light_int in self.recipeDict:
-                    recipeName = self.recipeDict[light_int]
+                if light_int in self.lightLevelDict:
+                    recipeName = self.lightLevelDict[light_int]
                     light_int_defined = True                    
                     
                 if not light_int_defined:
                     
-                    raise ValueError(f'Light intensity "{light_int} mW/cm2" is not defined.')
+                    raise ValueError(f'Light intensity "{light_int} % sun" is not defined.')
                 
                 elif light_int == 0:
                     
@@ -1815,30 +1920,18 @@ class lamp:
             pass
         
         if self.brand == 'keithley' and self.model == 'filter wheel':
-            angle_code = self.filterWheelDict[0]
+            angle_code = self.lightLevelDict[0]
             self.smu.set_TTL_level(angle_code)
-            time.sleep(8.0) #wait 8 seconds for filter wheel to reach position
+            for i in range(1,8):
+                time.sleep(1.0) #wait 8 seconds for filter wheel to reach position
+                if self.abortRunFlag():
+                    break
         
-        if self.brand == 'Trinamic' and self.model == 'TMCM-3110':
-            angle = self.filterWheelDict[0]
+        if self.brand == 'Trinamic':
+            angle = self.lightLevelDict[0]
             if not self.emulate and self.light_is_on:
-                self.motor.moveTo(0,self.convert_angle_to_microsteps(angle))
+                self.trinamic_move_to_position(angle)
 
-                while not(self.motor.positionReached(0)):
-                    if self.abortRunFlag():
-                        break
-
-                
-        if self.brand == 'Trinamic' and self.model == 'TMCM-1260':
-            angle = self.filterWheelDict[0]
-            if not self.emulate and self.light_is_on:
-                self.motor.moveTo(self.convert_angle_to_microsteps(angle))
-
-                while not(self.motor.positionReached()):
-                    if self.abortRunFlag():
-                        break
-
-        
         if self.brand == 'Oriel' and self.model == 'LSS-7120':
             if not self.emulate and self.light_is_on:
                 #disable the output
@@ -1883,19 +1976,45 @@ class lamp:
                     raise ValueError("Error from Wavelabs Cancel Recipe:\n" + errString)
                 
         self.light_is_on = False
+    
+    
+    def trinamic_move_to_position(self,angle):
+        with self.pytrinamic_ConnectionManager().connect() as my_interface:
                     
+            module = self.trinamic_module(my_interface)
+                
+            motor = module.motors[0]
+            
+            motor.move_to(self.convert_angle_to_microsteps(angle))
+
+            #grab the current timestamp as a reference for move timeout
+            now = datetime.datetime.now()
+            timeNow = datetime.datetime.timestamp(now)
+            timeout = timeNow + self.TrinamicMoveTimeout
+            
+            while (timeNow < timeout):
+                if motor.get_position_reached():
+                    break
+                else:
+                    time.sleep(0.2)
+                    now = datetime.datetime.now()
+                    timeNow = datetime.datetime.timestamp(now)
+                    if self.app != None:
+                        self.app.processEvents()
+            
+            if not(motor.get_position_reached()):
+                motor.stop()
+                raise ValueError("ERROR: Could not move motor to off position")
+            
+            my_interface.close()
+    
                 
     def turn_off(self):
-        if self.brand == 'Trinamic' and self.model == 'TMCM-3110':
+        if self.brand == 'Trinamic':
             if not self.emulate:
                 if self.connection_open :
                     self.disconnect()
                 
-        if self.brand == 'Trinamic' and self.model == 'TMCM-1260':
-            if not self.emulate:
-                if self.connection_open :
-                    self.disconnect()
-    
         if self.brand == 'Oriel' and self.model == 'LSS-7120':
             if not self.emulate:
                 if self.connection_open :
@@ -2069,13 +2188,15 @@ class system:
                     configFilePath = os.path.join(self.sp.computer['basePath'] , self.username , 'IVLab_config.json')
                     # tell the gui to load the configuration file
                     self.win.loadSettingsFile(configFilePath)
+                    # write a line in the log file listing the username and time they logged in
+                    self.writeToLogFile(datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S: ") + "user " + self.username + " logged on")
             else:
                 self.error_window("Sciper not valid for user " + username)
         else:
             self.error_window("Username not valid")
             
     
-    def user_logout(self):
+    def user_logout(self, logBookEntry):
         
         if self.win != None:
             # user-specific configuration files should be located here:
@@ -2085,18 +2206,24 @@ class system:
             # clear the previous values from the gui
             self.win.setAllFieldsToDefault()
             
-            #clear out scan data and results
-            self.data_IV = None
-            self.IV_Results = None
-            self.data_CC = None
-            self.CC_Results = None
-            self.data_CV = None
-            self.CV_Results = None
-            self.data_MPP = None
-            self.MPP_Results = None
-            
             self.win.showStatus("Please Log In")
+            
 
+        #clear out scan data and results
+        self.data_IV = None
+        self.IV_Results = None
+        self.data_CC = None
+        self.CC_Results = None
+        self.data_CV = None
+        self.CV_Results = None
+        self.data_MPP = None
+        self.MPP_Results = None
+        
+        # write a line in the log file listing the username and time they logged out
+        if len(logBookEntry) > 0:
+            self.writeToLogFile(datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S: ") + "user comment: " + logBookEntry)
+        self.writeToLogFile(datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S: ") + "user " + self.username + " logged off")
+            
         self.username = None
         #disconnect the hardware
         try:
@@ -2275,6 +2402,7 @@ class system:
                         if self.SMU.useReferenceDiode:
                             self.IV_Results['light_int_meas'] = avgLightLevel
                         self.IV_Results['Imax'] = IV_param['Imax']
+                        self.IV_Results['Nwire'] = IV_param['Nwire']
                         self.IV_Results['Dwell'] = IV_param['Dwell']
                         
                         if IV_param['light_int'] > 0 and not self.abortRunFlag(): #don't analyze dark or aborted runs
@@ -2410,6 +2538,7 @@ class system:
                     if self.SMU.useReferenceDiode:
                         self.CC_Results['light_int_meas'] = lightIntensity
                     self.CC_Results['set_current'] = param['set_current']
+                    self.CC_Results['Nwire'] = param['Nwire']
                     self.CC_Results['interval'] = param['interval']
                     self.CC_Results['duration'] = param['duration']
 
@@ -2520,6 +2649,7 @@ class system:
                     if self.SMU.useReferenceDiode:
                         self.CV_Results['light_int_meas'] = avgLightLevel
                     self.CV_Results['set_voltage'] = param['set_voltage']
+                    self.CV_Results['Nwire'] = param['Nwire']
                     self.CV_Results['interval'] = param['interval']
                     self.CV_Results['duration'] = param['duration']
 
@@ -2651,6 +2781,7 @@ class system:
                     self.MPP_Results['active_area'] = param['active_area']
                     self.MPP_Results['cell_name'] = param['cell_name']
                     self.MPP_Results['light_int'] = param['light_int']
+                    self.MPP_Results['Nwire'] = param['Nwire']
                     if self.SMU.useReferenceDiode:
                         self.MPP_Results['light_int_meas'] = avgLightLevel
                     if param['start_voltage'] == 'auto' and len(v_smu) > 0:
@@ -2861,11 +2992,11 @@ class system:
         headerLines.append("Scan Start Time," + data['start_time'])
         headerLines.append("Sourcemeter Brand," + self.sp.SMU['brand'])
         headerLines.append("Sourcemeter Model," + self.sp.SMU['model'])
-        headerLines.append("Lamp Brand," + self.sp.lamp['brand'])
-        headerLines.append("Lamp Model," + self.sp.lamp['model'])
-        headerLines.append("Requested Light Intensity," + str(IV_Results['light_int']) + ',mW/cm^2')
+        headerLines.append("Sourcemeter Sense Mode," + IV_Results['Nwire'])
+        headerLines.append("Light Source," + self.sp.lamp['display name'])
+        headerLines.append("Requested Light Intensity," + str(IV_Results['light_int']) + ',% sun')
         if self.SMU.useReferenceDiode:
-            headerLines.append("Measured Light Intensity," + str(IV_Results['light_int_meas']) + ',mW/cm^2')
+            headerLines.append("Measured Light Intensity," + str(IV_Results['light_int_meas']) + ',% sun')
             headerLines.append("Reference Diode 1sun Current," + str(self.SMU.fullSunReferenceCurrent*1000.) + ',mA')
             headerLines.append("Reference Diode calibration date," + self.SMU.calibrationDateTime)
         headerLines.append("Cell Active Area," + str(IV_Results['active_area']) + ',cm^2')
@@ -2890,7 +3021,7 @@ class system:
             if 'Pmpp' in IV_Results:
                 headerLines.append("Pmpp," + str(IV_Results['Pmpp']) + ",mW/cm^2")
             if self.SMU.useReferenceDiode:
-                headerLines.append("Voltage(V),Current(A),light intensity (mW/cm^2)")
+                headerLines.append("Voltage(V),Current(A),light intensity (% sun)")
             else:
                 headerLines.append("Voltage(V),Current(A)")
         elif data['scanType'] == 'CV':
@@ -2899,7 +3030,7 @@ class system:
             headerLines.append("Measurement Duration," + str(IV_Results['duration'] ) + ",sec")
             headerLines.append("Constant Voltage Results")
             if self.SMU.useReferenceDiode:
-                headerLines.append("Time(s),Voltage(V),Current(A),light intensity (mW/cm^2)")
+                headerLines.append("Time(s),Voltage(V),Current(A),light intensity (% sun)")
             else:
                 headerLines.append("Time(s),Voltage(V),Current(A)")
         elif data['scanType'] == 'CC':
@@ -2914,9 +3045,9 @@ class system:
             headerLines.append("Measurement Duration," + str(IV_Results['duration'] ) + ",sec")
             headerLines.append("Maximum Power Point Results")
             if self.SMU.useReferenceDiode:
-                headerLines.append("Time(s),Voltage(V),Current (A),Power(mW/cm2),light intensity (mW/cm^2)")
+                headerLines.append("Time(s),Voltage(V),Current (A),Power(mW/cm^2),light intensity (% sun)")
             else:
-                headerLines.append("Time(s),Voltage(V),Current(A),Power(mW/cm2)")
+                headerLines.append("Time(s),Voltage(V),Current(A),Power(mW/cm^2)")
         else:
             raise ValueError("scanType entry in data dictionary must be JV, CV, CC, or MPP")
 
@@ -3024,7 +3155,7 @@ class system:
         params_text = []
         params_text.append(("Measurement Date",dateTimeString, ""))
         params_text.append(("Cell Active Area",str(IV_Results['active_area'])," $cm^2$"))
-        params_text.append(("Light Source",self.sp.lamp['brand'] + " ",self.sp.lamp['model']))
+        params_text.append(("Light Source",self.sp.lamp['display name'],""))
         if self.SMU.useReferenceDiode:
             params_text.append(("Reference Calibration","{:6.4f}".format(self.SMU.fullSunReferenceCurrent*1000.), " mA"))
             params_text.append(("Calibration Date", self.SMU.calibrationDateTime, ""))
@@ -3040,6 +3171,7 @@ class system:
             #print out the remaining text
             params_text.append(("",dataFileNameWrap,""))
                 
+        params_text.append(("Sense Mode",str(IV_Results['Nwire']),""))
         params_text.append(("Current Compliance",str(IV_Results['Imax']*1000.)," mA"))
         #params_text.append(("Settling Time","{:5.3f}".format(IV_Results['dV']/IV_Results['sweep_rate'])," s"))
         params_text.append(("Sweep rate",f"{IV_Results['sweep_rate']*1000:.1f}"," mV/s"))
@@ -3056,10 +3188,10 @@ class system:
         rtY = 0.45
         rtSpace = 0.0225
         results_text = []
-        results_text.append(("Nominal Light Intensity",str(IV_Results['light_int'])," mW/$cm^2$"))
+        results_text.append(("Nominal Light Intensity",str(IV_Results['light_int']),"% sun"))
         nominalLightIntensityString = str(IV_Results['light_int']) + " mW/$cm^2$"
         if 'light_int_meas' in IV_Results:
-            results_text.append(("Measured Intensity","{:6.2f}".format(IV_Results['light_int_meas'])," mW/$cm^2$"))
+            results_text.append(("Measured Intensity","{:6.2f}".format(IV_Results['light_int_meas']),"% sun"))
         if 'Jsc' in IV_Results:
             results_text.append(("Jsc","{:5.3f}".format(IV_Results['Jsc']), " mA/$cm^2$"))
         if 'Voc' in IV_Results:
@@ -3100,6 +3232,29 @@ class system:
         sys_params['SMU'] = self.sp.SMU
         with open(settingsFilePath, 'w') as outfile:
             json.dump(sys_params, outfile)                        
+    
+    def writeToLogFile(self, logFileEntry):
+        
+        logFilePath = os.path.join(self.sp.computer['sdPath'] , "ivlablog.txt")
+        
+        basePath, filename = os.path.split(logFilePath)
+        try:
+            if (not os.path.exists(basePath)):
+                os.makedirs(basePath)
+        except:
+            print("ERROR: unable to create logfile directory")
+            return
+            
+        if not os.path.exists(logFilePath):
+            accessMode = "w"
+        else:
+            accessMode = "a"
+        
+        with open(logFilePath, accessMode) as f:
+            f.write(logFileEntry + "\n")
+        
+        #f.close()
+        
     
     def scramble_string(self,name_to_scramble):
         bytename = bytearray(name_to_scramble.encode())
@@ -3163,7 +3318,7 @@ class system:
         
         retval = msg.exec_()
         #print("value of pressed message box button: " +  str(retval))
-        
+    
     def show_status(self,msg):
         if self.app != None:
             self.win.showStatus(msg)
@@ -3191,17 +3346,27 @@ if __name__ == "__main__":
     """
     sp_wavelabs1 = dict(computer = dict(hardware = "PC", os = "Windows 10", basePath = "C:\\Users\\Public\\Documents\\IVLab", sdPath = "C:\\Users\\Public\\Documents\\IVLab\\sd"),
                     IVsys = dict(sysName = "IV_Old", fullSunReferenceCurrent = 0.000145, calibrationDateTime = "Wed Feb 16 16:55:17 2022"),
-                    lamp = dict(brand = "Trinamic", model = "TMCM-3110", visa_address = "ASRL1::INSTR", visa_library = "C:\\Windows\\System32\\visa32.dll"),
+                    lamp = dict(brand = "Trinamic", model = "TMCM-3110", visa_address = "ASRL1::INSTR", visa_library = "C:\\Windows\\System32\\visa32.dll", lightLevelDict = {"100" : 60, "50" : 120, "20" : 180, "10" : 240,  "0" : 300} ),
                     arduino = dict(brand = "Arduino", model = "Uno", visa_address = "ASRL1::INSTR", visa_library = "C:\\Windows\\System32\\visa32.dll"),
                     SMU = dict(brand = "Keithley", model = "2602", visa_address = "GPIB0::24::INSTR", visa_library = "C:\\Windows\\System32\\visa32.dll"))
     """
     
     systemSettingsFilePath = os.path.join(os.getcwd() , "system_settings.json")
     with open(systemSettingsFilePath) as json_file:
-        sp_wavelabs1 = json.load(json_file)
+        sys_params_dict = json.load(json_file)
+    
+    #convert string keys in light level dict to numeric (only string keys allowed in json file)
+    if "lightLevelDict" in sys_params_dict["lamp"]:
+        #make a copy of the light level dictionary to use as the for-loop index
+        ll_dict = sys_params_dict["lamp"]["lightLevelDict"].copy()
+        
+        for key, value in ll_dict.items():
+            sys_params_dict["lamp"]["lightLevelDict"][int(key)] = value
+            del sys_params_dict["lamp"]["lightLevelDict"][key]
+    
     
     #System initialization
-    sp = syst_param(**sp_wavelabs1)
+    sp = syst_param(**sys_params_dict)
     #sp.emulate_lamp_on()
     sp.emulate_arduino_on()
     #sp.emulate_SMU_on()
@@ -3210,36 +3375,32 @@ if __name__ == "__main__":
     
     #system preferences - have been moved into the system parameters file.
     # default values are set in the system and SMU object initialization routines
-    """
-    s.saveDataAutomatic = False #automatically save every scan upon completion
-    s.checkVOCBeforeScan = True #check Voc polarity before each run and warn user if incorrect
-    s.firstPointDwellTime = 5.0 #allow the cell to stabilize at the initial setting for this many seconds before starting a scan
-    s.MPPVoltageStepInitial = 0.005    #initial step size for MPP algorithm
-    s.MPPVoltageStepMax = 0.01 #maximum step size for MPP algorithm
-    s.MPPVoltageStepMin = 0.001 #minimum step size for MPP algorithm
-    s.SMU.sense_mode = '2wire'
-    s.SMU.autorange = True #False
-    s.SMU.useReferenceDiode = True
-    #if the SMU can read both channels in parallel, set referenceDiodeParallel to True
-    #However, if the system name is IV_Old we must do it in parallel because the reference diode is
-    #mounted on a stage in that setup and is not in the light at the same time as the sample.
-    if (sp_wavelabs1['SMU']['model'] == '2600' or sp_wavelabs1['SMU']['model'] == '2602') and sp_wavelabs1['IVsys']['sysName'] != 'IV_Old':
-        s.SMU.referenceDiodeParallel = True
-    else:
-        s.SMU.referenceDiodeParallel = False
     
-    s.SMU.referenceDiodeImax = 0.010
-    """
+    #wavelabs light level dictionary should have the names of the wavelabs recipes as values
+    #s.lamp.lightLevelDict = {100 : "1 sun, 1 h", 50 : "0.5 sun, 1 h", 20 : "0.2 sun, 1 h", 10 : "0.1 sun, 1 h",  0 : "dummy"}
     
-    s.lamp.recipeDict = {100 : "1 sun, 1 h", 50 : "0.5 sun, 1 h", 20 : "0.2 sun, 1 h", 10 : "0.1 sun, 1 h",  0 : "dummy"}
     #filter wheel dictionary key is light level, value is filter wheel angle
-    #s.lamp.filterWheelDict = {100 : 60, 50 : 120, 20 : 180, 10 : 240,  0 : 300} 
-    #for main IV setup, filter wheel dictionary key is light level, value is filter digital code
-    s.lamp.filterWheelDict = {100 : 0, 50 : 5, 20 : 4, 10 : 3,  0 : 2} 
-    #the 'lightIntensities' dictionary is loaded into the gui and controls which light levels can be selected in the drop-down menu.
-    #care must be taken that there is a valid recipe defined in s.lamp.recipeDict for each of the light levels in this list.
-    lightIntensities = {'1 Sun' : 100, '0.5 Sun' : 50, '0.2 Sun' : 20, '0.1 Sun' : 10, 'Dark' : 0}
+    #s.lamp.lightLevelDict = {100 : 60, 50 : 120, 20 : 180, 10 : 240,  0 : 300} 
     
+    #for keithley filter wheel lamp type, filter wheel dictionary key is light level, value is filter digital code
+    #s.lamp.lightLevelDict = {100 : 0, 50 : 5, 20 : 4, 10 : 3,  0 : 2} 
+    
+    #the 'lightIntensities' dictionary is loaded into the gui and controls which light levels can be selected in the drop-down menu.
+    #it should look like this:
+    #lightIntensities = {'1 Sun' : 100, '0.5 Sun' : 50, '0.2 Sun' : 20, '0.1 Sun' : 10, 'Dark' : 0}
+    #generate it automatically from the light level dictionary in the settings file
+    
+    lightIntensities = {}
+    if "lightLevelDict" in sys_params_dict["lamp"]:
+        for key,value in s.lamp.lightLevelDict.items():
+            if key == 100 :
+                lightIntensities["1 Sun"] = key
+            elif  key < 0.01 :
+                lightIntensities["Dark"] = key
+            else:
+                lightIntensities["{:4.2f}".format(key/100.) + " Sun"] = key
+    
+    #set up the light level menu on the gui
     if win != None:
         if s.lamp.brand.lower() == 'manual':
             win.setLightLevelModeManual()
