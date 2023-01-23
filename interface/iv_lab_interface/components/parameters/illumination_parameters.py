@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Dict
+from typing import Dict, Union
 
 from PyQt6.QtWidgets import (
     QHBoxLayout,
@@ -10,10 +10,13 @@ from PyQt6.QtWidgets import (
     QComboBox,
     QDoubleSpinBox,
     QStackedWidget,
-    QLabel
+    QLabel,
+    QFrame
 )
 
 from iv_lab_controller.parameters import IlluminationParameters
+from iv_lab_controller.base_classes import System, ReferenceDiodeState
+from iv_lab_controller.store import Store, Observer
 
 from .parameters_widget_base import ParametersWidgetBase
 
@@ -75,6 +78,7 @@ class IlluminationParametersWidget(QGroupBox, ParametersWidgetBase):
         # reference diode
         lbl_enable_reference_diode = QLabel('Enable Reference Diode')
         self.cb_enable_reference_diode = QCheckBox()
+        self.cb_enable_reference_diode.setChecked(True)
 
         lo_enable_reference_diode = QHBoxLayout()
         lo_enable_reference_diode.addWidget(self.cb_enable_reference_diode)
@@ -90,15 +94,40 @@ class IlluminationParametersWidget(QGroupBox, ParametersWidgetBase):
         lo_measured_intensity.addWidget(self.lbl_measured_intensity)
         lo_measured_intensity.addWidget(lbl_measured_intensity_units)
 
+        # reference diode frame
+        self.wgt_reference_diode = QFrame()
+        lo_reference_diode = QVBoxLayout()
+        lo_reference_diode.addLayout(lo_enable_reference_diode)
+        lo_reference_diode.addLayout(lo_measured_intensity)        
+        self.wgt_reference_diode.setLayout(lo_reference_diode)
+
+        # main
         lo_main = QVBoxLayout()
         lo_main.addWidget(self.stk_intensity)
-        lo_main.addLayout(lo_enable_reference_diode)
-        lo_main.addLayout(lo_measured_intensity)
+        lo_main.addWidget(self.wgt_reference_diode)
         self.setLayout(lo_main)
         self.setMaximumWidth(300)
 
         self.disable_ui()
         self.reset_fields()
+
+    def init_observers(self):
+        ParametersWidgetBase.init_observers(self)
+        # system state
+        def enable_reference_diode_ui(system: Union[System, None]):
+            if (system is None) or (system.reference_diode_state  is ReferenceDiodeState.NotPresent):
+                # do not show reference diode ui
+                self.wgt_reference_diode.hide()
+
+            else:
+                # show reference diode ui
+                self.wgt_reference_diode.show()
+
+        def system_changed(system: Union[System, None], o_system: Union[System, None]):
+            enable_reference_diode_ui(system)
+
+        system_observer = Observer(changed=system_changed, subscribed=enable_reference_diode_ui)
+        Store.subscribe('system', system_observer)
 
     @property
     def illumination_mode(self) -> IlluminationMode:
