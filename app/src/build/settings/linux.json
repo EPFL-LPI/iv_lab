@@ -1,6 +1,0 @@
-{
-    "categories": "Utility;",
-    "description": "GUI application for EPFL LPI's IV lab.",
-    "author_email": "Benjamin Le Geyt <benjamin.legeyt@epfl.ch>, Felix Eickemeyer <felix.eickemeyer@epfl.ch>, Brian Carlsen <carlsen.bri@gmail.com>",
-    "url": "https://github.com/EPFL-LPI/iv_lab"
-}
