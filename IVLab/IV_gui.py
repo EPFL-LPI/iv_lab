@@ -1163,7 +1163,7 @@ class Window(QMainWindow):
     
     def runConstantI(self):
         Icompliance = abs(float(self.fieldCurrentLimit.text())/1000.)
-        setI = float(self.fieldConstantISetI.text())
+        setI = float(self.fieldConstantISetI.text())/1000.
         if abs(setI) > Icompliance:
             self.showErrorMessage("ERROR: Requested current outside of compliance range")
             return

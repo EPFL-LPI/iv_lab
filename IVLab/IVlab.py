@@ -1024,8 +1024,12 @@ class SMU:
         #param: light int, set current, time, interval
         
         if abs(param['set_current']) > abs(param['Imax']):
-            raise ValueError("ERROR: measure_V_time_dependent set voltage outside of compliance range")
-            
+            raise ValueError("ERROR: measure_V_time_dependent set current outside of compliance range")
+        
+        if self.useReferenceDiode and self.referenceDiodeParallel:
+            self.setup_reference_diode() #This will probably have already been called before during the 
+                                     #light level check but we don't lose anything by calling it again.
+        
         self.set_sense_mode("CHAN_A",param['Nwire'])
         self.setup_current_output("CHAN_A",param['Vmax'])
         self.set_current("CHAN_A",param['set_current'])
@@ -1089,7 +1093,11 @@ class SMU:
         
         if abs(param['set_voltage']) > abs(param['Vmax']):
             raise ValueError("ERROR: measure_I_time_dependent set voltage outside of compliance range")
-            
+        
+        if self.useReferenceDiode and self.referenceDiodeParallel:
+            self.setup_reference_diode() #This will probably have already been called before during the 
+                                     #light level check but we don't lose anything by calling it again.
+        
         self.set_sense_mode("CHAN_A",param['Nwire'])
         self.setup_voltage_output("CHAN_A",param['Imax'])
         self.set_voltage("CHAN_A",param['set_voltage'])
