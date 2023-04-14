@@ -1629,7 +1629,7 @@ class lamp:
             if self.model == 'TMCM-1260':
                 from pytrinamic.modules import TMCM1260 as pytri_module
                 self.trinamic_module = pytri_module
-            if self.model == 'TMCM-1160':
+            elif self.model == 'TMCM-1160':
                 from pytrinamic.modules import TMCM1160 as pytri_module
                 self.trinamic_module = pytri_module                             
             elif self.model == 'TMCM-3110':
