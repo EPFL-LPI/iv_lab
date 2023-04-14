@@ -401,6 +401,7 @@ class SMU:
                     self.smu_current_channel = channel
                     self.toggle_output_2400(channel)
                     
+                self.smu.source_current_range = Imax
                 self.smu.compliance_current = Imax
                 self.smu_i_limit[channel] = Imax
     
@@ -419,6 +420,7 @@ class SMU:
                     self.smu_current_channel = channel
                     self.toggle_output_2400(channel)
                     
+                self.smu.source_voltage_range = Vmax
                 self.smu.compliance_voltage = Vmax
                 self.smu_v_limit[channel] = Vmax
     
@@ -903,6 +905,10 @@ class SMU:
         #measurement interval
         interval = abs(IV_param['dV'])/IV_param['sweep_rate']
         
+        #apply compliance settings
+        self.set_voltage_limit("CHAN_A",IV_param['Vmax'])
+        self.set_current_limit("CHAN_A",IV_param['Imax'])
+        
         self.show_status("Running J-V Scan...")
         
         dataV = []
@@ -1029,6 +1035,10 @@ class SMU:
         if self.useReferenceDiode and self.referenceDiodeParallel:
             self.setup_reference_diode() #This will probably have already been called before during the 
                                      #light level check but we don't lose anything by calling it again.
+         
+        #apply compliance settings
+        self.set_voltage_limit("CHAN_A",param['Vmax'])
+        self.set_current_limit("CHAN_A",param['Imax'])
         
         self.set_sense_mode("CHAN_A",param['Nwire'])
         self.setup_current_output("CHAN_A",param['Vmax'])
@@ -1097,6 +1107,10 @@ class SMU:
         if self.useReferenceDiode and self.referenceDiodeParallel:
             self.setup_reference_diode() #This will probably have already been called before during the 
                                      #light level check but we don't lose anything by calling it again.
+        
+        #apply compliance settings
+        self.set_voltage_limit("CHAN_A",param['Vmax'])
+        self.set_current_limit("CHAN_A",param['Imax'])
         
         self.set_sense_mode("CHAN_A",param['Nwire'])
         self.setup_voltage_output("CHAN_A",param['Imax'])
@@ -1226,6 +1240,10 @@ class SMU:
         steps = []
         last_power = 0.0
         #param: light int, start voltage, time, interval
+        
+        #apply compliance settings (redundant if JV scan was run just before)
+        self.set_voltage_limit("CHAN_A",param['Vmax'])
+        self.set_current_limit("CHAN_A",param['Imax'])
         
         self.set_sense_mode("CHAN_A",param['Nwire'])
         self.setup_voltage_output("CHAN_A",param['Imax'])
@@ -1365,6 +1383,10 @@ class SMU:
         dataMeasmA = []
         dataRefmA = []
         #param: light int, set voltage, time, interval
+        
+        #apply compliance settings (redundant if JV scan was run just before)
+        self.set_voltage_limit("CHAN_A",param['Vmax'])
+        self.set_current_limit("CHAN_A",param['Imax'])
         
         if True:
             if self.referenceDiodeParallel:
@@ -1607,6 +1629,9 @@ class lamp:
             if self.model == 'TMCM-1260':
                 from pytrinamic.modules import TMCM1260 as pytri_module
                 self.trinamic_module = pytri_module
+            if self.model == 'TMCM-1160':
+                from pytrinamic.modules import TMCM1160 as pytri_module
+                self.trinamic_module = pytri_module                             
             elif self.model == 'TMCM-3110':
                 from pytrinamic.modules import TMCM3110 as pytri_module
                 self.trinamic_module = pytri_module
@@ -1654,7 +1679,10 @@ class lamp:
                     raise ValueError("Oriel lamp IDN incorrect: " + lss_idn)
             
             if self.brand == 'Trinamic': 
-                with self.pytrinamic_ConnectionManager().connect() as my_interface:
+                pytrinamic_option_string = ""
+                if self.model == TMCM-1160:
+                    pytrinamic_option_string = "--data-rate 9600"
+                with self.pytrinamic_ConnectionManager(pytrinamic_option_string).connect() as my_interface:
                     
                     module = self.trinamic_module(my_interface)
                     
@@ -1672,12 +1700,12 @@ class lamp:
                         motor.set_axis_parameter(193,135) #reference search mode 7 (search home switch in positive direction), switch polarity inverted by or'ing in 128.
                         motor.set_axis_parameter(194,5000) #reference search rough search speed
                         motor.set_axis_parameter(195,2000) #reference search fine search speed
-                    elif self.model == 'TMCM-3110':
-                        motor.linear_ramp.max_velocity = 500
-                        motor.linear_ramp.max_acceleration = 200
+                    elif self.model == 'TMCM-3110' or self.model == 'TMCM-1160':
+                        motor.linear_ramp.max_velocity = 200
+                        motor.linear_ramp.max_acceleration = 50
                         motor.set_axis_parameter(193,135) #reference search mode 7 (search home switch in positive direction), switch polarity inverted by or'ing in 128.
-                        motor.set_axis_parameter(194,500) #reference search rough search speed
-                        motor.set_axis_parameter(195,200) #reference search fine search speed
+                        motor.set_axis_parameter(194,200) #reference search rough search speed
+                        motor.set_axis_parameter(195,50) #reference search fine search speed
                     else:
                         raise ValueError("ERROR: Trinamic model " + self.model + " is not configured")
                     
@@ -3133,7 +3161,11 @@ class system:
             dataJ.append(i*1000./IV_Results['active_area'])
     
         #make plot of JV curve
-        fig = plt.figure(figsize=(A4SizeX,A4SizeY))
+        #fig = plt.figure(figsize=(A4SizeX,A4SizeY))
+        fig = plt.gcf()
+        plt.clf()
+        fig.set_size_inches(A4SizeX, A4SizeY)
+        
         ax1 = fig.add_axes([0.5,0.4,0.4,0.4]) #x, y, width, height
         ax1.invert_yaxis()
         ax1.set_ylabel("Current density [mA/$cm^2$]")

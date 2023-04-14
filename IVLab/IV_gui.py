@@ -1025,9 +1025,11 @@ class Window(QMainWindow):
     
     def IVMaxVTextChanged(self):
         if self.CheckBoxAutomaticLimits.isChecked():
-            self.IVFwdLimitUser = float(self.fieldIVMaxV.text())
+            if len(self.fieldIVMaxV.text()) > 0:
+                self.IVFwdLimitUser = float(self.fieldIVMaxV.text())
         else:
-            self.IVMaxVUser = float(self.fieldIVMaxV.text())
+            if len(self.fieldIVMaxV.text()) > 0:
+                self.IVMaxVUser = float(self.fieldIVMaxV.text())
     
     def toggleIVLimitsMode(self):
         if self.CheckBoxAutomaticLimits.isChecked():

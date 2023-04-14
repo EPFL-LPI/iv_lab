@@ -1,0 +1,37 @@
+{
+"computer": 
+	{"hardware": "MAC", 
+	"os": "macOS Catalina 10.15.7", 
+	"basePath": "/Users/gmf/Documents/IVlab_data", "sdPath": 
+	"/Users/gmf/Documents/sd"}, 
+
+"IVsys": 
+	{"sysName": "IVLab", 
+	"fullSunReferenceCurrent": 0.0054989999999999995, 
+	"calibrationDateTime": "Thu Feb 23 10:15:05 2023", 
+	"referenceDiodeImax": 0.008, 
+	"saveDataAutomatic": false, 
+	"checkVOCBeforeScan": true, 
+	"firstPointDwellTime": 5.0, 
+	"MPPVoltageStepInitial": 0.008, 
+	"MPPVoltageStepMax": 0.008, 
+	"MPPVoltageStepMin": 0.00025}, 
+
+"lamp": 
+	{"brand": "Trinamic", 
+	"model": "TMCM-1160", 
+	"display name": "Newport SOL3A 94043A", 
+	"emulate": false, 
+	"visa_address": "/dev/tty.usbmodemTMC11601",
+	"lightLevelDict": {"100.0": 5, "52.5": 305, "38.2": 245, "16.1": 185, "2.0": 125, "0.0": 65}}, 
+
+"SMU": 
+	{"brand": "Keithley", 
+	"model": "2400", "visa_address": 
+	"GPIB0::24::INSTR", "visa_library": 
+	"C:\\Windows\\System32\\visa32.dll", 
+	"emulate": false, 
+	"referenceDiodeSenseMode": "2 wire", 
+	"autorange": true, 
+	"useReferenceDiode": true}
+}
