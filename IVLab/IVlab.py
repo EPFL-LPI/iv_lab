@@ -1680,7 +1680,7 @@ class lamp:
             
             if self.brand == 'Trinamic': 
                 pytrinamic_option_string = ""
-                if self.model == TMCM-1160:
+                if self.model == "TMCM-1160":
                     pytrinamic_option_string = "--data-rate 9600"
                 with self.pytrinamic_ConnectionManager(pytrinamic_option_string).connect() as my_interface:
                     
