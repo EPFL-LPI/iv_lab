@@ -1,0 +1,39 @@
+{
+    "computer":
+    {
+        "hardware": "Dell Precision 3580",
+        "os": "Windows 11",
+        "basePath": "C:\\Users\\dreickem\\switchdrive\\Work\\Python\\Laboratory\\Optoelectronics_lab\\iv_lab_data\\data",
+        "sdPath": "C:\\Users\\dreickem\\switchdrive\\Work\\Python\\Laboratory\\Optoelectronics_lab\\iv_lab_data\\sd"
+    },
+    "IVsys":
+    {
+        "sysName": "IVLab",
+        "fullSunReferenceCurrent": 0.006318,
+        "calibrationDateTime": "Wed Jun  8 16:07:18 2022",
+		"referenceDiodeImax" : 0.005,
+		"saveDataAutomatic" : false,
+		"checkVOCBeforeScan" : true,
+		"firstPointDwellTime" : 5.0,
+		"MPPVoltageStepInitial" : 0.002,
+		"MPPVoltageStepMax" : 0.002,
+		"MPPVoltageStepMin" : 0.001
+    },
+    "lamp":
+    {
+        "brand": "manual",
+        "model": "manual",
+        "emulate": false
+    },
+    "SMU":
+    {
+        "brand": "Keithley",
+        "model": "2401",
+        "visa_address": "",
+        "visa_library": "/Library/Frameworks/VISA.framework/Versions/A/Headers/visa.h",
+        "emulate": false,
+		"referenceDiodeSenseMode" : "2wire",
+		"autorange" : true,
+		"useReferenceDiode" : false
+    }
+}

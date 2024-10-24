@@ -119,8 +119,8 @@ class arduino:
             self.ard = self.rm.open_resource(self.visa_address)
             
             self.ard.baud_rate = 115200
-            self.ard.read_termination = '\n'
-            self.ard.write_termination = '\n'
+            self.ard.read_termination = r'\n'
+            self.ard.write_termination = r'\n'
             self.ard.send_end = True
             self.ard.query_delay = 0.05
             self.ard.timeout = 1000 
@@ -1607,7 +1607,8 @@ class lamp:
         self.model = hardware['model']
         self.emulate = hardware['emulate']
         #dictionary of recipies must be loaded if using wavelabs.  Currently set at top level.
-        self.lightLevelDict = hardware['lightLevelDict'] 
+        if self.brand != 'manual':
+            self.lightLevelDict = hardware['lightLevelDict'] 
         self.light_int = 100
         self.connection_open = False
         self.connected = False
@@ -1666,8 +1667,8 @@ class lamp:
                 # print(rm.list_resources())
                 self.lss = self.rm.open_resource(self.visa_address)
                 
-                self.lss.read_termination = '\n\003'
-                self.lss.write_termination = '\n'
+                self.lss.read_termination = r'\n\003'
+                self.lss.write_termination = r'\n'
                 self.lss.send_end = True
                 self.lss.query_delay = 0.05
                 self.lss.timeout = 1000 
@@ -1828,7 +1829,7 @@ class lamp:
             return (False,"No Error")
             
         startIndex = replyString.find('sError=')
-        endIndex = replyString.find('\>')
+        endIndex = replyString.find(r'\>')
         if startIndex == -1 or endIndex == -1:
             return (True, "Did not receive proper reply from Wavelabs")
         else:    
@@ -2125,7 +2126,7 @@ class system:
         self.MPP_Results = None
         
         #instatiate the class instance.  use smu.connect() to initialize the hardware
-        self.SMU = SMU(sp.SMU, app=app, gui=win)
+        self.SMU = SMU(sp.SMU, app=self.app, gui=self.win)
         self.SMU.fullSunReferenceCurrent = self.sp.IVsys['fullSunReferenceCurrent']
         self.SMU.calibrationDateTime = self.sp.IVsys['calibrationDateTime']
         self.SMU.referenceDiodeImax = self.sp.IVsys['referenceDiodeImax']
@@ -2138,13 +2139,13 @@ class system:
         else:
             self.SMU.referenceDiodeParallel = False
                 
-        self.lamp = lamp(sp.lamp, app=app, gui=win, smu=self.SMU)
+        self.lamp = lamp(sp.lamp, app=self.app, gui=self.win, smu=self.SMU)
         
         if self.sp.IVsys['sysName'] == 'IV_Old':
             #arduino is not present in all systems.  
             #Check that its parameters have been loaded from the system settings file before trying to access
             if self.sp.arduino != None:
-                self.arduino = arduino(sp.arduino, app=app, gui=win)
+                self.arduino = arduino(sp.arduino, app=self.app, gui=self.win)
             else:
                 raise ValueError("ERROR: System name is set to 'IV_Old' but no arduino settings dictionary is present")
         
