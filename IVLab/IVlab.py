@@ -266,6 +266,13 @@ class SMU:
                 self.kb.set_voltage_range(2)
                 self.kb.set_current_range(0.01)
                 
+                if self.autorange:
+                    self.enable_voltage_autorange('CHAN_A')
+                    self.enable_voltage_autorange('CHAN_B')
+                    self.enable_current_autorange('CHAN_A')
+                    self.enable_current_autorange('CHAN_B')
+                    
+                
                 #set default sense mode.  b-channel sense mode (reference diode) is set in system settings file
                 if self.senseModeA == '4 wire':
                     self.k.set_sense_4wire()
@@ -297,8 +304,12 @@ class SMU:
                 #self.smu.write_lua("smua.measure.delay = smua.DELAY_OFF")
                 #self.smu.write_lua("trigger.timer[1].delay = 0.0")
             
-            if (self.brand == 'Keithley') and (self.model == '2400' or self.model == '2401'):
-                from pymeasure.instruments.keithley import Keithley2400
+            if (self.brand == 'Keithley') and (self.model == '2400' or self.model == '2401' or self.model =='2450'):
+                if (self.model == '2400' or self.model == '2401'):
+                    from pymeasure.instruments.keithley import Keithley2400
+                elif self.model == '2450':
+                    from pymeasure.instruments.keithley import Keithley2450
+                    
                 
                 # Set the input parameters
                 data_points = 50
@@ -351,7 +362,7 @@ class SMU:
             if (self.brand == 'Keithley') and (self.model == '2602'):  
                 self.smu.disconnect()
                 
-            if (self.brand == 'Keithley') and (self.model == '2400' or self.model == '2401'):
+            if (self.brand == 'Keithley') and (self.model == '2400' or self.model == '2401' or self.model =='2450'):
                 #no explicit 'disconnect' function in pymeasure.  disable SMU output in case it is enabled.
                 self.smu.disable_source()
                 
@@ -381,7 +392,7 @@ class SMU:
   
     def set_TTL_level(self,angle_code):
         if not self.emulate:
-            if (self.brand == 'Keithley') and (self.model == '2400' or self.model == '2401'):
+            if (self.brand == 'Keithley') and (self.model == '2400' or self.model == '2401' or self.model =='2450'):
                 self.smu.write(":SOUR2:TTL:LEV " + str(int(angle_code)))
             else:
                 raise ValueError("ERROR: smu.set_TTL_level(..) only available for 2400 series sourcemeters")
@@ -396,7 +407,7 @@ class SMU:
                 if channel == 'CHAN_B' or channel == 'CHAN_BOTH':
                     self.kb.set_current_limit(Imax)
                     
-            if (self.brand == 'Keithley') and (self.model == '2400' or self.model == '2401'):
+            if (self.brand == 'Keithley') and (self.model == '2400' or self.model == '2401' or self.model =='2450'):
                 if channel != self.smu_current_channel:
                     self.smu_current_channel = channel
                     self.toggle_output_2400(channel)
@@ -415,7 +426,7 @@ class SMU:
                 if channel == 'CHAN_B' or channel == 'CHAN_BOTH':
                     self.kb.set_voltage_limit(Vmax)
                     
-            if (self.brand == 'Keithley') and (self.model == '2400' or self.model == '2401'):
+            if (self.brand == 'Keithley') and (self.model == '2400' or self.model == '2401' or self.model =='2450'):
                 if channel != self.smu_current_channel:
                     self.smu_current_channel = channel
                     self.toggle_output_2400(channel)
@@ -432,7 +443,7 @@ class SMU:
                 if channel == 'CHAN_B' or channel == 'CHAN_BOTH':
                     self.kb.enable_current_autorange()
                     
-            if (self.brand == 'Keithley') and (self.model == '2400' or self.model == '2401'):
+            if (self.brand == 'Keithley') and (self.model == '2400' or self.model == '2401' or self.model =='2450'):
                 if channel != self.smu_current_channel:
                     self.smu_current_channel = channel
                     self.toggle_output_2400(channel)
@@ -448,7 +459,7 @@ class SMU:
                 if channel == 'CHAN_B' or channel == 'CHAN_BOTH':
                     self.kb.enable_voltage_autorange()
                     
-            if (self.brand == 'Keithley') and (self.model == '2400' or self.model == '2401'):
+            if (self.brand == 'Keithley') and (self.model == '2400' or self.model == '2401' or self.model =='2450'):
                 if channel != self.smu_current_channel:
                     self.smu_current_channel = channel
                     self.toggle_output_2400(channel)
@@ -464,7 +475,7 @@ class SMU:
                 if channel == 'CHAN_B' or channel == 'CHAN_BOTH':
                     self.kb.disable_current_autorange()
             
-            if (self.brand == 'Keithley') and (self.model == '2400' or self.model == '2401'):
+            if (self.brand == 'Keithley') and (self.model == '2400' or self.model == '2401' or self.model =='2450'):
                 if channel != self.smu_current_channel:
                     self.smu_current_channel = channel
                     self.toggle_output_2400(channel)
@@ -480,7 +491,7 @@ class SMU:
                 if channel == 'CHAN_B' or channel == 'CHAN_BOTH':
                     self.kb.disable_voltage_autorange()
                     
-            if (self.brand == 'Keithley') and (self.model == '2400' or self.model == '2401'):
+            if (self.brand == 'Keithley') and (self.model == '2400' or self.model == '2401' or self.model =='2450'):
                 if channel != self.smu_current_channel:
                     self.smu_current_channel = channel
                     self.toggle_output_2400(channel)
@@ -496,7 +507,7 @@ class SMU:
                 if channel == 'CHAN_B' or channel == 'CHAN_BOTH':
                     self.kb.set_current_range(Irange)
                     
-            if (self.brand == 'Keithley') and (self.model == '2400' or self.model == '2401'):
+            if (self.brand == 'Keithley') and (self.model == '2400' or self.model == '2401' or self.model =='2450'):
                 if channel != self.smu_current_channel:
                     self.smu_current_channel = channel
                     self.toggle_output_2400(channel)
@@ -512,7 +523,7 @@ class SMU:
                 if channel == 'CHAN_B' or channel == 'CHAN_BOTH':
                     self.kb.set_voltage_range(Vrange)
                     
-            if (self.brand == 'Keithley') and (self.model == '2400' or self.model == '2401'):
+            if (self.brand == 'Keithley') and (self.model == '2400' or self.model == '2401' or self.model =='2450'):
                 if channel != self.smu_current_channel:
                     self.smu_current_channel = channel
                     self.toggle_output_2400(channel)
@@ -530,7 +541,7 @@ class SMU:
                 if channel == 'CHAN_B' or channel == 'CHAN_BOTH':
                     self.kb.set_mode_current_source()
                     
-            if (self.brand == 'Keithley') and (self.model == '2400' or self.model == '2401'):
+            if (self.brand == 'Keithley') and (self.model == '2400' or self.model == '2401' or self.model =='2450'):
                 if channel != self.smu_current_channel:
                     self.smu_current_channel = channel
                     self.toggle_output_2400(channel)
@@ -558,7 +569,7 @@ class SMU:
                 if channel == 'CHAN_B' or channel == 'CHAN_BOTH':
                     self.kb.set_mode_voltage_source()
             
-            if (self.brand == 'Keithley') and (self.model == '2400' or self.model == '2401'):
+            if (self.brand == 'Keithley') and (self.model == '2400' or self.model == '2401' or self.model =='2450'):
                 if channel != self.smu_current_channel:
                     self.smu_current_channel = channel
                     self.toggle_output_2400(channel)
@@ -584,7 +595,7 @@ class SMU:
                 if channel == 'CHAN_B' or channel == 'CHAN_BOTH':
                     self.kb.display_voltage()
             
-            if (self.brand == 'Keithley') and (self.model == '2400' or self.model == '2401'):
+            if (self.brand == 'Keithley') and (self.model == '2400' or self.model == '2401' or self.model =='2450'):
                 if channel != self.smu_current_channel:
                     self.smu_current_channel = channel
                     self.toggle_output_2400(channel)
@@ -600,7 +611,7 @@ class SMU:
                 if channel == 'CHAN_B' or channel == 'CHAN_BOTH':
                     self.kb.display_current()
             
-            if (self.brand == 'Keithley') and (self.model == '2400' or self.model == '2401'):
+            if (self.brand == 'Keithley') and (self.model == '2400' or self.model == '2401' or self.model =='2450'):
                 if channel != self.smu_current_channel:
                     self.smu_current_channel = channel
                     self.toggle_output_2400(channel)
@@ -618,7 +629,7 @@ class SMU:
                 if channel == 'CHAN_B' or channel == 'CHAN_BOTH':
                     self.kb.set_voltage(v)
             
-            if (self.brand == 'Keithley') and (self.model == '2400' or self.model == '2401'):
+            if (self.brand == 'Keithley') and (self.model == '2400' or self.model == '2401' or self.model =='2450'):
                 if channel != self.smu_current_channel:
                     self.smu_current_channel = channel
                     self.toggle_output_2400(channel)
@@ -636,7 +647,7 @@ class SMU:
                 if channel == 'CHAN_B' or channel == 'CHAN_BOTH':
                     self.kb.set_current(i)
             
-            if (self.brand == 'Keithley') and (self.model == '2400' or self.model == '2401'):
+            if (self.brand == 'Keithley') and (self.model == '2400' or self.model == '2401' or self.model =='2450'):
                 if channel != self.smu_current_channel:
                     self.smu_current_channel = channel
                     self.toggle_output_2400(channel)
@@ -652,7 +663,7 @@ class SMU:
                 if channel == 'CHAN_B' or channel == 'CHAN_BOTH':
                     self.kb.enable_output()
             
-            if (self.brand == 'Keithley') and (self.model == '2400' or self.model == '2401'):
+            if (self.brand == 'Keithley') and (self.model == '2400' or self.model == '2401' or self.model =='2450'):
                 if channel != self.smu_current_channel:
                     self.smu_current_channel = channel
                     self.toggle_output_2400(channel)
@@ -668,7 +679,7 @@ class SMU:
                 if channel == 'CHAN_B' or channel == 'CHAN_BOTH':
                     self.kb.disable_output()
             
-            if (self.brand == 'Keithley') and (self.model == '2400' or self.model == '2401'):
+            if (self.brand == 'Keithley') and (self.model == '2400' or self.model == '2401' or self.model =='2450'):
                 if channel != self.smu_current_channel:
                     self.smu_current_channel = channel
                     self.toggle_output_2400(channel)
@@ -695,7 +706,7 @@ class SMU:
                     else:
                         raise ValueError("sense mode " + str(mode) + " is not supported.  Valid values are '2 wire' and '4 wire'")
             
-            if (self.brand == 'Keithley') and (self.model == '2400' or self.model == '2401'):
+            if (self.brand == 'Keithley') and (self.model == '2400' or self.model == '2401' or self.model =='2450'):
                 if channel != self.smu_current_channel:
                     self.smu_current_channel = channel
                     self.toggle_output_2400(channel)
@@ -793,7 +804,7 @@ class SMU:
                 elif channel == 'CHAN_BOTH':
                     return self.smu.measure_voltage()
             
-            if (self.brand == 'Keithley') and (self.model == '2400' or self.model == '2401'):
+            if (self.brand == 'Keithley') and (self.model == '2400' or self.model == '2401' or self.model =='2450'):
                 return self.smu.voltage
     
     def measure_current(self,channel):
@@ -831,7 +842,7 @@ class SMU:
                 elif channel == 'CHAN_BOTH':
                     return self.smu.measure_current()
             
-            if (self.brand == 'Keithley') and (self.model == '2400' or self.model == '2401'):
+            if (self.brand == 'Keithley') and (self.model == '2400' or self.model == '2401' or self.model =='2450'):
                 return self.smu.current
     
     def measure_current_and_voltage(self,channel):
@@ -851,7 +862,7 @@ class SMU:
                 if channel == "CHAN_BOTH":
                     return self.smu.measure_current_and_voltage()
             
-            if (self.brand == 'Keithley') and (self.model == '2400' or self.model == '2401'):
+            if (self.brand == 'Keithley') and (self.model == '2400' or self.model == '2401' or self.model =='2450'):
                 return [self.smu.current, self.smu_v_set[channel]] #2400 doesn't like to read voltage in voltage mode
     
     def setup_voltage_output(self,channel,Ilimit):
@@ -1587,7 +1598,7 @@ class SMU:
                     #self.k.smua.source.output = self.k.smua.OUTPUT_OFF   # turn off SMUA
                     self.k.disable_output()
                     self.kb.disable_output()
-            if self.model == '2400' or self.model == '2401':
+            if self.model == '2400' or self.model == '2401' or self.model=='2450':
                 if not self.emulate:
                     #self.k.smua.source.output = self.k.smua.OUTPUT_OFF   # turn off SMUA
                     self.smu.disable_source()
