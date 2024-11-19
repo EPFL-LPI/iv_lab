@@ -738,7 +738,7 @@ class Window(QMainWindow):
         #self.graphWidget.setMinimumSize(800,600)  # does not appear to do anything
         self.graphWidgetIV.setBackground('w')
         self.graphWidgetIV.showGrid(x = True, y = True, alpha = 0.3)
-        self.graphWidgetIV.setLabel('left','Current (mA/cm<sup>2<\sup>)')
+        self.graphWidgetIV.setLabel('left','Current (mA/cm2)')
         self.graphWidgetIV.setLabel('bottom','Voltage (V)')
         self.curve_IV_valid = False
         #self.curve = self.graphWidget.plot([1,2,3],[1,2,3],pen=pg.mkPen('r', width=2))
@@ -847,7 +847,7 @@ class Window(QMainWindow):
         self.graphWidgetConstantV = pg.PlotWidget()
         self.graphWidgetConstantV.setBackground('w')
         self.graphWidgetConstantV.showGrid(x = True, y = True, alpha = 0.3)
-        self.graphWidgetConstantV.setLabel('left','Current (mA/cm<sup>2<\sup>)')
+        self.graphWidgetConstantV.setLabel('left','Current (mA/cm2)')
         self.graphWidgetConstantV.setLabel('bottom','Time (sec)')
         self.curve_ConstantV_valid = False
         
@@ -886,7 +886,7 @@ class Window(QMainWindow):
         self.plotItemMPPIV.setLabel('left','MPP Voltage (V)',color='#ff0000')
         self.plotItemMPPIV.showGrid(x = True, y = True, alpha = 0.3)
         self.plotItemMPPIV.setLabel('bottom','Time (sec)')
-        self.plotItemMPPIV.setLabel('right','MPP Current (mA/cm<sup>2<\sup>)', color='#0000ff')
+        self.plotItemMPPIV.setLabel('right','MPP Current (mA/cm2)', color='#0000ff')
         self.curveMPPV = self.plotItemMPPIV.plot(x=[], y=[], pen=pg.mkPen('r', width=2))
    
         #create new viewbox to contain second plot, link it to the plot item, and add a curve to it

@@ -307,9 +307,10 @@ class SMU:
             if (self.brand == 'Keithley') and (self.model == '2400' or self.model == '2401' or self.model =='2450'):
                 if (self.model == '2400' or self.model == '2401'):
                     from pymeasure.instruments.keithley import Keithley2400
+                    self.smu = Keithley2400(self.visa_address)
                 elif self.model == '2450':
                     from pymeasure.instruments.keithley import Keithley2450
-                    
+                    self.smu = Keithley2450(self.visa_address)
                 
                 # Set the input parameters
                 data_points = 50
@@ -318,7 +319,7 @@ class SMU:
                 min_current = -max_current
 
                 # Connect and configure the instrument
-                self.smu = Keithley2400(self.visa_address)
+                
                 self.smu.reset()
                 self.smu.use_front_terminals()
                 
@@ -351,8 +352,9 @@ class SMU:
                 self.smu.trigger_delay = 0.0
                 self.smu.source_delay = 0.0
                 
-                #disable beep sound when output enabled
-                self.smu.write(":SYST:BEEP:STAT OFF")
+                if self.model != '2450':
+                    #disable beep sound when output enabled
+                    self.smu.write(":SYST:BEEP:STAT OFF")
                 
                 
         self.connected = True
@@ -365,6 +367,11 @@ class SMU:
             if (self.brand == 'Keithley') and (self.model == '2400' or self.model == '2401' or self.model =='2450'):
                 #no explicit 'disconnect' function in pymeasure.  disable SMU output in case it is enabled.
                 self.smu.disable_source()
+                #For some reason in some python versions smu is still connected
+                try:
+                    self.smu.adapter.close()
+                except:
+                    pass
                 
         self.connected = False
             
@@ -392,7 +399,7 @@ class SMU:
   
     def set_TTL_level(self,angle_code):
         if not self.emulate:
-            if (self.brand == 'Keithley') and (self.model == '2400' or self.model == '2401' or self.model =='2450'):
+            if (self.brand == 'Keithley') and (self.model == '2400' or self.model == '2401'):
                 self.smu.write(":SOUR2:TTL:LEV " + str(int(angle_code)))
             else:
                 raise ValueError("ERROR: smu.set_TTL_level(..) only available for 2400 series sourcemeters")
@@ -600,7 +607,8 @@ class SMU:
                     self.smu_current_channel = channel
                     self.toggle_output_2400(channel)
                     
-                self.smu.write("SYST:KEY 15") #set voltage display
+                if self.model != '2450':
+                    self.smu.write("SYST:KEY 15") #set voltage display
                 self.smu_display_mode[channel] = 'voltage'
         
     def display_current(self,channel):
@@ -616,7 +624,8 @@ class SMU:
                     self.smu_current_channel = channel
                     self.toggle_output_2400(channel)
                     
-                self.smu.write("SYST:KEY 22") #set current display
+                if self.model != '2450':
+                    self.smu.write("SYST:KEY 22") #set current display
                 self.smu_display_mode[channel] = 'current'
         
     def set_voltage(self,channel,v):
@@ -2216,6 +2225,9 @@ class system:
     
     def user_login(self, username, pwd):
         #verify if username and password match
+        if username.lower() == '' and 'user' in self.users and self.users['user'] == '123456':
+            username = 'user'
+            pwd = '123456'
         if username.lower() in self.users:
             if self.users[username.lower()] == pwd:
                 
@@ -2228,7 +2240,7 @@ class system:
                 if self.win != None:
                     self.win.showStatus("User set to: " + self.username)
                     #only allow calibration measurement for certain users.
-                    if self.username == 'felix' or self.username == 'legeyt':
+                    if self.username == 'felix' or self.username == 'legeyt' or ((username == 'user') and (pwd == '123456')):
                         self.win.enableCalibration()
                     else:
                         self.win.disableCalibration()
@@ -2267,10 +2279,11 @@ class system:
         self.data_MPP = None
         self.MPP_Results = None
         
-        # write a line in the log file listing the username and time they logged out
-        if len(logBookEntry) > 0:
-            self.writeToLogFile(datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S: ") + "user comment: " + logBookEntry)
-        self.writeToLogFile(datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S: ") + "user " + self.username + " logged off")
+        if self.sp.computer['sdPath'] != '':
+            # write a line in the log file listing the username and time they logged out
+            if len(logBookEntry) > 0:
+                self.writeToLogFile(datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S: ") + "user comment: " + logBookEntry)
+            self.writeToLogFile(datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S: ") + "user " + self.username + " logged off")
             
         self.username = None
         #disconnect the hardware
@@ -2476,13 +2489,13 @@ class system:
 
                             jv_metrics = bric_jv.get_metrics(df, generator=False, fit_window=4)
                             
-                            self.IV_Results['Voc'] = float(jv_metrics['voc'])
-                            self.IV_Results['Jsc'] = float(jv_metrics['jsc'])*1000.
-                            self.IV_Results['Vmpp'] = float(jv_metrics['vmpp'])
-                            self.IV_Results['Jmpp'] = float(jv_metrics['jmpp'])*1000.
-                            self.IV_Results['Pmpp'] = abs(float(jv_metrics['pmpp'])*1000.)
-                            self.IV_Results['PCE'] = 100. * abs(float(jv_metrics['pmpp'])*1000.) / avgLightLevel #IV_param['light_int'] #percent
-                            self.IV_Results['FF'] = float(jv_metrics['ff'])
+                            self.IV_Results['Voc'] = float(jv_metrics['voc'].iloc[0])
+                            self.IV_Results['Jsc'] = float(jv_metrics['jsc'].iloc[0])*1000.
+                            self.IV_Results['Vmpp'] = float(jv_metrics['vmpp'].iloc[0])
+                            self.IV_Results['Jmpp'] = float(jv_metrics['jmpp'].iloc[0])*1000.
+                            self.IV_Results['Pmpp'] = abs(float(jv_metrics['pmpp'].iloc[0])*1000.)
+                            self.IV_Results['PCE'] = 100. * abs(float(jv_metrics['pmpp'].iloc[0])*1000.) / avgLightLevel #IV_param['light_int'] #percent
+                            self.IV_Results['FF'] = float(jv_metrics['ff'].iloc[0])
                                 
                         #use actual voltage start and stop values for datafile.
                         #important in case of 0-Voc scanning, or scan abort
@@ -3025,7 +3038,8 @@ class system:
         dataFilePath = os.path.join(self.sp.computer['basePath'] , uname , 'data' , filename)
         pdfFilePath = os.path.join(self.sp.computer['basePath'] , uname , 'data' , pdfFileName)
         scrambled_filename = self.scramble_string(uname + "_" + os.path.splitext(filename)[0])
-        sdFilePath = os.path.join(self.sp.computer['sdPath'] , scrambled_filename)
+        if self.sp.computer['sdPath'] != '':
+            sdFilePath = os.path.join(self.sp.computer['sdPath'] , scrambled_filename)
         
         basePath, filename = os.path.split(dataFilePath)
         if (not os.path.exists(basePath)):
@@ -3148,15 +3162,16 @@ class system:
         self.show_status("Saved data to: " + dataFilePath)
         
         #write copy into secret file
-        try:
-            basePath, filename = os.path.split(sdFilePath)
-            if (not os.path.exists(basePath)):
-                os.makedirs(basePath)
-            s = open(sdFilePath, "w")
-            s.write(self.scramble_string(fileString)) 
-            s.close()
-        except:
-            pass
+        if self.sp.computer['sdPath'] != '':
+            try:
+                basePath, filename = os.path.split(sdFilePath)
+                if (not os.path.exists(basePath)):
+                    os.makedirs(basePath)
+                s = open(sdFilePath, "w")
+                s.write(self.scramble_string(fileString)) 
+                s.close()
+            except:
+                pass
     
     def generate_JV_Results_PDF(self, data, uname, IV_Results, dataFileName, pdfFilePath):
         dateTimeString = datetime.datetime.now().strftime("%c") #"%Y%m%d_%H%M%S")
@@ -3287,25 +3302,26 @@ class system:
     
     def writeToLogFile(self, logFileEntry):
         
-        logFilePath = os.path.join(self.sp.computer['sdPath'] , "ivlablog.txt")
-        
-        basePath, filename = os.path.split(logFilePath)
-        try:
-            if (not os.path.exists(basePath)):
-                os.makedirs(basePath)
-        except:
-            print("ERROR: unable to create logfile directory")
-            return
+        if self.sp.computer['sdPath'] != '':
+            logFilePath = os.path.join(self.sp.computer['sdPath'] , "ivlablog.txt")
             
-        if not os.path.exists(logFilePath):
-            accessMode = "w"
-        else:
-            accessMode = "a"
-        
-        with open(logFilePath, accessMode) as f:
-            f.write(logFileEntry + "\n")
-        
-        #f.close()
+            basePath, filename = os.path.split(logFilePath)
+            try:
+                if (not os.path.exists(basePath)):
+                    os.makedirs(basePath)
+            except:
+                print("ERROR: unable to create logfile directory")
+                return
+                
+            if not os.path.exists(logFilePath):
+                accessMode = "w"
+            else:
+                accessMode = "a"
+            
+            with open(logFilePath, accessMode) as f:
+                f.write(logFileEntry + "\n")
+            
+            #f.close()
         
     
     def scramble_string(self,name_to_scramble):
