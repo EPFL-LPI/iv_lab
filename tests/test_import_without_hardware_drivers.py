@@ -34,6 +34,10 @@ PACKAGE_MODULES = [
     "iv_lab.hardware.lamp.drivers",
     "iv_lab.hardware.lamp.drivers.emulated",
     "iv_lab.hardware.lamp.drivers.manual",
+    "iv_lab.hardware.lamp.drivers.wavelabs",
+    "iv_lab.hardware.lamp.drivers.oriel",
+    "iv_lab.hardware.lamp.drivers.trinamic",
+    "iv_lab.hardware.lamp.drivers.keithley_filter",
 ]
 
 

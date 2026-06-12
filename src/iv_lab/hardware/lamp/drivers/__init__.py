@@ -8,4 +8,8 @@ is safe on machines without them installed.
 The emulated driver does not register; the factory selects it directly.
 """
 
+from . import keithley_filter  # noqa: F401
 from . import manual  # noqa: F401
+from . import oriel  # noqa: F401
+from . import trinamic  # noqa: F401
+from . import wavelabs  # noqa: F401
