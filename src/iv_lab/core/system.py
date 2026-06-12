@@ -255,11 +255,16 @@ class IVLabSystem(QObject):
         return True
 
     def turn_off(self) -> None:
-        """Bring the hardware into a safe state (legacy ``turn_off``)."""
-        self.smu.turn_off()
-        self.lamp.turn_off()
+        """Bring the hardware into a safe state.
+
+        Safe order per docs/HARDWARE.md: block the light first (close
+        the shutter), then the lamp, then disable the SMU outputs. The
+        legacy ``turn_off`` did SMU first and had no arduino step.
+        """
         if self.arduino is not None:
-            self.arduino.turn_off()
+            self.arduino.turn_off()  # closes the shutter
+        self.lamp.turn_off()
+        self.smu.turn_off()
 
     def disconnect_hardware(self) -> None:
         """Disconnect all hardware, ignoring errors (legacy logout path)."""
@@ -385,11 +390,13 @@ class IVLabSystem(QObject):
             self._worker.request_stop()
 
     def _cleanup_worker(self) -> None:
-        if self._worker is not None:
-            self._worker.deleteLater()
-            self._worker = None
+        # runs in the main thread after the worker thread finished;
+        # deleteLater on the worker would post to the finished thread's
+        # queue and never run — dropping the Python reference lets
+        # PySide reclaim the worker safely instead
+        self._worker = None
         if self._thread is not None:
-            self._thread.deleteLater()
+            self._thread.deleteLater()  # thread object lives in this thread
             self._thread = None
 
     def _on_worker_finished(self, spec: _MeasurementSpec, result) -> None:

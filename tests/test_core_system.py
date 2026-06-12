@@ -368,6 +368,40 @@ def test_auto_save_writes_file_after_run(tmp_path: Path) -> None:
     assert len(saved) == 1
 
 
+def test_turn_off_order_is_shutter_lamp_smu(tmp_path: Path) -> None:
+    # safe order per docs/HARDWARE.md: shutter first, then lamp, then SMU
+    settings = settings_dict(tmp_path)
+    settings["IVsys"]["sysName"] = "IV_Old"
+    settings["arduino"] = {
+        "brand": "Arduino",
+        "model": "Uno",
+        "visa_address": "ASRL1::INSTR",
+        "emulate": True,
+    }
+    write_users(tmp_path / "users.txt", USERS)
+    system = IVLabSystem(
+        SystemSettings.model_validate(settings),
+        users_file=tmp_path / "users.txt",
+        threaded=False,
+    )
+
+    order: list[str] = []
+    for name, device in (
+        ("arduino", system.arduino),
+        ("lamp", system.lamp),
+        ("smu", system.smu),
+    ):
+        original = device.turn_off
+        device.turn_off = lambda name=name, original=original: (
+            order.append(name),
+            original(),
+        )
+
+    system.turn_off()
+
+    assert order == ["arduino", "lamp", "smu"]
+
+
 # --- calibration persistence ---
 
 
