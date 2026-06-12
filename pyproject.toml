@@ -13,7 +13,9 @@ authors = [
     { name = "EPFL LPI" },
 ]
 # Runtime dependencies are added as components are migrated (see docs/MIGRATION.md).
-dependencies = []
+dependencies = [
+    "pydantic>=2",
+]
 
 [project.optional-dependencies]
 dev = [
