@@ -27,6 +27,13 @@ PACKAGE_MODULES = [
     "iv_lab.hardware.smu.drivers.emulated",
     "iv_lab.hardware.smu.drivers.keithley_2400",
     "iv_lab.hardware.smu.drivers.keithley_26xx",
+    "iv_lab.hardware.lamp",
+    "iv_lab.hardware.lamp.base",
+    "iv_lab.hardware.lamp.registry",
+    "iv_lab.hardware.lamp.factory",
+    "iv_lab.hardware.lamp.drivers",
+    "iv_lab.hardware.lamp.drivers.emulated",
+    "iv_lab.hardware.lamp.drivers.manual",
 ]
 
 
