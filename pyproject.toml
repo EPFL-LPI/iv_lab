@@ -15,6 +15,10 @@ authors = [
 # Runtime dependencies are added as components are migrated (see docs/MIGRATION.md).
 dependencies = [
     "pydantic>=2",
+    "numpy",
+    "pandas",
+    # JV metrics (Voc, Jsc, FF, PCE); imported lazily in analysis/jv_metrics.py
+    "bric-analysis-libraries>=0.1.2",
 ]
 
 [project.optional-dependencies]
