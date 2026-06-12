@@ -21,6 +21,8 @@ dependencies = [
     "bric-analysis-libraries>=0.1.2",
     # Qt measurement workers and (later) the GUI; QtCore only in workers
     "PySide6",
+    # J-V PDF reports; imported lazily in data/pdf_report.py
+    "matplotlib",
 ]
 
 [project.optional-dependencies]
