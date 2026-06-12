@@ -21,6 +21,10 @@ PACKAGE_MODULES = [
     "iv_lab.hardware.errors",
     "iv_lab.hardware.smu",
     "iv_lab.hardware.smu.base",
+    "iv_lab.hardware.smu.registry",
+    "iv_lab.hardware.smu.factory",
+    "iv_lab.hardware.smu.drivers",
+    "iv_lab.hardware.smu.drivers.emulated",
 ]
 
 
