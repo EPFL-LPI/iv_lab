@@ -172,6 +172,22 @@ def test_emulated_reference_diode_reads_full_sun_current() -> None:
     assert i_ref_both == pytest.approx(i_ref)
 
 
+def test_emulated_measure_both_iv_points() -> None:
+    # legacy measure_current_and_voltage("CHAN_BOTH"): (i_a, v_a, i_b, v_b)
+    smu = make_emulated_smu()
+    smu.connect()
+    smu.setup_voltage_output(SMUChannel.CELL, 0.01)
+    smu.set_voltage(SMUChannel.CELL, 0.3)
+    smu.setup_reference_diode()
+
+    i_cell, v_cell, i_ref, v_ref = smu.measure_both_iv_points()
+
+    assert v_cell == pytest.approx(0.3)
+    assert v_ref == pytest.approx(0.0)
+    assert i_cell == pytest.approx(smu.measure_current(SMUChannel.CELL))
+    assert i_ref == pytest.approx(-smu.full_sun_reference_current, rel=0.02)
+
+
 def test_emulated_measure_iv_point() -> None:
     smu = make_emulated_smu()
     smu.connect()

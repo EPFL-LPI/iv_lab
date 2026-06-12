@@ -169,6 +169,19 @@ class BaseSMU(HardwareDevice):
 
     # --- composed/optional behavior ---
 
+    def measure_both_iv_points(self) -> tuple[float, float, float, float]:
+        """Measure ``(i_cell, v_cell, i_ref, v_ref)`` in one cycle.
+
+        Legacy ``measure_current_and_voltage("CHAN_BOTH")``, used by MPP
+        tracking when ``reference_diode_parallel`` is True. Only dual
+        channel instruments support it; the default mirrors
+        :meth:`measure_both_currents` being unavailable.
+        """
+        raise HardwareCommandError(
+            f"{self.name}: parallel cell/reference IV-point measurement is "
+            "not supported by this SMU"
+        )
+
     def setup_reference_diode(self) -> None:
         """Prepare channel B to read the reference photodiode.
 

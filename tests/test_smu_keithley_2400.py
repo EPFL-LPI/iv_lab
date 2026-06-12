@@ -334,6 +334,9 @@ def test_measure_both_currents_not_supported(fake_pymeasure) -> None:
     with pytest.raises(HardwareCommandError, match="not supported"):
         smu.measure_both_currents()
 
+    with pytest.raises(HardwareCommandError, match="not supported"):
+        smu.measure_both_iv_points()
+
 
 # --- channel switching (legacy toggle_output_2400) ---
 

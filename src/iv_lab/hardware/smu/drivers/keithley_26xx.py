@@ -218,6 +218,12 @@ class Keithley26xxSMU(BaseSMU):
         i, v = self._chan(channel).measure_current_and_voltage()
         return (i, v)
 
+    def measure_both_iv_points(self) -> tuple[float, float, float, float]:
+        # legacy measure_current_and_voltage("CHAN_BOTH") through the
+        # parent SMU26xx object: [i_a, v_a, i_b, v_b] in one cycle
+        i_cell, v_cell, i_ref, v_ref = self.smu.measure_current_and_voltage()
+        return (i_cell, v_cell, i_ref, v_ref)
+
     # --- safety ---
 
     def turn_off(self) -> None:

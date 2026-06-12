@@ -187,6 +187,21 @@ class EmulatedSMU(BaseSMU):
         # legacy emulation: measure_current then measure_voltage
         return (self.measure_current(channel), self.measure_voltage(channel))
 
+    def measure_both_iv_points(self) -> tuple[float, float, float, float]:
+        # legacy CHAN_BOTH current-and-voltage read in one cycle
+        self._integrate()
+        values: list[float] = []
+        for channel in (SMUChannel.CELL, SMUChannel.REFERENCE):
+            state = self._channels[channel]
+            if state.source_mode == "current":
+                i = state.i_set
+                v = self._diode_voltage(channel)
+            else:
+                i = self._noisy(self._diode_current(channel))
+                v = state.v_set
+            values.extend((i, v))
+        return (values[0], values[1], values[2], values[3])
+
     # --- safety ---
 
     def turn_off(self) -> None:

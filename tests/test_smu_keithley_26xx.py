@@ -301,6 +301,17 @@ def test_measure_both_currents_reads_both_channels_in_parallel(
     assert not fake.channels["b"].calls("measure_current")
 
 
+def test_measure_both_iv_points_reads_parent_object(fake_keithley26xx) -> None:
+    smu, fake = connected_smu(fake_keithley26xx)
+    fake.both_current_readings = [-0.0041, 0.00635]
+    fake.both_voltage_readings = [0.51, 0.0]
+
+    i_cell, v_cell, i_ref, v_ref = smu.measure_both_iv_points()
+
+    assert (i_cell, v_cell) == pytest.approx((-0.0041, 0.51))
+    assert (i_ref, v_ref) == pytest.approx((0.00635, 0.0))
+
+
 def test_measure_iv_point_reads_current_and_voltage(fake_keithley26xx) -> None:
     smu, fake = connected_smu(fake_keithley26xx)
 
