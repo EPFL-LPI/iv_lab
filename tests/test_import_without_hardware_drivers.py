@@ -38,6 +38,13 @@ PACKAGE_MODULES = [
     "iv_lab.hardware.lamp.drivers.oriel",
     "iv_lab.hardware.lamp.drivers.trinamic",
     "iv_lab.hardware.lamp.drivers.keithley_filter",
+    "iv_lab.hardware.arduino",
+    "iv_lab.hardware.arduino.base",
+    "iv_lab.hardware.arduino.registry",
+    "iv_lab.hardware.arduino.factory",
+    "iv_lab.hardware.arduino.drivers",
+    "iv_lab.hardware.arduino.drivers.emulated",
+    "iv_lab.hardware.arduino.drivers.shutter_controller",
 ]
 
 
