@@ -11,3 +11,4 @@ The emulated driver does not register; the factory selects it directly.
 # Real driver modules are imported here as they are migrated, so that
 # their registry decorators run.
 from . import keithley_2400  # noqa: F401
+from . import keithley_26xx  # noqa: F401
