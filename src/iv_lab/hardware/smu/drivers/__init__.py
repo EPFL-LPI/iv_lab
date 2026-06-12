@@ -8,5 +8,6 @@ on machines without them installed.
 The emulated driver does not register; the factory selects it directly.
 """
 
-# Real driver modules (keithley_2400, keithley_26xx) are imported here as
-# they are migrated, so that their registry decorators run.
+# Real driver modules are imported here as they are migrated, so that
+# their registry decorators run.
+from . import keithley_2400  # noqa: F401

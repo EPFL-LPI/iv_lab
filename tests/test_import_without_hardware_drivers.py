@@ -25,6 +25,7 @@ PACKAGE_MODULES = [
     "iv_lab.hardware.smu.factory",
     "iv_lab.hardware.smu.drivers",
     "iv_lab.hardware.smu.drivers.emulated",
+    "iv_lab.hardware.smu.drivers.keithley_2400",
 ]
 
 
