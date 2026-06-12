@@ -19,6 +19,8 @@ PACKAGE_MODULES = [
     "iv_lab.hardware",
     "iv_lab.hardware.base",
     "iv_lab.hardware.errors",
+    "iv_lab.hardware.smu",
+    "iv_lab.hardware.smu.base",
 ]
 
 
