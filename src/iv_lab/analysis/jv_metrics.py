@@ -32,6 +32,29 @@ class JVMetrics:
     FF: float  #: fill factor
 
 
+def _import_bric_jv():
+    """Import the analysis package, shimming the removed scipy name.
+
+    ``bric_analysis_libraries`` 0.1.x imports ``scipy.integrate.trapz``,
+    which modern SciPy removed (it is called ``trapezoid`` now), so the
+    package cannot import on current environments. Alias the old name
+    before retrying (found during the step 16 end-to-end validation).
+    """
+    try:
+        import bric_analysis_libraries.jv.jv_analysis as bric_jv
+    except ImportError:
+        import scipy.integrate
+
+        if hasattr(scipy.integrate, "trapz") or not hasattr(
+            scipy.integrate, "trapezoid"
+        ):
+            raise
+        scipy.integrate.trapz = scipy.integrate.trapezoid
+        import bric_analysis_libraries.jv.jv_analysis as bric_jv
+
+    return bric_jv
+
+
 def compute_jv_metrics(
     voltage: Sequence[float],
     current: Sequence[float],
@@ -48,7 +71,7 @@ def compute_jv_metrics(
     import numpy as np
     import pandas as pd
 
-    import bric_analysis_libraries.jv.jv_analysis as bric_jv
+    bric_jv = _import_bric_jv()
 
     pairs = [(v, i / active_area) for v, i in zip(voltage, current)]
 

@@ -50,9 +50,25 @@ def fake_bric(monkeypatch):
 
 
 def test_import_does_not_require_analysis_libraries() -> None:
-    # the wrapper module is imported at the top of this file already;
-    # bric must not have been pulled in at import time
-    assert "bric_analysis_libraries" not in sys.modules
+    # checked in a fresh interpreter: other tests may legitimately import
+    # bric at runtime, so the in-process sys.modules is not meaningful here
+    import os
+    import subprocess
+    from pathlib import Path
+
+    src = Path(__file__).resolve().parent.parent / "src"
+    code = (
+        "import sys; import iv_lab.analysis; "
+        "assert 'bric_analysis_libraries' not in sys.modules, 'imported at module load'; "
+        "print('ok')"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", code],
+        capture_output=True,
+        text=True,
+        env={**os.environ, "PYTHONPATH": str(src)},
+    )
+    assert result.stdout.strip() == "ok", result.stderr
 
 
 def test_compute_jv_metrics_legacy_dataframe_layout(fake_bric) -> None:
@@ -88,3 +104,39 @@ def test_pce_legacy_formula() -> None:
     assert pce(8.46, 100.0) == pytest.approx(8.46)
     assert pce(8.46, 50.0) == pytest.approx(16.92)
     assert pce(-8.46, 100.0) == pytest.approx(8.46)
+
+
+def test_real_bric_pipeline_on_emulated_diode() -> None:
+    """End-to-end check with the real analysis package (skipped when it
+    is not installed). Exercises the scipy ``trapz`` compatibility shim."""
+    pytest.importorskip("bric_analysis_libraries")
+
+    from iv_lab.config import SMUSettings
+    from iv_lab.hardware.smu.base import SMUChannel
+    from iv_lab.hardware.smu.drivers.emulated import EmulatedSMU
+
+    smu = EmulatedSMU(
+        SMUSettings(
+            brand="Keithley", model="2602", visa_address="x",
+            visa_library="x", emulate=True,
+        )
+    )
+    smu.integration_delay = 0.0
+    smu.full_sun_reference_current = 0.004
+    smu.connect()
+    smu.setup_voltage_output(SMUChannel.CELL, 0.01)
+
+    voltage = [k * 0.01 for k in range(0, 61)]
+    current = []
+    for v in voltage:
+        smu.set_voltage(SMUChannel.CELL, v)
+        current.append(smu.measure_current(SMUChannel.CELL))
+
+    metrics = compute_jv_metrics(voltage, current, 0.16, cell_name="emulated")
+
+    # the emulated diode model: Voc = 0.55 V, Isc = -4 mA over 0.16 cm²
+    assert metrics.Voc == pytest.approx(0.55, abs=0.01)
+    assert metrics.Jsc == pytest.approx(-25.0, rel=0.02)
+    assert 0.0 < metrics.Vmpp < 0.55
+    assert 0.4 < metrics.FF < 0.9
+    assert metrics.Pmpp > 0
