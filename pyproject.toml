@@ -23,6 +23,8 @@ dependencies = [
     "PySide6",
     # J-V PDF reports; imported lazily in data/pdf_report.py
     "matplotlib",
+    # GUI plotting (legacy used pyqtgraph as well)
+    "pyqtgraph",
 ]
 
 [project.optional-dependencies]
