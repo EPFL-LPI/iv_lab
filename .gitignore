@@ -3,3 +3,11 @@ IVLab Accessories
 IVLab/users.txt
 IVLab/system_settings.json
 IVLab/__pycache__
+
+# Python build/test artifacts (new src/ package)
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+build/
+dist/
