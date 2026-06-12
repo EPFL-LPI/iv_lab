@@ -101,6 +101,29 @@ class MeasurementProtocol(ABC):
 
     # --- callback plumbing ---
 
+    def set_callbacks(
+        self,
+        *,
+        status: Optional[Callable[[str], None]] = None,
+        warning: Optional[Callable[[str], None]] = None,
+        data: Optional[Callable[[dict], None]] = None,
+        cancel: Optional[Callable[[], bool]] = None,
+    ) -> None:
+        """Attach or replace the interaction callbacks.
+
+        Used by the Qt measurement workers to wire their signals to a
+        protocol instance after construction. Only the callbacks passed
+        are replaced.
+        """
+        if status is not None:
+            self._status_callback = status
+        if warning is not None:
+            self._warning_callback = warning
+        if data is not None:
+            self._data_callback = data
+        if cancel is not None:
+            self._cancel_callback = cancel
+
     def status(self, message: str) -> None:
         """Report a status message (legacy ``show_status``)."""
         if self._status_callback is not None:
