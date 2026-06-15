@@ -40,7 +40,7 @@ def write_settings(tmp_path: Path, emulate: bool) -> Path:
 def test_parse_args_defaults() -> None:
     args = parse_args([])
 
-    assert args.settings == "system_settings.json"
+    assert args.settings == "config/system_settings.toml"
     assert args.users is None
     assert args.logo == "EPFL_Logo.png"
     assert not args.emulate

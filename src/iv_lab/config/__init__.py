@@ -7,6 +7,7 @@ from .settings import (
     SMUSettings,
     SystemSettings,
     load_settings,
+    save_settings,
 )
 
 __all__ = [
@@ -18,4 +19,5 @@ __all__ = [
     "SMUSettings",
     "SystemSettings",
     "load_settings",
+    "save_settings",
 ]

@@ -23,8 +23,8 @@ from typing import Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-#: Default settings filename (JSON; TOML is also supported).
-DEFAULT_SETTINGS_FILENAME = "system_settings.json"
+#: Default settings filename.  The loader accepts .json and .toml.
+DEFAULT_SETTINGS_FILENAME = "config/system_settings.toml"
 
 
 class LegacyCompatibleModel(BaseModel):
@@ -124,6 +124,23 @@ class SystemSettings(LegacyCompatibleModel):
     arduino: Optional[ArduinoSettings] = None
 
 
+def _update_toml_scalars(toml_node, data: dict) -> None:
+    """Recursively update *toml_node* in place with values from *data*.
+
+    Only keys already present in *toml_node* are touched; new keys are
+    not inserted.  Non-string keys (e.g. float keys produced by Pydantic
+    coercion of ``lightLevelDict``) are skipped — those values are only
+    set during machine configuration, never by code.
+    """
+    for key, value in data.items():
+        if not isinstance(key, str) or key not in toml_node:
+            continue
+        if isinstance(value, dict):
+            _update_toml_scalars(toml_node[key], value)
+        else:
+            toml_node[key] = value
+
+
 def load_settings(path: Union[str, Path]) -> SystemSettings:
     """Load and validate a system settings file (.json or .toml).
 
@@ -143,3 +160,29 @@ def load_settings(path: Union[str, Path]) -> SystemSettings:
             f"unsupported settings file format {suffix!r} — expected .json or .toml"
         )
     return SystemSettings.model_validate(raw)
+
+
+def save_settings(path: Union[str, Path], settings: SystemSettings) -> None:
+    """Write *settings* back to *path*, auto-detecting format by extension.
+
+    For ``.json``: full rewrite via ``json.dumps``.
+    For ``.toml``: round-trip via ``tomlkit`` — the existing file is
+    parsed, only the values that are present in both the file and the
+    model are updated in place, and the result is written back.  Comments
+    and formatting in the original file are preserved.
+    """
+    p = Path(path)
+    suffix = p.suffix.lower()
+    data = settings.model_dump(by_alias=True, exclude_none=True)
+    if suffix == ".json":
+        p.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    elif suffix == ".toml":
+        import tomlkit
+
+        doc = tomlkit.loads(p.read_text(encoding="utf-8"))
+        _update_toml_scalars(doc, data)
+        p.write_text(tomlkit.dumps(doc), encoding="utf-8")
+    else:
+        raise ValueError(
+            f"unsupported settings file format {suffix!r} — expected .json or .toml"
+        )

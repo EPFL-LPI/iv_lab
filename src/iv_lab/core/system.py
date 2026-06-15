@@ -17,7 +17,8 @@ the migrated orchestration layer of the legacy ``system`` class in
   when ``saveDataAutomatic`` is enabled),
 - coordinates authentication and the logbook (legacy
   ``user_login``/``user_logout``),
-- persists a confirmed calibration to ``system_settings.json`` (legacy
+- persists a confirmed calibration to the settings file (.json or .toml),
+  preserving comments in TOML files (legacy
   ``save_calibration_to_system_settings`` — with the fix that the
   arduino section is no longer dropped from the file).
 
@@ -28,14 +29,13 @@ module imports QtCore only.
 from __future__ import annotations
 
 import datetime
-import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, Union
 
 from PySide6.QtCore import QObject, QThread, Signal
 
-from iv_lab.config import SystemSettings
+from iv_lab.config import SystemSettings, save_settings
 from iv_lab.data import FileWriter, SystemContext
 from iv_lab.data.results import MeasurementResult
 from iv_lab.hardware.arduino import create_arduino
@@ -68,8 +68,8 @@ from iv_lab.services import (
 )
 from iv_lab.services.auth import USERS_FILENAME
 
-#: Legacy settings file name (in the working directory).
-SETTINGS_FILENAME = "system_settings.json"
+#: Default settings filename (mirrors config.DEFAULT_SETTINGS_FILENAME).
+SETTINGS_FILENAME = "config/system_settings.toml"
 
 
 @dataclass(frozen=True)
@@ -467,12 +467,12 @@ class IVLabSystem(QObject):
     # --- calibration persistence (legacy save_calibration_to_system_settings) ---
 
     def save_calibration_to_system_settings(self, calibration_params: dict) -> None:
-        """Persist a confirmed calibration to ``system_settings.json``.
+        """Persist a confirmed calibration to the settings file.
 
-        Legacy behavior: updates ``fullSunReferenceCurrent`` and a fresh
-        ``calibrationDateTime`` (``%c`` format) in the settings and on
-        the SMU, then rewrites the settings file. Unlike legacy, the
-        arduino section (and any extra keys) survive the rewrite.
+        Updates ``fullSunReferenceCurrent`` and ``calibrationDateTime``
+        in memory and on the SMU, then writes the file back via
+        :func:`~iv_lab.config.save_settings` (JSON: full rewrite;
+        TOML: targeted round-trip that preserves comments).
         """
         date_time_string = datetime.datetime.now().strftime("%c")
         reference_current = calibration_params["reference_current"]
@@ -482,10 +482,7 @@ class IVLabSystem(QObject):
         self.settings.IVsys.calibrationDateTime = date_time_string
         self.smu.calibration_datetime = date_time_string
 
-        with open(self.settings_file, "w") as outfile:
-            json.dump(
-                self.settings.model_dump(by_alias=True, exclude_none=True), outfile
-            )
+        save_settings(self.settings_file, self.settings)
 
     # --- shutdown ---
 

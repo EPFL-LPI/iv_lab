@@ -25,6 +25,8 @@ dependencies = [
     "matplotlib",
     # GUI plotting (legacy used pyqtgraph as well)
     "pyqtgraph",
+    # TOML round-trip writer (preserves comments when saving calibration to .toml)
+    "tomlkit",
 ]
 
 [project.optional-dependencies]

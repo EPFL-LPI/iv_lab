@@ -419,6 +419,95 @@ def test_save_calibration_updates_settings_file(tmp_path: Path) -> None:
     assert reloaded.IVsys.calibrationDateTime != "Wed Jun  8 16:07:18 2022"
 
 
+def test_save_calibration_toml_updates_values(tmp_path: Path) -> None:
+    toml_content = """\
+[computer]
+hardware = "Test PC"
+os = "Windows 11"
+basePath = "C:\\\\Data"
+sdPath = ""
+
+[IVsys]
+sysName = "IVLab"
+fullSunReferenceCurrent = 0.005
+calibrationDateTime = "Mon Jan  1 00:00:00 2024"
+referenceDiodeImax = 0.01
+
+[lamp]
+brand = "manual"
+model = "manual"
+emulate = true
+
+[SMU]
+brand = "Keithley"
+model = "2400"
+visa_address = "GPIB0::24::INSTR"
+visa_library = "C:\\\\Windows\\\\System32\\\\visa32.dll"
+emulate = true
+useReferenceDiode = false
+"""
+    settings_path = tmp_path / "system_settings.toml"
+    settings_path.write_text(toml_content, encoding="utf-8")
+    write_users(tmp_path / "users.txt", USERS)
+    system = IVLabSystem(
+        load_settings(settings_path),
+        users_file=tmp_path / "users.txt",
+        settings_file=settings_path,
+        threaded=False,
+    )
+
+    system.save_calibration_to_system_settings({"reference_current": 0.0062})
+
+    reloaded = load_settings(settings_path)
+    assert reloaded.IVsys.fullSunReferenceCurrent == pytest.approx(0.0062)
+    assert reloaded.IVsys.calibrationDateTime != "Mon Jan  1 00:00:00 2024"
+
+
+def test_save_calibration_toml_preserves_comments(tmp_path: Path) -> None:
+    toml_content = """\
+# This comment must survive a calibration save.
+[computer]
+hardware = "Test PC"
+os = "Windows 11"
+basePath = "C:\\\\Data"
+sdPath = ""
+
+[IVsys]
+sysName = "IVLab"
+fullSunReferenceCurrent = 0.005  # updated by calibration
+calibrationDateTime = "Mon Jan  1 00:00:00 2024"
+referenceDiodeImax = 0.01
+
+[lamp]
+brand = "manual"
+model = "manual"
+emulate = true
+
+[SMU]
+brand = "Keithley"
+model = "2400"
+visa_address = "GPIB0::24::INSTR"
+visa_library = "C:\\\\Windows\\\\System32\\\\visa32.dll"
+emulate = true
+useReferenceDiode = false
+"""
+    settings_path = tmp_path / "system_settings.toml"
+    settings_path.write_text(toml_content, encoding="utf-8")
+    write_users(tmp_path / "users.txt", USERS)
+    system = IVLabSystem(
+        load_settings(settings_path),
+        users_file=tmp_path / "users.txt",
+        settings_file=settings_path,
+        threaded=False,
+    )
+
+    system.save_calibration_to_system_settings({"reference_current": 0.0062})
+
+    saved_text = settings_path.read_text(encoding="utf-8")
+    assert "# This comment must survive a calibration save." in saved_text
+    assert "# updated by calibration" in saved_text
+
+
 def test_save_calibration_preserves_arduino_section(tmp_path: Path) -> None:
     # legacy dropped the arduino section on rewrite; the migrated code keeps it
     settings = settings_dict(tmp_path)

@@ -2,7 +2,7 @@
 # Hardware: Trinamic TMCM-1260 filter wheel + Newport SOL3A 94043A solar simulator
 #           Keithley 2400 SMU (single channel, with reference diode on ch B)
 #
-# To use: copy to config/system_settings.json and adjust paths and calibration values.
+# To use: copy to config/system_settings.toml and adjust paths and calibration values.
 
 [computer]
 hardware = "OrielIV"          # free label, used in log files
