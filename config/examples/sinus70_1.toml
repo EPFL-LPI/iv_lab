@@ -1,0 +1,48 @@
+# Sinus70-1 — LPI lab station
+# Hardware: Wavelabs Sinus70 solar simulator + Keithley 2602 SMU
+
+[computer]
+hardware = "Sinus70-1 PC"
+os = "Windows 10"
+basePath = "D:\\Data"
+sdPath = "D:\\sd"
+
+[IVsys]
+sysName = "IVLab"
+fullSunReferenceCurrent = 0.001096
+calibrationDateTime = "Tue Oct  1 14:32:52 2024"
+referenceDiodeImax = 0.01
+saveDataAutomatic = false
+checkVOCBeforeScan = true
+firstPointDwellTime = 5.0
+MPPVoltageStepInitial = 0.002
+MPPVoltageStepMax = 0.002
+MPPVoltageStepMin = 0.001
+
+[lamp]
+brand = "Wavelabs"
+model = "Sinus70"
+"display name" = "Sinus70 (Wavelabs)"
+emulate = false
+
+# lightLevelDict: maps light level % to Wavelabs recipe name (string).
+# "999.0" is the custom/manual recipe slot.
+[lamp.lightLevelDict]
+"100.0" = "1 sun, 1 h"
+"50.0" = "0.5 sun, 1 h"
+"20.0" = "0.2 sun, 1 h"
+"10.0" = "0.1 sun, 1 h"
+"999.0" = "custom"
+"0.0" = "dummy"
+
+[SMU]
+brand = "Keithley"
+model = "2602"                       # dual-channel; ch A = cell, ch B = reference diode
+visa_address = "COM1"
+# macOS VISA framework path — use SysWOW64\\visa32.dll on Windows instead.
+visa_library = "/Library/Frameworks/VISA.framework/Versions/A/Headers/visa.h"
+emulate = false
+referenceDiodeSenseMode = "2wire"
+autorange = true
+measSpeed = "normal"                 # "fast" | "medium" | "normal" (2602 only)
+useReferenceDiode = true
