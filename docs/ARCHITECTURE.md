@@ -106,11 +106,21 @@ Purpose:
 Target files:
 
 ```text
-config/
+src/iv_lab/config/
 ├── __init__.py
-├── settings.py
-└── templates/
-    └── system_settings.example.json
+└── settings.py
+```
+
+Per-machine example configs live under the repository-level `config/` directory:
+
+```text
+config/
+├── system_settings_example.json   # emulation-ready template (committed)
+├── system_settings.json           # machine-specific runtime (gitignored)
+├── users_generic.txt              # user table template (committed)
+├── users.txt                      # machine-specific live users (gitignored)
+└── examples/
+    └── *.toml                     # per-system config examples with comments
 ```
 
 Rules:
@@ -177,7 +187,7 @@ hardware/smu/
 
 Important rule:
 
-Hardware libraries such as `pyvisa`, `pymeasure`, `pytrinamic`, and local `Keithley26XX.py` must only be imported inside `connect()` or equivalent hardware-use methods.
+Hardware libraries such as `pyvisa`, `pymeasure`, `pytrinamic`, and the bundled `_keithley26xx_lib` module must only be imported inside `connect()` or equivalent hardware-use methods.
 
 The package must import successfully in emulation mode without these libraries installed.
 
@@ -253,21 +263,18 @@ Purpose:
 
 - isolate photovoltaic metric calculation.
 
-Target file:
+Files:
 
 ```text
-analysis/jv_metrics.py
+analysis/
+├── jv_metrics.py    # thin public interface (Voc, Jsc, FF, PCE, …)
+└── jv_analysis.py   # bundled implementation (ported from bric_analysis_libraries)
 ```
 
-Preserve use of:
+`jv_metrics.py` is the only module the rest of the codebase imports.
+`jv_analysis.py` contains the actual curve-fitting and metric calculations.
 
-```text
-bric_analysis_libraries.jv.jv_analysis
-```
-
-Do not reimplement Voc, Jsc, FF, or PCE unless explicitly requested.
-
-The analysis module should provide a small internal interface so the rest of the code does not directly depend on the external analysis package everywhere.
+Do not reimplement these metrics from scratch. If the calculations need to change, edit `jv_analysis.py` directly.
 
 ---
 

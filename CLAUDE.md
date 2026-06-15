@@ -1,11 +1,10 @@
 # CLAUDE.md
 
-This file gives Claude Code the mandatory instructions for refactoring this repository.
+This file gives Claude Code mandatory instructions for working on this repository.
 
-For details, read the supporting documents:
+For architecture details, see:
 
 - `docs/ARCHITECTURE.md`
-- `docs/MIGRATION.md`
 - `docs/HARDWARE.md`
 - `docs/TESTING.md`
 
@@ -32,30 +31,55 @@ and supports:
 - PDF report generation,
 - user login/logout and logbook behavior.
 
-The current goal is to refactor the monolithic PyQt5 application into a modern, modular PySide6 package while preserving legacy behavior.
+The refactor from the monolithic PyQt5 application to a modular PySide6 package is **complete**. The new package is `src/iv_lab/` and is the primary codebase going forward.
 
 ---
 
-## Legacy source of truth
+## Legacy files
 
-The legacy source of truth is:
+The legacy application lives in `IVLab/`:
 
-- `IVLab/IVlab.py`
-- `IVLab/IV_gui.py`
-- `IVLab/system_settings.json`
+- `IVLab/IVlab.py` — legacy backend
+- `IVLab/IV_gui.py` — legacy GUI
 
-Do not delete these files during migration.
+Do not delete or modify these files. They remain as behavioral reference and as a working fallback.
 
-Do not rewrite these files during the initial refactor.
+---
 
-Use them as the behavioral reference.
+## Package structure
+
+```text
+pyproject.toml
+
+config/
+├── system_settings_example.json   # emulation-ready template (committed)
+├── system_settings.json           # machine-specific runtime file (gitignored)
+├── users_generic.txt              # user table template (committed)
+└── users.txt                      # machine-specific live users (gitignored)
+
+src/
+└── iv_lab/
+    ├── __init__.py
+    ├── main.py
+    ├── config/       # settings.py — Pydantic v2 models for system_settings.json
+    ├── hardware/     # SMU, lamp, Arduino — base, registry, factory, drivers
+    ├── measurements/ # protocols/ (pure logic) + workers/ (Qt wrappers)
+    ├── analysis/     # jv_metrics.py + bundled jv_analysis.py
+    ├── data/         # results.py, file_writer.py, pdf_report.py
+    ├── services/     # auth.py, logbook.py
+    ├── core/         # system.py — application orchestration
+    └── gui/          # app.py, main_window.py, panels/, dialogs/
+
+tests/
+docs/
+```
 
 ---
 
 ## Golden rules
 
 1. Preserve legacy behavior unless explicitly asked to change it.
-2. Do not modify `IVLab/IVlab.py` or `IVLab/IV_gui.py` during migration.
+2. Do not modify `IVLab/IVlab.py` or `IVLab/IV_gui.py`.
 3. Do not change the structure or key names of `system_settings.json`.
 4. New GUI code must use PySide6 only. No PyQt5 in new code.
 5. Emulation mode must work without physical hardware.
@@ -64,51 +88,12 @@ Use them as the behavioral reference.
 8. Do not use `app.processEvents()` in new code.
 9. GUI updates from running measurements must go through Qt signals and slots.
 10. Hardware must be left in a safe state after completion, error, or cancellation.
-11. Refactor incrementally. Do not perform a large all-at-once rewrite.
-12. Add or update tests for every migrated component.
-13. Commit and push after each validated migration step.
-
----
-
-## Target package structure
-
-Use a modern `src/` layout:
-
-```text
-pyproject.toml
-CLAUDE.md
-README.md
-
-src/
-└── iv_lab/
-    ├── __init__.py
-    ├── main.py
-    ├── config/
-    ├── hardware/
-    ├── measurements/
-    ├── analysis/
-    ├── data/
-    ├── services/
-    ├── core/
-    └── gui/
-
-tests/
-docs/
-```
-
-Do not place the new package directly at repository root.
-
-The package should be importable as:
-
-```python
-import iv_lab
-```
+11. Add or update tests for every changed component.
+12. Run `python -m pytest` before every commit.
 
 ---
 
 ## Dependency direction
-
-Keep dependencies clean:
 
 ```text
 gui → core → measurements → hardware
@@ -132,80 +117,58 @@ Rules:
 
 ## Configuration
 
-Use Pydantic v2 in:
-
-```text
-src/iv_lab/config/settings.py
-```
+`src/iv_lab/config/settings.py` is the only module that reads `system_settings.json`.
 
 Rules:
 
-- `config/settings.py` is the only new module that reads `system_settings.json`.
-- Other modules receive typed settings objects.
-- Preserve the legacy JSON structure.
-- During migration, allow extra fields so existing machine configs do not break prematurely.
-- Per-machine `system_settings.json` files must be gitignored.
-- Example/template settings files may be committed.
+- Other modules receive typed Pydantic settings objects, never raw dicts.
+- Preserve the legacy JSON key names and nesting.
+- Models use `extra="allow"` to tolerate unknown legacy fields.
+
+Runtime configuration files (machine-specific, gitignored):
+
+- `config/system_settings.json` — auto-discovered by `main.py` if `--settings` is omitted
+- `config/users.txt` — auto-discovered if `--users` is omitted; falls back to `config/users_generic.txt`
+
+Committed templates (copy and edit for a new machine):
+
+- `config/system_settings_example.json`
+- `config/users_generic.txt`
+
+Per-machine example configs for each physical system live under `config/examples/` as TOML files with comments.
 
 ---
 
 ## Hardware
 
-Hardware modules must use:
-
-- an abstract base class,
-- a registry,
-- a factory,
-- real drivers,
-- an emulated driver.
-
-Target hardware modules:
+All hardware families follow: abstract base class → registry → factory → real drivers + emulated driver.
 
 ```text
 src/iv_lab/hardware/
 ├── base.py
 ├── errors.py
-├── smu/
-├── lamp/
-└── arduino/
+├── smu/     # Keithley 2400/2401/2450 (pymeasure),
+│            # Keithley 2600/2602 (bundled drivers/_keithley26xx_lib.py)
+├── lamp/    # Wavelabs Sinus70, Oriel LSS-7120, Trinamic filter wheels,
+│            # Keithley-controlled filter wheel, manual lamp
+└── arduino/ # shutter / cell-selection controller
 ```
 
-Supported legacy behavior must be preserved:
-
-- Keithley 2400 / 2401 / 2450 via `pymeasure`
-- Keithley 2600 / 2602 via local `Keithley26XX.py`
-- dual-channel Keithley behavior, including reference photodiode measurement on channel B
-- Wavelabs Sinus70
-- Oriel LSS-7120
-- Trinamic filter wheels
-- Keithley-controlled filter wheel
-- manual lamp mode
-- Arduino shutter / cell-selection controller
-
-All optional hardware libraries must be imported only inside driver connection/use methods.
+All optional hardware libraries (`pyvisa`, `pymeasure`, `pytrinamic`) must be imported only inside driver `connect()`-style methods, never at package import time.
 
 ---
 
 ## Measurements
 
-Do not put measurement logic directly into `QThread` subclasses.
-
-Use:
-
 ```text
 src/iv_lab/measurements/
-├── protocols/   # pure measurement logic
-└── workers/     # QObject workers with Qt signals
+├── protocols/   # pure measurement logic — no GUI imports
+└── workers/     # QObject workers with Qt signals, run on QThread
 ```
 
-Workers should support:
+Workers emit: `data_ready`, `status_update`, `progress_update`, `finished`, `error`.
 
-- `data_ready`
-- `status_update`
-- `progress_update`
-- `finished`
-- `error`
-- cancellation via `request_stop()`
+Workers support cancellation via `request_stop()`.
 
 Measurement routines must use `try/finally` to leave hardware safe.
 
@@ -213,136 +176,67 @@ Measurement routines must use `try/finally` to leave hardware safe.
 
 ## Data
 
-Use dataclasses for result objects in:
+Result objects: `src/iv_lab/data/results.py` (dataclasses).
+All file writing: `src/iv_lab/data/file_writer.py`.
+PDF reports: `src/iv_lab/data/pdf_report.py`.
 
-```text
-src/iv_lab/data/results.py
-```
-
-All file writing must go through:
-
-```text
-src/iv_lab/data/file_writer.py
-```
-
-Preserve:
-
-- legacy data file format,
-- CSV compatibility,
-- PDF report behavior,
-- `sdPath` scrambled duplicate copy logic,
-- `ivlablog.txt`.
-
-Do not scatter `open()` calls across the application.
+Preserve: legacy data file format, CSV compatibility, PDF report behavior, `sdPath` scrambled duplicate copy, `ivlablog.txt`.
 
 ---
 
 ## Services
 
-Move authentication and logbook behavior into:
-
 ```text
-src/iv_lab/services/auth.py
-src/iv_lab/services/logbook.py
+src/iv_lab/services/
+├── auth.py     # users.txt scrambled JSON, login, calibration permissions
+└── logbook.py  # login/logout logging
 ```
 
-Preserve:
-
-- `users.txt` scrambled JSON behavior,
-- blank username plus password `123456` login as generic `user`,
-- hardcoded calibration permissions,
-- legacy login/logout logging.
+Preserve: scrambled JSON format, blank-username generic login (`user` / `123456`), hardcoded calibration permissions.
 
 ---
 
-## Migration order
+## Running the application
 
-Refactor in this order:
+```bash
+# Emulation (no hardware needed):
+python -m iv_lab.main --settings config/system_settings_example.json --emulate
 
-1. package skeleton with `src/iv_lab`
-2. `config/settings.py`
-3. `data/results.py`
-4. `hardware/base.py` and `hardware/errors.py`
-5. `hardware/smu/`
-6. `hardware/lamp/`
-7. `hardware/arduino/`
-8. `analysis/jv_metrics.py`
-9. `measurements/protocols/`
-10. `measurements/workers/`
-11. `services/auth.py` and `services/logbook.py`
-12. `data/file_writer.py` and `data/pdf_report.py`
-13. `core/system.py`
-14. `gui/`
-15. `main.py`
+# Real hardware (copy and customise system_settings_example.json first):
+python -m iv_lab.main --settings config/system_settings.json
+```
 
-Commit and push after each validated step.
+`--users` is optional: falls back to `config/users.txt`, then `config/users_generic.txt`.
 
 ---
 
 ## Tests
 
-Use `pytest`.
-
-At minimum, add tests for:
-
-- settings loading,
-- importing without hardware drivers installed,
-- SMU emulation,
-- lamp emulation,
-- Arduino emulation,
-- emulated IV curve measurement,
-- legacy file-writing format,
-- legacy authentication behavior.
-
-Before committing, run:
+Use `pytest`. Run before every commit:
 
 ```bash
 python -m pytest
 ```
 
-When available, also run:
+Add or update tests for every changed component. At minimum cover:
 
-```bash
-python -m iv_lab.main --emulate
-```
+- settings loading and Pydantic validation,
+- importing without hardware libraries installed,
+- SMU / lamp / Arduino emulation,
+- emulated IV curve and MPP tracking,
+- legacy file-writing format,
+- legacy authentication behavior.
 
 ---
 
 ## Git workflow
 
-Work only on:
-
-```text
-refactor/modular-pyside6
-```
-
-Do not commit to `main`.
-
-After each working step:
+Work on `refactor/modular-pyside6`. Do not commit directly to `main`.
 
 ```bash
-git add -A
-git commit -m "refactor: <subject>" -m "<body explaining what was done and why>"
+git add <files>
+git commit -m "refactor: <subject>" -m "<body>"
 git push
 ```
 
-Use granular commits.
-
-Do not squash or amend unless explicitly requested.
-
----
-
-## Definition of done
-
-The refactor is complete only when:
-
-- the new PySide6 GUI starts,
-- emulation mode works without hardware libraries,
-- an emulated J-V scan works,
-- MPP tracking works in emulation,
-- data files are legacy-compatible,
-- PDF generation works,
-- login/logout behavior is preserved,
-- calibration permissions are preserved,
-- tests pass,
-- real hardware has been validated carefully.
+Use granular commits. Do not squash or amend unless explicitly requested.
