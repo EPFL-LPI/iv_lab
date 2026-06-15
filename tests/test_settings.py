@@ -170,7 +170,7 @@ def test_arduino_section_is_parsed_when_present(tmp_path: Path) -> None:
     [
         "system_settings_oldIV.json",
         "system_settings_Sinus70-1.json",
-        "system_settings_OrielIV_LPI.json",
+        "system_settings_OrielIV.json",
     ],
 )
 def test_committed_legacy_templates_load(template: str) -> None:

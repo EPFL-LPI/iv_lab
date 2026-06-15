@@ -1,17 +1,12 @@
 """Photovoltaic metrics from a J-V scan.
 
-Thin wrapper around ``bric_analysis_libraries.jv.jv_analysis``, isolating
-the external analysis package behind one internal interface (step 8 of
-docs/MIGRATION.md). Voc, Jsc, FF, and PCE are *not* reimplemented.
+Thin wrapper around the internal ``jv_analysis`` module, isolating the
+analysis logic behind one interface (step 8 of docs/MIGRATION.md). Voc,
+Jsc, FF, and PCE are not reimplemented here.
 
-The DataFrame plumbing and the unit conversions replicate the legacy
-``system.measure_IVcurve`` in ``IVLab/IVlab.py`` exactly: current is
-divided by the active area before analysis, and the returned values use
-the legacy result units (V, mA/cm², mW/cm²; ``Pmpp`` as absolute value).
-
-``numpy``, ``pandas``, and ``bric_analysis_libraries`` are imported
-inside the computation so the package imports without them (consistent
-with the deferred-import policy for optional dependencies).
+``numpy`` and ``jv_analysis`` (which imports ``pandas`` and ``scipy``) are
+imported inside ``compute_jv_metrics`` so the package imports without them,
+consistent with the deferred-import policy for heavy scientific dependencies.
 """
 
 from __future__ import annotations
@@ -32,29 +27,6 @@ class JVMetrics:
     FF: float  #: fill factor
 
 
-def _import_bric_jv():
-    """Import the analysis package, shimming the removed scipy name.
-
-    ``bric_analysis_libraries`` 0.1.x imports ``scipy.integrate.trapz``,
-    which modern SciPy removed (it is called ``trapezoid`` now), so the
-    package cannot import on current environments. Alias the old name
-    before retrying (found during the step 16 end-to-end validation).
-    """
-    try:
-        import bric_analysis_libraries.jv.jv_analysis as bric_jv
-    except ImportError:
-        import scipy.integrate
-
-        if hasattr(scipy.integrate, "trapz") or not hasattr(
-            scipy.integrate, "trapezoid"
-        ):
-            raise
-        scipy.integrate.trapz = scipy.integrate.trapezoid
-        import bric_analysis_libraries.jv.jv_analysis as bric_jv
-
-    return bric_jv
-
-
 def compute_jv_metrics(
     voltage: Sequence[float],
     current: Sequence[float],
@@ -63,39 +35,26 @@ def compute_jv_metrics(
 ) -> JVMetrics:
     """Compute J-V metrics from raw scan data.
 
-    ``voltage`` in V, ``current`` in A, ``active_area`` in cm². The
-    legacy DataFrame layout is reproduced: voltage as the index, current
-    density (A/cm²) as a single column named after the cell, analyzed by
-    ``bric_jv.get_metrics(df, generator=False, fit_window=4)``.
+    ``voltage`` in V, ``current`` in A, ``active_area`` in cm².  The
+    legacy result units are used: Jsc/Jmpp in mA/cm², Pmpp in mW/cm²
+    as an absolute value.
     """
     import numpy as np
     import pandas as pd
+    from . import jv_analysis
 
-    bric_jv = _import_bric_jv()
+    j_density = np.array(current) / active_area  # A/cm²
+    df = pd.DataFrame({cell_name: j_density}, index=list(voltage))
 
-    pairs = [(v, i / active_area) for v, i in zip(voltage, current)]
-
-    jv_data = np.array(pairs)
-    df = pd.DataFrame(jv_data)
-    metrics = ["voltage", "current"]
-    header = pd.MultiIndex.from_product(
-        [[cell_name], metrics], names=["sample", "metrics"]
-    )
-    df.columns = header
-
-    df.index = df.xs("voltage", level="metrics", axis=1).values.flatten()
-    df.drop("voltage", level="metrics", axis=1, inplace=True)
-    df.columns = df.columns.droplevel("metrics")
-
-    jv_metrics = bric_jv.get_metrics(df, generator=False, fit_window=4)
+    result = jv_analysis.get_metrics(df, generator=False, fit_window=4)
 
     return JVMetrics(
-        Voc=float(jv_metrics["voc"].iloc[0]),
-        Jsc=float(jv_metrics["jsc"].iloc[0]) * 1000.0,
-        Vmpp=float(jv_metrics["vmpp"].iloc[0]),
-        Jmpp=float(jv_metrics["jmpp"].iloc[0]) * 1000.0,
-        Pmpp=abs(float(jv_metrics["pmpp"].iloc[0]) * 1000.0),
-        FF=float(jv_metrics["ff"].iloc[0]),
+        Voc=float(result["voc"].iloc[0]),
+        Jsc=float(result["jsc"].iloc[0]) * 1000.0,
+        Vmpp=float(result["vmpp"].iloc[0]),
+        Jmpp=float(result["jmpp"].iloc[0]) * 1000.0,
+        Pmpp=abs(float(result["pmpp"].iloc[0]) * 1000.0),
+        FF=float(result["ff"].iloc[0]),
     )
 
 

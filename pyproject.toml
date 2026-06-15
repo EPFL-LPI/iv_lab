@@ -18,7 +18,7 @@ dependencies = [
     "numpy",
     "pandas",
     # JV metrics (Voc, Jsc, FF, PCE); imported lazily in analysis/jv_metrics.py
-    "bric-analysis-libraries>=0.1.2",
+    "scipy",
     # Qt measurement workers and (later) the GUI; QtCore only in workers
     "PySide6",
     # J-V PDF reports; imported lazily in data/pdf_report.py

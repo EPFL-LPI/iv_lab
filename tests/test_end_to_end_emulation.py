@@ -89,8 +89,6 @@ def login(window: MainWindow, username: str, password: str) -> None:
 
 
 def test_full_session_login_to_logout(tmp_path: Path) -> None:
-    pytest.importorskip("bric_analysis_libraries")  # real metrics pipeline
-
     window = make_window(tmp_path)
     system = window.system
     panel = window.measurement_panel

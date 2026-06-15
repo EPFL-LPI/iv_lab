@@ -1,102 +1,83 @@
 """Tests for the JV metrics analysis wrapper.
 
-``bric_analysis_libraries`` is not required: a fake module is injected
-into ``sys.modules``. ``numpy`` and ``pandas`` are real (runtime
-dependencies of the package).
+``scipy``, ``numpy``, and ``pandas`` are deferred — only imported when
+``compute_jv_metrics`` is called, not at module load.
 """
 
+import os
+import subprocess
 import sys
-import types
 
+import numpy as np
 import pytest
 
 from iv_lab.analysis import JVMetrics, compute_jv_metrics, pce
 
 
-@pytest.fixture
-def fake_bric(monkeypatch):
-    """Inject a fake bric_analysis_libraries.jv.jv_analysis module."""
-    import pandas as pd
+def _ideal_diode_jv(active_area: float = 0.16, n: int = 500):
+    """Synthetic ideal-diode JV curve with predictable metrics.
 
-    state = types.SimpleNamespace(received=None, kwargs=None)
-
-    def get_metrics(df, **kwargs):
-        state.received = df
-        state.kwargs = kwargs
-        return pd.DataFrame(
-            {
-                "voc": [0.55],
-                "jsc": [-0.0212],  # A/cm²
-                "vmpp": [0.45],
-                "jmpp": [-0.0188],  # A/cm²
-                "pmpp": [-0.00846],  # W/cm²
-                "ff": [0.726],
-            }
-        )
-
-    jv_analysis_mod = types.ModuleType("bric_analysis_libraries.jv.jv_analysis")
-    jv_analysis_mod.get_metrics = get_metrics
-    jv_mod = types.ModuleType("bric_analysis_libraries.jv")
-    jv_mod.jv_analysis = jv_analysis_mod
-    bric_mod = types.ModuleType("bric_analysis_libraries")
-    bric_mod.jv = jv_mod
-
-    monkeypatch.setitem(sys.modules, "bric_analysis_libraries", bric_mod)
-    monkeypatch.setitem(sys.modules, "bric_analysis_libraries.jv", jv_mod)
-    monkeypatch.setitem(
-        sys.modules, "bric_analysis_libraries.jv.jv_analysis", jv_analysis_mod
-    )
-    return state
+    Returns (voltage_list, current_A_list).
+    Voc ≈ 0.497 V, Jsc = -0.02 A/cm².
+    """
+    v = np.linspace(0.0, 0.55, n)
+    jsc = -0.02   # A/cm²
+    j0 = 1e-10
+    vt = 0.026
+    j = j0 * (np.exp(v / vt) - 1) + jsc  # A/cm²
+    current = j * active_area             # A
+    return list(v), list(current)
 
 
-def test_import_does_not_require_analysis_libraries() -> None:
-    # checked in a fresh interpreter: other tests may legitimately import
-    # bric at runtime, so the in-process sys.modules is not meaningful here
-    import os
-    import subprocess
-    from pathlib import Path
+def test_import_does_not_eagerly_import_scipy() -> None:
+    """``import iv_lab.analysis`` must not pull in scipy."""
+    src = str((pytest.importorskip.__module__ and None) or None)  # just need a path expr
+    import pathlib
+    src = str(pathlib.Path(__file__).resolve().parent.parent / "src")
 
-    src = Path(__file__).resolve().parent.parent / "src"
     code = (
         "import sys; import iv_lab.analysis; "
-        "assert 'bric_analysis_libraries' not in sys.modules, 'imported at module load'; "
+        "assert 'scipy' not in sys.modules, 'scipy imported at module load'; "
         "print('ok')"
     )
     result = subprocess.run(
         [sys.executable, "-c", code],
         capture_output=True,
         text=True,
-        env={**os.environ, "PYTHONPATH": str(src)},
+        env={**os.environ, "PYTHONPATH": src},
     )
     assert result.stdout.strip() == "ok", result.stderr
 
 
-def test_compute_jv_metrics_legacy_dataframe_layout(fake_bric) -> None:
-    voltage = [0.0, 0.2, 0.4, 0.6]
-    current = [-0.0034, -0.0033, -0.0028, 0.001]  # A
-    active_area = 0.16  # cm²
-
-    compute_jv_metrics(voltage, current, active_area, cell_name="my cell")
-
-    df = fake_bric.received
-    # legacy layout: voltage as index, current density as the only column
-    assert list(df.index) == voltage
-    assert list(df.columns) == ["my cell"]
-    assert df["my cell"].iloc[0] == pytest.approx(-0.0034 / 0.16)
-    # legacy call arguments
-    assert fake_bric.kwargs == {"generator": False, "fit_window": 4}
-
-
-def test_compute_jv_metrics_legacy_unit_conversions(fake_bric) -> None:
-    metrics = compute_jv_metrics([0.0, 0.5], [-0.003, 0.001], 0.16)
-
+def test_compute_jv_metrics_returns_jvmetrics() -> None:
+    voltage, current = _ideal_diode_jv()
+    metrics = compute_jv_metrics(voltage, current, 0.16)
     assert isinstance(metrics, JVMetrics)
-    assert metrics.Voc == pytest.approx(0.55)
-    assert metrics.Jsc == pytest.approx(-21.2)  # A/cm² -> mA/cm²
-    assert metrics.Vmpp == pytest.approx(0.45)
-    assert metrics.Jmpp == pytest.approx(-18.8)
-    assert metrics.Pmpp == pytest.approx(8.46)  # abs, W/cm² -> mW/cm²
-    assert metrics.FF == pytest.approx(0.726)
+
+
+def test_compute_jv_metrics_unit_conversions() -> None:
+    """Jsc and Jmpp are in mA/cm², Pmpp is mW/cm² and always positive."""
+    active_area = 0.16
+    voltage, current = _ideal_diode_jv(active_area=active_area)
+
+    metrics = compute_jv_metrics(voltage, current, active_area)
+
+    # Jsc in mA/cm² (factor-of-1000 vs A/cm²), negative for a solar cell
+    assert metrics.Jsc == pytest.approx(-20.0, rel=0.02)
+    # Pmpp is the absolute value in mW/cm²
+    assert metrics.Pmpp > 0
+    # Vmpp is between 0 and Voc
+    assert 0.0 < metrics.Vmpp < metrics.Voc
+    # FF is a unitless ratio between 0 and 1
+    assert 0.0 < metrics.FF < 1.0
+
+
+def test_compute_jv_metrics_voc_and_jsc_signs() -> None:
+    """Voc is positive, Jsc is negative (consumer convention)."""
+    voltage, current = _ideal_diode_jv()
+    metrics = compute_jv_metrics(voltage, current, 0.16)
+    assert metrics.Voc > 0
+    assert metrics.Jsc < 0
 
 
 def test_pce_legacy_formula() -> None:
@@ -106,11 +87,8 @@ def test_pce_legacy_formula() -> None:
     assert pce(-8.46, 100.0) == pytest.approx(8.46)
 
 
-def test_real_bric_pipeline_on_emulated_diode() -> None:
-    """End-to-end check with the real analysis package (skipped when it
-    is not installed). Exercises the scipy ``trapz`` compatibility shim."""
-    pytest.importorskip("bric_analysis_libraries")
-
+def test_compute_jv_metrics_emulated_diode() -> None:
+    """End-to-end check using the hardware emulator as the data source."""
     from iv_lab.config import SMUSettings
     from iv_lab.hardware.smu.base import SMUChannel
     from iv_lab.hardware.smu.drivers.emulated import EmulatedSMU
@@ -134,7 +112,6 @@ def test_real_bric_pipeline_on_emulated_diode() -> None:
 
     metrics = compute_jv_metrics(voltage, current, 0.16, cell_name="emulated")
 
-    # the emulated diode model: Voc = 0.55 V, Isc = -4 mA over 0.16 cm²
     assert metrics.Voc == pytest.approx(0.55, abs=0.01)
     assert metrics.Jsc == pytest.approx(-25.0, rel=0.02)
     assert 0.0 < metrics.Vmpp < 0.55
