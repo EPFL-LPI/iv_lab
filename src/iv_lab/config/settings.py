@@ -1,6 +1,6 @@
-"""Typed loading of the legacy ``system_settings.json`` configuration file.
+"""Typed loading of system settings from ``.json`` or ``.toml`` files.
 
-This is the only module in the new package that reads ``system_settings.json``.
+This is the only module in the new package that reads settings files.
 All other modules receive the typed settings objects defined here.
 
 The JSON structure, key names, and nesting of the legacy file are preserved
@@ -17,12 +17,13 @@ Defaults for optional fields replicate the legacy defaults set in
 from __future__ import annotations
 
 import json
+import tomllib
 from pathlib import Path
 from typing import Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-#: Filename used by the legacy application (loaded from the working directory).
+#: Default settings filename (JSON; TOML is also supported).
 DEFAULT_SETTINGS_FILENAME = "system_settings.json"
 
 
@@ -124,6 +125,21 @@ class SystemSettings(LegacyCompatibleModel):
 
 
 def load_settings(path: Union[str, Path]) -> SystemSettings:
-    """Load and validate a legacy ``system_settings.json`` file."""
-    raw = json.loads(Path(path).read_text(encoding="utf-8"))
+    """Load and validate a system settings file (.json or .toml).
+
+    The file format is detected from the file extension.  Both formats
+    produce the same Python dict structure so all Pydantic validation
+    applies identically.  ``tomllib`` is part of the Python standard
+    library since 3.11.
+    """
+    p = Path(path)
+    suffix = p.suffix.lower()
+    if suffix == ".toml":
+        raw = tomllib.loads(p.read_text(encoding="utf-8"))
+    elif suffix == ".json":
+        raw = json.loads(p.read_text(encoding="utf-8"))
+    else:
+        raise ValueError(
+            f"unsupported settings file format {suffix!r} — expected .json or .toml"
+        )
     return SystemSettings.model_validate(raw)

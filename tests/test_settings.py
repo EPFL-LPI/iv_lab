@@ -179,3 +179,113 @@ def test_committed_legacy_templates_load(template: str) -> None:
     assert isinstance(settings, SystemSettings)
     assert settings.IVsys.sysName
     assert settings.SMU.brand == "Keithley"
+
+
+# ---------------------------------------------------------------------------
+# TOML support
+# ---------------------------------------------------------------------------
+
+MINIMAL_TOML = """\
+[computer]
+hardware = "Test PC"
+os = "Windows 11"
+basePath = "C:\\\\IVLab\\\\data"
+sdPath = ""
+
+[IVsys]
+sysName = "IVLab"
+fullSunReferenceCurrent = 0.006318
+calibrationDateTime = "Wed Jun  8 16:07:18 2022"
+referenceDiodeImax = 0.005
+
+[lamp]
+brand = "manual"
+model = "manual"
+emulate = false
+
+[SMU]
+brand = "Keithley"
+model = "2401"
+visa_address = "ASRL2"
+visa_library = "C:\\\\Windows\\\\System32\\\\visa32.dll"
+emulate = false
+"""
+
+
+def write_toml_settings(tmp_path: Path, content: str) -> Path:
+    path = tmp_path / "system_settings.toml"
+    path.write_text(content, encoding="utf-8")
+    return path
+
+
+def test_load_minimal_toml_settings(tmp_path: Path) -> None:
+    settings = load_settings(write_toml_settings(tmp_path, MINIMAL_TOML))
+
+    assert settings.computer.hardware == "Test PC"
+    assert settings.IVsys.sysName == "IVLab"
+    assert settings.lamp.brand == "manual"
+    assert settings.SMU.model == "2401"
+    assert settings.arduino is None
+
+
+def test_toml_ivsys_defaults_apply(tmp_path: Path) -> None:
+    settings = load_settings(write_toml_settings(tmp_path, MINIMAL_TOML))
+
+    assert settings.IVsys.saveDataAutomatic is False
+    assert settings.IVsys.checkVOCBeforeScan is True
+    assert settings.IVsys.firstPointDwellTime == 5.0
+
+
+def test_toml_light_level_dict_with_subtable(tmp_path: Path) -> None:
+    content = MINIMAL_TOML.replace(
+        '[lamp]\nbrand = "manual"\nmodel = "manual"\nemulate = false',
+        '[lamp]\nbrand = "Trinamic"\nmodel = "TMCM-1260"\nemulate = false\n'
+        '"display name" = "Newport SOL3A"\n\n[lamp.lightLevelDict]\n'
+        '"100.0" = 17\n"55.0" = 77\n"0.0" = 257',
+    )
+    settings = load_settings(write_toml_settings(tmp_path, content))
+
+    assert settings.lamp.lightLevelDict == {100.0: 17, 55.0: 77, 0.0: 257}
+    assert settings.lamp.display_name == "Newport SOL3A"
+
+
+def test_toml_wavelabs_recipe_strings(tmp_path: Path) -> None:
+    content = MINIMAL_TOML.replace(
+        '[lamp]\nbrand = "manual"\nmodel = "manual"\nemulate = false',
+        '[lamp]\nbrand = "Wavelabs"\nmodel = "Sinus70"\nemulate = false\n\n'
+        '[lamp.lightLevelDict]\n"100.0" = "1 sun, 1 h"\n"0.0" = "dummy"',
+    )
+    settings = load_settings(write_toml_settings(tmp_path, content))
+
+    assert settings.lamp.lightLevelDict[100.0] == "1 sun, 1 h"
+
+
+def test_toml_unsupported_extension_raises(tmp_path: Path) -> None:
+    path = tmp_path / "settings.yaml"
+    path.write_text("", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="unsupported settings file format"):
+        load_settings(path)
+
+
+@pytest.mark.parametrize(
+    "example",
+    [
+        "oriel_iv.toml",
+        "sinus70_1.toml",
+        "ivlab_wavelabs.toml",
+        "ivlab_indoor.toml",
+        "bcl.toml",
+        "bcl_old_iv.toml",
+        "gmf.toml",
+        "dell.toml",
+        "fte.toml",
+        "old_iv.toml",
+    ],
+)
+def test_committed_toml_examples_load(example: str) -> None:
+    settings = load_settings(REPO_ROOT / "config" / "examples" / example)
+
+    assert isinstance(settings, SystemSettings)
+    assert settings.IVsys.sysName
+    assert settings.SMU.brand == "Keithley"
