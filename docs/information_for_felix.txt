@@ -1,0 +1,7 @@
+C:\Users\dreickem\Documents\iv_lab
+
+# Emulation mode (no hardware needed):
+python -m iv_lab.main --settings config/system_settings_example.json --users tests/fixtures/users_generic.txt --emulate
+
+# Real hardware (copy and edit config/system_settings_example.json for your machine first):
+python -m iv_lab.main --settings config/system_settings.json --users tests/fixtures/users_generic.txt

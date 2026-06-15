@@ -1,10 +1,10 @@
 """Keithley 2600 / 2602 SMU driver (via the local ``Keithley26XX`` module).
 
 Migrated from the 2602 branches of the legacy ``SMU`` class in
-``IVLab/IVlab.py``. The local ``Keithley26XX.py`` driver (historically in
-the ``IVLab/`` directory, which must be importable) is imported only at
-connection time in ``_open()`` so the package imports without it (see
-docs/HARDWARE.md).
+``IVLab/IVlab.py``. The low-level VISA driver is now bundled as the
+private ``_keithley26xx_lib`` module in this package; it is imported only
+at connection time in ``_open()`` so the package imports without ``pyvisa``
+present (see docs/HARDWARE.md).
 
 Unlike the 2400 family, these instruments have two real SMU channels:
 
@@ -60,7 +60,7 @@ class Keithley26xxSMU(BaseSMU):
 
     def _open(self) -> None:
         # deferred import: must not be loaded at package import time
-        from Keithley26XX import SMU26xx
+        from iv_lab.hardware.smu.drivers._keithley26xx_lib import SMU26xx
 
         self.smu = SMU26xx(self.visa_address)
         self._channel_objects = {

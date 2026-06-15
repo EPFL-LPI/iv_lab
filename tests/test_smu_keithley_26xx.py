@@ -107,9 +107,10 @@ def fake_keithley26xx(monkeypatch):
         instances: list = []
         fail_on_init = False
 
-    module = types.ModuleType("Keithley26XX")
+    _LIB = "iv_lab.hardware.smu.drivers._keithley26xx_lib"
+    module = types.ModuleType(_LIB)
     module.SMU26xx = TestSMU26xx
-    monkeypatch.setitem(sys.modules, "Keithley26XX", module)
+    monkeypatch.setitem(sys.modules, _LIB, module)
     return TestSMU26xx
 
 
@@ -127,7 +128,7 @@ def connected_smu(fake_cls, **overrides):
 
 def test_driver_module_import_does_not_import_keithley26xx() -> None:
     assert "iv_lab.hardware.smu.drivers.keithley_26xx" in sys.modules
-    assert "Keithley26XX" not in sys.modules
+    assert "iv_lab.hardware.smu.drivers._keithley26xx_lib" not in sys.modules
 
 
 def test_driver_registered_for_2600_and_2602() -> None:
@@ -140,7 +141,7 @@ def test_factory_creates_driver_without_connecting() -> None:
 
     assert isinstance(smu, Keithley26xxSMU)
     assert not smu.is_connected()
-    assert "Keithley26XX" not in sys.modules  # only imported on connect
+    assert "iv_lab.hardware.smu.drivers._keithley26xx_lib" not in sys.modules
 
 
 # --- connection ---

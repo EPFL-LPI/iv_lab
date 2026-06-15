@@ -2,7 +2,7 @@
 
 All user files are created in tmp_path with the test's own scrambled
 content; the only repository file touched is the committed generic
-template ``IVLab/users_generic.txt`` (read-only).
+template ``config/users_generic.txt`` (read-only).
 """
 
 from pathlib import Path
@@ -63,7 +63,7 @@ def test_scramble_output_is_hex_with_random_seed_byte() -> None:
 
 def test_committed_generic_users_file_decodes() -> None:
     # the committed legacy template must load with the migrated code
-    users = load_users(REPO_ROOT / "IVLab" / "users_generic.txt")
+    users = load_users(REPO_ROOT / "config" / "users_generic.txt")
 
     assert isinstance(users, dict)
     assert users  # non-empty

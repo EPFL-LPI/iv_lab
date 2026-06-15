@@ -35,8 +35,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Union
 
-#: Legacy users file name (loaded from the working directory in legacy).
-USERS_FILENAME = "users.txt"
+#: Machine-specific live users file (gitignored; takes priority if it exists).
+USERS_FILENAME = "config/users.txt"
+
+#: Committed generic template used on new systems before a users.txt is created.
+USERS_GENERIC_FILENAME = "config/users_generic.txt"
 
 #: Legacy hardcoded usernames allowed to run the calibration.
 CALIBRATION_USERS = ("felix", "legeyt")

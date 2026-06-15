@@ -66,7 +66,7 @@ def test_factory_raises_for_unknown_real_driver() -> None:
 def test_factory_emulation_does_not_import_hardware_libraries() -> None:
     create_smu(make_settings(emulate=True))
 
-    for module in ("pyvisa", "pymeasure", "pytrinamic", "Keithley26XX"):
+    for module in ("pyvisa", "pymeasure", "pytrinamic"):
         assert module not in sys.modules
 
 

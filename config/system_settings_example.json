@@ -1,0 +1,44 @@
+{
+  "computer": {
+    "hardware": "OrielIV",
+    "os": "Windows 11",
+    "basePath": "C:\\Data",
+    "sdPath": "C:\\sd"
+  },
+  "IVsys": {
+    "sysName": "IVLab",
+    "fullSunReferenceCurrent": 0.006129,
+    "calibrationDateTime": "",
+    "referenceDiodeImax": 0.01,
+    "saveDataAutomatic": false,
+    "checkVOCBeforeScan": true,
+    "firstPointDwellTime": 5.0,
+    "MPPVoltageStepInitial": 0.002,
+    "MPPVoltageStepMax": 0.002,
+    "MPPVoltageStepMin": 0.001
+  },
+  "lamp": {
+    "brand": "Trinamic",
+    "model": "TMCM-1260",
+    "emulate": true,
+    "display name": "Newport SOL3A 94043A",
+    "lightLevelDict": {
+      "100.0": 17,
+      "55.0": 77,
+      "12.0": 137,
+      "1.2": 197,
+      "0.0": 257
+    }
+  },
+  "SMU": {
+    "brand": "Keithley",
+    "model": "2400",
+    "visa_address": "GPIB0::24::INSTR",
+    "visa_library": "C:\\Windows\\SysWOW64\\visa32.dll",
+    "emulate": true,
+    "referenceDiodeSenseMode": "2wire",
+    "autorange": true,
+    "measSpeed": "normal",
+    "useReferenceDiode": true
+  }
+}

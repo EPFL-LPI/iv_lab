@@ -10,7 +10,7 @@ import sys
 
 import pytest
 
-OPTIONAL_HARDWARE_MODULES = ["pyvisa", "pymeasure", "pytrinamic", "Keithley26XX"]
+OPTIONAL_HARDWARE_MODULES = ["pyvisa", "pymeasure", "pytrinamic"]
 
 PACKAGE_MODULES = [
     "iv_lab",

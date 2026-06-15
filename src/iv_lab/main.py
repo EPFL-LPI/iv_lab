@@ -20,11 +20,26 @@ import argparse
 import sys
 from typing import Optional
 
+from pathlib import Path
+
 from iv_lab.config import DEFAULT_SETTINGS_FILENAME, load_settings
-from iv_lab.services.auth import USERS_FILENAME
+from iv_lab.services.auth import USERS_FILENAME, USERS_GENERIC_FILENAME
 
 #: Legacy report logo file (in the working directory, as in legacy).
 DEFAULT_LOGO_FILENAME = "EPFL_Logo.png"
+
+
+def resolve_users_file(explicit: Optional[str]) -> Path:
+    """Return the users file to load, applying the fallback chain.
+
+    Priority: explicit --users arg → config/users.txt (if exists) → config/users_generic.txt
+    """
+    if explicit is not None:
+        return Path(explicit)
+    primary = Path(USERS_FILENAME)
+    if primary.exists():
+        return primary
+    return Path(USERS_GENERIC_FILENAME)
 
 
 def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
@@ -39,8 +54,11 @@ def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
     )
     parser.add_argument(
         "--users",
-        default=USERS_FILENAME,
-        help="scrambled user table (default: %(default)s in the working directory)",
+        default=None,
+        help=(
+            f"scrambled user table; if omitted the app looks for "
+            f"{USERS_FILENAME} first, then falls back to {USERS_GENERIC_FILENAME}"
+        ),
     )
     parser.add_argument(
         "--logo",
@@ -77,12 +95,14 @@ def main(argv: Optional[list[str]] = None, *, exec_app: bool = True) -> int:
         if settings.arduino is not None:
             settings.arduino.emulate = True
 
+    users_file = resolve_users_file(args.users)
+
     from iv_lab.gui.app import launch
 
     app, window = launch(
         settings,
         settings_file=args.settings,
-        users_file=args.users,
+        users_file=users_file,
         logo_path=args.logo,
     )
 

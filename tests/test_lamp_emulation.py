@@ -74,7 +74,7 @@ def test_factory_does_not_import_hardware_libraries() -> None:
     create_lamp(make_settings(emulate=True))
     create_lamp(manual_settings())
 
-    for module in ("pyvisa", "pymeasure", "pytrinamic", "Keithley26XX"):
+    for module in ("pyvisa", "pymeasure", "pytrinamic"):
         assert module not in sys.modules
 
 
