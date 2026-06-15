@@ -52,8 +52,12 @@ Do not delete or modify these files. They remain as behavioral reference and as 
 pyproject.toml
 
 config/
-├── system_settings_example.json   # emulation-ready template (committed)
-├── system_settings.json           # machine-specific runtime file (gitignored)
+├── examples/                      # per-system TOML templates with comments (committed)
+│   ├── oriel_iv.toml              # LPI OrielIV station (Trinamic + SOL3A + Keithley 2400)
+│   ├── sinus70_1.toml             # Wavelabs Sinus70 + Keithley 2602
+│   └── ...                        # one file per physical system
+├── system_settings_example.json   # emulation-ready JSON template (committed)
+├── system_settings.toml           # machine-specific runtime file (gitignored)
 ├── users_generic.txt              # user table template (committed)
 └── users.txt                      # machine-specific live users (gitignored)
 
@@ -61,7 +65,7 @@ src/
 └── iv_lab/
     ├── __init__.py
     ├── main.py
-    ├── config/       # settings.py — Pydantic v2 models for system_settings.json
+    ├── config/       # settings.py — Pydantic v2 models, load_settings(), save_settings()
     ├── hardware/     # SMU, lamp, Arduino — base, registry, factory, drivers
     ├── measurements/ # protocols/ (pure logic) + workers/ (Qt wrappers)
     ├── analysis/     # jv_metrics.py + bundled jv_analysis.py
@@ -80,7 +84,7 @@ docs/
 
 1. Preserve legacy behavior unless explicitly asked to change it.
 2. Do not modify `IVLab/IVlab.py` or `IVLab/IV_gui.py`.
-3. Do not change the structure or key names of `system_settings.json`.
+3. Do not change the structure or key names of the settings files (TOML or JSON).
 4. New GUI code must use PySide6 only. No PyQt5 in new code.
 5. Emulation mode must work without physical hardware.
 6. Emulation mode must work without `pyvisa`, `pymeasure`, or `pytrinamic` installed.
@@ -117,25 +121,34 @@ Rules:
 
 ## Configuration
 
-`src/iv_lab/config/settings.py` is the only module that reads `system_settings.json`.
+`src/iv_lab/config/settings.py` is the only module that reads settings files. It provides:
+
+- `load_settings(path)` — accepts `.toml` or `.json`, auto-detected by extension.
+- `save_settings(path, settings)` — writes back in the same format. For TOML, uses `tomlkit` for a comment-preserving round-trip (only existing keys are updated; comments and formatting are kept).
 
 Rules:
 
 - Other modules receive typed Pydantic settings objects, never raw dicts.
-- Preserve the legacy JSON key names and nesting.
+- Preserve the legacy JSON key names and nesting (same structure applies to TOML).
 - Models use `extra="allow"` to tolerate unknown legacy fields.
 
 Runtime configuration files (machine-specific, gitignored):
 
-- `config/system_settings.json` — auto-discovered by `main.py` if `--settings` is omitted
-- `config/users.txt` — auto-discovered if `--users` is omitted; falls back to `config/users_generic.txt`
+- `config/system_settings.toml` — auto-discovered by `main.py` when `--settings` is omitted
+- `config/users.txt` — auto-discovered when `--users` is omitted; falls back to `config/users_generic.txt`
 
-Committed templates (copy and edit for a new machine):
+To set up a new machine, copy an annotated example and edit it:
 
-- `config/system_settings_example.json`
-- `config/users_generic.txt`
+```bash
+copy config\examples\oriel_iv.toml config\system_settings.toml
+# edit config\system_settings.toml
+```
 
-Per-machine example configs for each physical system live under `config/examples/` as TOML files with comments.
+Committed templates:
+
+- `config/examples/*.toml` — one annotated file per physical system; copy to use
+- `config/system_settings_example.json` — emulation-ready JSON template
+- `config/users_generic.txt` — starting point for a new `users.txt`
 
 ---
 
@@ -199,11 +212,12 @@ Preserve: scrambled JSON format, blank-username generic login (`user` / `123456`
 ## Running the application
 
 ```bash
+# Real hardware — copy an example config and edit it, then run without flags:
+copy config\examples\oriel_iv.toml config\system_settings.toml
+python -m iv_lab.main
+
 # Emulation (no hardware needed):
 python -m iv_lab.main --settings config/system_settings_example.json --emulate
-
-# Real hardware (copy and customise system_settings_example.json first):
-python -m iv_lab.main --settings config/system_settings.json
 ```
 
 `--users` is optional: falls back to `config/users.txt`, then `config/users_generic.txt`.
@@ -220,7 +234,7 @@ python -m pytest
 
 Add or update tests for every changed component. At minimum cover:
 
-- settings loading and Pydantic validation,
+- settings loading and Pydantic validation (both `.json` and `.toml`),
 - importing without hardware libraries installed,
 - SMU / lamp / Arduino emulation,
 - emulated IV curve and MPP tracking,
