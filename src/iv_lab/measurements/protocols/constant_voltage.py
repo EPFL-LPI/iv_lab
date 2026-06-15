@@ -95,7 +95,11 @@ def measure_current_vs_time(
 
             emit_data({"t": list(data_t), "j": list(data_j)})
 
-            meas_time = meas_time + p["interval"]
+            # Skip any already-elapsed intervals so burst catch-up doesn't
+            # produce duplicate timestamps when the SMU returns instantly.
+            meas_time += p["interval"]
+            while meas_time <= now:
+                meas_time += p["interval"]
         else:
             # dummy measurement to keep the instrument display alive (legacy)
             if parallel_reference:
