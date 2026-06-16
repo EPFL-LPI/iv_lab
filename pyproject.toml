@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "iv_lab"
+version = "0.1.0.dev0"
+description = "Modular IV characterization application for the EPFL LPI optoelectronics lab"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "GPL-3.0-only" }
+authors = [
+    { name = "EPFL LPI" },
+]
+# Runtime dependencies are added as components are migrated (see docs/MIGRATION.md).
+dependencies = [
+    "pydantic>=2",
+    "numpy",
+    "pandas",
+    # JV metrics (Voc, Jsc, FF, PCE); imported lazily in analysis/jv_metrics.py
+    "scipy",
+    # Qt measurement workers and (later) the GUI; QtCore only in workers
+    "PySide6",
+    # J-V PDF reports; imported lazily in data/pdf_report.py
+    "matplotlib",
+    # GUI plotting (legacy used pyqtgraph as well)
+    "pyqtgraph",
+    # TOML round-trip writer (preserves comments when saving calibration to .toml)
+    "tomlkit",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

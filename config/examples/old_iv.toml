@@ -1,0 +1,42 @@
+# Old IV — original macOS IVLab station (historical reference)
+# Hardware: manual lamp + Keithley 2400 SMU + Arduino shutter/cell-selector
+
+[computer]
+hardware = "oldIV MAC"
+os = "macOS Mojave 10.14.6"
+basePath = "/Users/Shared/ivlab/data"
+sdPath = "/Users/Shared/ivlab/sd"
+
+[IVsys]
+sysName = "IVLab"
+fullSunReferenceCurrent = 1.6        # placeholder — update after first calibration
+calibrationDateTime = "Mon Jan 01 00:00:00 1900"
+referenceDiodeImax = 0.005
+saveDataAutomatic = false
+checkVOCBeforeScan = true
+firstPointDwellTime = 5.0
+MPPVoltageStepInitial = 0.002
+MPPVoltageStepMax = 0.002
+MPPVoltageStepMin = 0.001
+
+[lamp]
+brand = "manual"
+model = "manual"
+emulate = false
+
+[SMU]
+brand = "Keithley"
+model = "2400"
+visa_address = "GPIB0::24::INSTR"
+visa_library = "/Library/Frameworks/VISA.framework/Versions/A/Headers/visa.h"
+emulate = false
+referenceDiodeSenseMode = "2wire"
+autorange = true
+useReferenceDiode = true
+
+[arduino]
+brand = "Arduino"
+model = "Uno"
+visa_address = "ASRL1::INSTR"
+visa_library = "C:\\Windows\\System32\\visa32.dll"
+emulate = false

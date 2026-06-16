@@ -1,0 +1,50 @@
+# OrielIV — LPI lab station
+# Hardware: Trinamic TMCM-1260 filter wheel + Newport SOL3A 94043A solar simulator
+#           Keithley 2400 SMU (single channel, with reference diode on ch B)
+#
+# To use: copy to config/system_settings.toml and adjust paths and calibration values.
+
+[computer]
+hardware = "OrielIV"          # free label, used in log files
+os = "Windows 11"
+basePath = "C:\\Data"          # root directory for measurement data
+sdPath = "C:\\sd"              # scrambled backup copy directory; set "" to disable
+
+[IVsys]
+sysName = "IVLab"
+# fullSunReferenceCurrent is updated automatically each time you run a calibration.
+fullSunReferenceCurrent = 0.006078   # amps — reference diode current at 1 sun
+calibrationDateTime = "Tue Dec 16 21:00:53 2025"
+referenceDiodeImax = 0.01            # amps — current compliance for reference diode channel
+saveDataAutomatic = false            # true = auto-save after each scan; false = prompt
+checkVOCBeforeScan = true            # measure Voc before each scan to verify illumination
+firstPointDwellTime = 5.0            # seconds — settling time at first voltage point
+MPPVoltageStepInitial = 0.002        # volts — initial MPP tracker step
+MPPVoltageStepMax = 0.002            # volts — maximum MPP tracker step
+MPPVoltageStepMin = 0.001            # volts — minimum MPP tracker step
+
+[lamp]
+brand = "Trinamic"
+model = "TMCM-1260"                  # single-axis stepper controller
+"display name" = "Newport SOL3A 94043A"
+emulate = false
+
+# lightLevelDict: maps light level (% of 1 sun, string key) to stepper motor position.
+# Determine positions empirically with the calibration routine.
+[lamp.lightLevelDict]
+"100.0" = 17
+"55.0" = 77
+"12.0" = 137
+"1.2" = 197
+"0.0" = 257    # fully closed / dark
+
+[SMU]
+brand = "Keithley"
+model = "2400"                       # 2400 | 2401 | 2450 use pymeasure driver
+visa_address = "GPIB0::24::INSTR"
+visa_library = "C:\\Windows\\SysWOW64\\visa32.dll"
+emulate = false
+referenceDiodeSenseMode = "2wire"    # "2wire" or "4 wire"
+autorange = true
+# measSpeed is supported on the 2602 only; omit or ignore for 2400-series.
+useReferenceDiode = true             # measure reference diode on channel B during scans

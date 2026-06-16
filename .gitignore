@@ -3,3 +3,16 @@ IVLab Accessories
 IVLab/users.txt
 IVLab/system_settings.json
 IVLab/__pycache__
+
+# Machine-specific config (committed templates: config/examples/*.toml, config/*_generic.txt)
+config/users.txt
+config/system_settings.toml
+config/system_settings.json
+
+# Python build/test artifacts (new src/ package)
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+build/
+dist/

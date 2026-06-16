@@ -1,0 +1,9 @@
+C:\Users\dreickem\Documents\iv_lab
+
+# Emulation mode (no hardware needed):
+python -m iv_lab.main --settings config/system_settings_example.json --emulate
+
+# Real hardware — copy an example and edit it:
+#   copy config\examples\oriel_iv.toml config\system_settings.toml
+#   edit config\system_settings.toml
+python -m iv_lab.main
