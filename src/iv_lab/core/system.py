@@ -133,6 +133,9 @@ class IVLabSystem(QObject):
     # GUI-facing signals
     status_message = Signal(str)
     warning_message = Signal(str)
+    #: Emitted when a protocol needs the user to confirm before continuing.
+    #: Payload: (message, adjusted_dv_in_V); adjusted_dv is 0 when not applicable.
+    warning_confirmation_needed = Signal(str, float)
     error_message = Signal(str)
     data_updated = Signal(dict)
     progress_updated = Signal(int)
@@ -212,6 +215,7 @@ class IVLabSystem(QObject):
 
     def hardware_init(self) -> bool:
         """Connect all configured hardware; emits ``hardware_ready``."""
+        self.status_message.emit("Initializing SMU...")
         try:
             self.smu.connect()
         except (ValueError, HardwareError) as err:
@@ -225,6 +229,7 @@ class IVLabSystem(QObject):
             self.hardware_ready.emit(False)
             return False
 
+        self.status_message.emit("Initializing lamp...")
         try:
             self.lamp.connect()
         except (ValueError, HardwareError) as err:
@@ -237,6 +242,7 @@ class IVLabSystem(QObject):
             return False
 
         if self.arduino is not None:
+            self.status_message.emit("Initializing Arduino...")
             try:
                 self.arduino.connect()
             except (ValueError, HardwareError) as err:
@@ -251,6 +257,7 @@ class IVLabSystem(QObject):
                 self.hardware_ready.emit(False)
                 return False
 
+        self.status_message.emit("Hardware initialized")
         self.hardware_ready.emit(True)
         return True
 
@@ -373,6 +380,10 @@ class IVLabSystem(QObject):
                 self._worker = None
             return True
 
+        # threaded mode: enable blocking confirmations and route the signal
+        worker.enable_blocking_confirmations()
+        worker.warning_confirmation_needed.connect(self.warning_confirmation_needed)
+
         thread = QThread(self)
         worker.moveToThread(thread)
         thread.started.connect(worker.run)
@@ -388,6 +399,16 @@ class IVLabSystem(QObject):
         ``abort_run``)."""
         if self._worker is not None:
             self._worker.request_stop()
+
+    def confirm_warning_ok(self) -> None:
+        """Unblock the running measurement worker: user chose to proceed."""
+        if self._worker is not None:
+            self._worker.confirm_warning_ok()
+
+    def confirm_warning_abort(self) -> None:
+        """Unblock the running measurement worker: user chose to abort."""
+        if self._worker is not None:
+            self._worker.confirm_warning_abort()
 
     def _cleanup_worker(self) -> None:
         # runs in the main thread after the worker thread finished;

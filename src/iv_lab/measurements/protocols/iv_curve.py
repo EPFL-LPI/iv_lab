@@ -189,11 +189,28 @@ class IVCurveProtocol(MeasurementProtocol):
         # check that the SMU can handle the requested measurement interval
         if abs(p["dV"]) / p["sweep_rate"] < self.smu.meas_period_min:
             p["dV"] = self.smu.meas_period_min * p["sweep_rate"] + 0.01
-            self.warn(
+            new_dv_mv = abs(p["dV"]) * 1000.0
+            should_continue = self.confirm_warning(
                 "WARNING: the SMU is unable to provide the requested measurement rate.\n"
-                "The voltage step size has been adjusted to assure the requested "
-                "sweep rate is respected."
+                f"The voltage step size has been adjusted to {new_dv_mv:.2f} mV to assure "
+                "the requested sweep rate is respected.",
+                abs(p["dV"]),
             )
+            if not should_continue:
+                self.status("Run Aborted")
+                return IVResults(
+                    start_time=start_time,
+                    active_area=p["active_area"],
+                    cell_name=p["cell_name"],
+                    light_int=p["light_int"],
+                    start_V=p["start_V"],
+                    stop_V=p["stop_V"],
+                    dV=p["dV"],
+                    sweep_rate=p["sweep_rate"],
+                    Imax=p["Imax"],
+                    Nwire=p["Nwire"],
+                    Dwell=p["Dwell"],
+                )
 
         result = IVResults(
             start_time=start_time,

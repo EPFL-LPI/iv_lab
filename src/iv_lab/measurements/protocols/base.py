@@ -90,6 +90,7 @@ class MeasurementProtocol(ABC):
         self._warning_callback = warning_callback
         self._data_callback = data_callback
         self._cancel_callback = cancel_callback
+        self._confirm_callback: Optional[Callable[[str, float], bool]] = None
 
         #: Legacy ``system.measure_light_intensity`` measured for 5 s.
         self.light_intensity_measure_time = 5.0
@@ -108,6 +109,7 @@ class MeasurementProtocol(ABC):
         warning: Optional[Callable[[str], None]] = None,
         data: Optional[Callable[[dict], None]] = None,
         cancel: Optional[Callable[[], bool]] = None,
+        confirm: Optional[Callable[[str, float], bool]] = None,
     ) -> None:
         """Attach or replace the interaction callbacks.
 
@@ -123,6 +125,8 @@ class MeasurementProtocol(ABC):
             self._data_callback = data
         if cancel is not None:
             self._cancel_callback = cancel
+        if confirm is not None:
+            self._confirm_callback = confirm
 
     def status(self, message: str) -> None:
         """Report a status message (legacy ``show_status``)."""
@@ -133,6 +137,20 @@ class MeasurementProtocol(ABC):
         """Report a non-fatal warning (legacy warning ``error_window``)."""
         if self._warning_callback is not None:
             self._warning_callback(message)
+
+    def confirm_warning(self, message: str, adjusted_dv: float = 0.0) -> bool:
+        """Ask the user to confirm before proceeding after a warning.
+
+        Returns True (proceed) or False (abort). When no confirm callback
+        is wired (non-GUI / test use), falls back to warning-and-proceed.
+
+        ``adjusted_dv`` is the new voltage step in volts, or 0 if not
+        applicable; passed through to the GUI so the field can be updated.
+        """
+        if self._confirm_callback is not None:
+            return bool(self._confirm_callback(message, adjusted_dv))
+        self.warn(message)
+        return True
 
     def emit_data(self, data: dict) -> None:
         """Report live data for plotting (legacy ``updatePlot*``)."""

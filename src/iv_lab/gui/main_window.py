@@ -189,7 +189,8 @@ class MainWindow(QMainWindow):
         system = self.system
         system.status_message.connect(self.status_bar.showMessage)
         system.error_message.connect(self._show_error)
-        system.warning_message.connect(self._show_error)  # legacy error_window
+        system.warning_message.connect(self._show_warning)
+        system.warning_confirmation_needed.connect(self._show_warning_confirmation)
         system.data_updated.connect(self.plot_panel.update_live_data)
         system.measurement_finished.connect(self._on_measurement_finished)
         system.calibration_ready.connect(self._on_calibration_ready)
@@ -213,12 +214,47 @@ class MainWindow(QMainWindow):
                 light_levels[f"{level:4.1f} % Sun"] = level
         self.light_panel.set_light_level_list(light_levels)
 
-    # --- error display (legacy showErrorMessage / error_window) ---
+    # --- error / warning display (legacy showErrorMessage / error_window) ---
 
     def _show_error(self, message: str) -> None:
         self.error_log.append(message)
         if not self.suppress_error_dialogs:
             QMessageBox.critical(self, "IVlab Error", message)
+
+    def _show_warning(self, message: str) -> None:
+        self.error_log.append(message)
+        if not self.suppress_error_dialogs:
+            QMessageBox.warning(self, "IVlab Warning", message)
+
+    def _show_warning_confirmation(self, message: str, adjusted_dv: float) -> None:
+        """Show a blocking warning with OK / Abort; unblocks the worker thread."""
+        self.error_log.append(message)
+        if self.suppress_error_dialogs:
+            # test mode: auto-proceed and update the field if needed
+            if adjusted_dv > 0.0:
+                self.measurement_panel.field_iv_v_step.setText(
+                    f"{adjusted_dv * 1000:.4g}"
+                )
+            self.system.confirm_warning_ok()
+            return
+
+        box = QMessageBox(self)
+        box.setWindowTitle("IVlab Warning")
+        box.setIcon(QMessageBox.Icon.Warning)
+        box.setText(message)
+        ok_button = box.addButton(QMessageBox.StandardButton.Ok)
+        abort_button = box.addButton("Abort", QMessageBox.ButtonRole.RejectRole)
+        box.setDefaultButton(ok_button)
+        box.exec()
+        if box.clickedButton() == abort_button:
+            self.system.confirm_warning_abort()
+        else:
+            if adjusted_dv > 0.0:
+                # update the Voltage Step field (field is in mV, dV is in V)
+                self.measurement_panel.field_iv_v_step.setText(
+                    f"{adjusted_dv * 1000:.4g}"
+                )
+            self.system.confirm_warning_ok()
 
     # --- login / logout (legacy logIn / logInValid / logOut) ---
 

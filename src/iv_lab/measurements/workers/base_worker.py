@@ -27,6 +27,7 @@ to the constructor), never write files, and import QtCore only.
 
 from __future__ import annotations
 
+import threading
 from typing import Optional
 
 from PySide6.QtCore import QObject, Signal, Slot
@@ -39,6 +40,8 @@ class MeasurementWorker(QObject):
 
     status_update = Signal(str)
     warning_update = Signal(str)
+    #: Emitted when the protocol needs user confirmation; (message, adjusted_dv_V).
+    warning_confirmation_needed = Signal(str, float)
     data_ready = Signal(dict)
     progress_update = Signal(int)
     finished = Signal(object)
@@ -62,12 +65,16 @@ class MeasurementWorker(QObject):
         self.protocol = protocol
         self.params = dict(params)
         self._stop_requested = False
+        self._confirm_event = threading.Event()
+        self._confirm_ok = False
 
         protocol.set_callbacks(
             status=self.status_update.emit,
             warning=self.warning_update.emit,
             data=self._on_data,
             cancel=self.is_stop_requested,
+            # confirm is wired separately via enable_blocking_confirmations()
+            # so that non-threaded (test) use auto-proceeds without blocking
         )
 
     # --- cancellation ---
@@ -80,6 +87,35 @@ class MeasurementWorker(QObject):
     def is_stop_requested(self) -> bool:
         """Whether cancellation has been requested."""
         return self._stop_requested
+
+    # --- warning confirmation (for threaded use) ---
+
+    def enable_blocking_confirmations(self) -> None:
+        """Wire the blocking confirm callback; call only in threaded mode.
+
+        In non-threaded (test) mode the confirm callback is left unset so
+        the protocol auto-proceeds without blocking the main thread.
+        """
+        self.protocol.set_callbacks(confirm=self._confirm_warning)
+
+    def _confirm_warning(self, message: str, adjusted_dv: float = 0.0) -> bool:
+        """Block the worker thread until the GUI responds (OK or Abort)."""
+        self._confirm_event.clear()
+        self._confirm_ok = False
+        self.warning_confirmation_needed.emit(message, adjusted_dv)
+        self._confirm_event.wait()
+        return self._confirm_ok
+
+    def confirm_warning_ok(self) -> None:
+        """Unblock the worker: user chose to proceed."""
+        self._confirm_ok = True
+        self._confirm_event.set()
+
+    def confirm_warning_abort(self) -> None:
+        """Unblock the worker: user chose to abort."""
+        self._confirm_ok = False
+        self._stop_requested = True
+        self._confirm_event.set()
 
     # --- progress derivation ---
 
