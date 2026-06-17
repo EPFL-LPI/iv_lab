@@ -302,6 +302,9 @@ def test_setup_voltage_output_replicates_legacy_sequence(fake_pymeasure) -> None
     # voltage source mode with current measurement configured (nplc=1, autorange);
     # pymeasure 0.16 replaced measure_current(nplc, range, auto) with explicit props
     assert fake.sets("source_mode") == ["voltage"]
+    # the current sense function must be selected, or the measurement range
+    # stays on its 100 uA default and clamps the source compliance to ~105 uA
+    assert ":SENS:FUNC 'CURR'" in fake.writes()
     assert 1 in fake.sets("current_nplc")
     assert fake.sets("current_range_auto_enabled") == [True]
     # current display (legacy SYST:KEY 22, non-2450 only)
@@ -316,6 +319,20 @@ def test_setup_voltage_output_fixed_range_when_autorange_off(fake_pymeasure) -> 
     assert ":CURR:RANG:AUTO OFF" in fake.writes()
     assert ":CURR:RANG:AUTO ON" not in fake.writes()
     assert fake.sets("current_range") == [0.02]
+
+
+def test_setup_current_output_selects_voltage_sense_function(fake_pymeasure) -> None:
+    # current source mode (e.g. the Voc / reference-diode setup) measures
+    # voltage; the voltage sense function must be selected so the measurement
+    # range and the source compliance are correct
+    smu, fake = connected_smu(fake_pymeasure)
+
+    smu.setup_current_output(SMUChannel.CELL, 1.0)
+
+    assert fake.sets("source_mode") == ["current"]
+    assert ":SENS:FUNC 'VOLT'" in fake.writes()
+    assert 1 in fake.sets("voltage_nplc")
+    assert fake.sets("voltage_range_auto_enabled") == [True]
 
 
 def test_set_voltage_and_measure_current(fake_pymeasure) -> None:

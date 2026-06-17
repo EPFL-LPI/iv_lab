@@ -297,7 +297,11 @@ class Keithley2400FamilySMU(BaseSMU):
         # legacy passed its whole range/autorange dicts here, which are
         # always truthy: the effective call is nplc=1 with autoranging on.
         # pymeasure 0.16 deprecated the measure_voltage(nplc, range, auto)
-        # config form; configure the equivalent explicitly instead.
+        # config form; replicate exactly what it wrote, including selecting
+        # the voltage sense function. Without ":SENS:FUNC 'VOLT'" the active
+        # measurement function (and range) is wrong, which clamps the source
+        # compliance to the default range.
+        self.smu.write(":SENS:FUNC 'VOLT'")
         self.smu.voltage_nplc = 1
         self.smu.voltage_range_auto_enabled = True
         if state.output:
@@ -315,7 +319,11 @@ class Keithley2400FamilySMU(BaseSMU):
         self.smu.source_mode = "voltage"
         # see set_mode_current_source: effectively nplc=1, autorange on.
         # pymeasure 0.16 deprecated the measure_current(nplc, range, auto)
-        # config form; configure the equivalent explicitly instead.
+        # config form; replicate exactly what it wrote, including selecting
+        # the current sense function. Without ":SENS:FUNC 'CURR'" the current
+        # measurement range stays on its 100 uA default and clamps the source
+        # current compliance to ~105 uA (105 % of range).
+        self.smu.write(":SENS:FUNC 'CURR'")
         self.smu.current_nplc = 1
         self.smu.current_range_auto_enabled = True
         if state.output:
