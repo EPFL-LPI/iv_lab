@@ -18,8 +18,6 @@ from __future__ import annotations
 
 import argparse
 import sys
-from typing import Optional
-
 from pathlib import Path
 
 from iv_lab.config import DEFAULT_SETTINGS_FILENAME, load_settings
@@ -29,7 +27,7 @@ from iv_lab.services.auth import USERS_FILENAME, USERS_GENERIC_FILENAME
 DEFAULT_LOGO_FILENAME = "EPFL_Logo.png"
 
 
-def resolve_users_file(explicit: Optional[str]) -> Path:
+def resolve_users_file(explicit: str | None) -> Path:
     """Return the users file to load, applying the fallback chain.
 
     Priority: explicit --users arg → config/users.txt (if exists) → config/users_generic.txt
@@ -42,7 +40,7 @@ def resolve_users_file(explicit: Optional[str]) -> Path:
     return Path(USERS_GENERIC_FILENAME)
 
 
-def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog="iv_lab",
         description="IV characterization lab application (EPFL LPI).",
@@ -73,7 +71,7 @@ def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def main(argv: Optional[list[str]] = None, *, exec_app: bool = True) -> int:
+def main(argv: list[str] | None = None, *, exec_app: bool = True) -> int:
     """Run the application; returns the process exit code.
 
     ``exec_app=False`` skips the Qt event loop (used by tests).

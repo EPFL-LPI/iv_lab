@@ -26,8 +26,9 @@ no dedicated field.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import Any, Optional, Sequence, Union
+from typing import Any
 
 #: Legacy units: voltages in V, currents in A, time in s, active area in cm².
 Array = Sequence[float]
@@ -43,16 +44,16 @@ class MeasurementResult:
     #: Legacy ``scanType`` tag ('JV', 'CV', 'CC', 'MPP'); set per subclass.
     scan_type: str = ""
     #: Measurement start time, legacy formatted string (``data_*['start_time']``).
-    start_time: Optional[str] = None
-    cell_name: Optional[str] = None
+    start_time: str | None = None
+    cell_name: str | None = None
     #: Active cell area in cm².
-    active_area: Optional[float] = None
+    active_area: float | None = None
     #: Requested light intensity in percent of one sun (``light_int``).
-    light_int: Optional[float] = None
+    light_int: float | None = None
     #: Measured light intensity in percent of one sun (``light_int_meas``).
-    light_int_meas: Optional[float] = None
+    light_int_meas: float | None = None
     #: Sense wiring, 2 or 4 (legacy ``Nwire``).
-    Nwire: Optional[int] = None
+    Nwire: int | None = None
     #: Extra legacy metadata preserved for the file writer.
     metadata: dict[str, Any] = field(default_factory=dict)
 
@@ -64,26 +65,26 @@ class IVResults(MeasurementResult):
     scan_type: str = "JV"
 
     # scan parameters (legacy key spelling)
-    start_V: Optional[Union[float, str]] = None  # may be 'Voc' in legacy
-    stop_V: Optional[Union[float, str]] = None  # may be 'Voc' in legacy
-    dV: Optional[float] = None
-    sweep_rate: Optional[float] = None
-    Imax: Optional[float] = None
-    Dwell: Optional[float] = None
+    start_V: float | str | None = None  # may be 'Voc' in legacy
+    stop_V: float | str | None = None  # may be 'Voc' in legacy
+    dV: float | None = None
+    sweep_rate: float | None = None
+    Imax: float | None = None
+    Dwell: float | None = None
 
     # data arrays (legacy data_IV['v'], ['i'], ['i_ref'])
     voltage: Array = field(default_factory=list)
     current: Array = field(default_factory=list)
-    current_reference: Optional[Array] = None
+    current_reference: Array | None = None
 
     # photovoltaic metrics (legacy key spelling)
-    Voc: Optional[float] = None
-    Jsc: Optional[float] = None
-    Vmpp: Optional[float] = None
-    Jmpp: Optional[float] = None
-    Pmpp: Optional[float] = None
-    PCE: Optional[float] = None
-    FF: Optional[float] = None
+    Voc: float | None = None
+    Jsc: float | None = None
+    Vmpp: float | None = None
+    Jmpp: float | None = None
+    Pmpp: float | None = None
+    PCE: float | None = None
+    FF: float | None = None
 
 
 @dataclass
@@ -93,15 +94,15 @@ class ConstantVoltageResults(MeasurementResult):
 
     scan_type: str = "CV"
 
-    set_voltage: Optional[float] = None
-    interval: Optional[float] = None
-    duration: Optional[float] = None
+    set_voltage: float | None = None
+    interval: float | None = None
+    duration: float | None = None
 
     # data arrays (legacy data_CV['t'], ['v'], ['i'], ['i_ref'])
     time: Array = field(default_factory=list)
     voltage: Array = field(default_factory=list)
     current: Array = field(default_factory=list)
-    current_reference: Optional[Array] = None
+    current_reference: Array | None = None
 
 
 @dataclass
@@ -111,15 +112,15 @@ class ConstantCurrentResults(MeasurementResult):
 
     scan_type: str = "CC"
 
-    set_current: Optional[float] = None
-    interval: Optional[float] = None
-    duration: Optional[float] = None
+    set_current: float | None = None
+    interval: float | None = None
+    duration: float | None = None
 
     # data arrays (legacy data_CC['t'], ['v'], ['i'])
     time: Array = field(default_factory=list)
     voltage: Array = field(default_factory=list)
     current: Array = field(default_factory=list)
-    current_reference: Optional[Array] = None
+    current_reference: Array | None = None
 
 
 @dataclass
@@ -130,15 +131,15 @@ class MPPResults(MeasurementResult):
     scan_type: str = "MPP"
 
     #: Legacy ``start_voltage``; may be 'auto' to start from a J-V scan.
-    start_voltage: Optional[Union[float, str]] = None
-    interval: Optional[float] = None
-    duration: Optional[float] = None
+    start_voltage: float | str | None = None
+    interval: float | None = None
+    duration: float | None = None
 
     # data arrays (legacy data_MPP['t'], ['v'], ['i'], ['i_ref'])
     time: Array = field(default_factory=list)
     voltage: Array = field(default_factory=list)
     current: Array = field(default_factory=list)
-    current_reference: Optional[Array] = None
+    current_reference: Array | None = None
 
 
 @dataclass
@@ -154,15 +155,15 @@ class CalibrationResults(MeasurementResult):
 
     scan_type: str = "Calibration"
 
-    interval: Optional[float] = None
-    duration: Optional[float] = None
+    interval: float | None = None
+    duration: float | None = None
 
     # data arrays (time, cell/diode current, reference diode current)
     time: Array = field(default_factory=list)
     current: Array = field(default_factory=list)
-    current_reference: Optional[Array] = None
+    current_reference: Array | None = None
 
     #: Derived full-sun reference current in A (``fullSunReferenceCurrent``).
-    reference_current: Optional[float] = None
+    reference_current: float | None = None
     #: Legacy formatted calibration date string (``calibrationDateTime``).
-    calibration_datetime: Optional[str] = None
+    calibration_datetime: str | None = None

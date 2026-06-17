@@ -98,8 +98,8 @@ def test_emulated_iv_scan_returns_result_with_plausible_data() -> None:
     assert result.current[-1] > 0
     # metrics from the injected analysis function, PCE per legacy formula
     assert result.Voc == pytest.approx(0.55)
-    assert result.FF == pytest.approx(0.726)
-    assert result.PCE == pytest.approx(8.46)
+    assert pytest.approx(0.726) == result.FF
+    assert pytest.approx(8.46) == result.PCE
     # parameters recorded with legacy key spelling
     assert result.cell_name == "test cell"
     assert result.start_V == pytest.approx(0.0)

@@ -12,8 +12,6 @@ verification tolerances).
 
 from __future__ import annotations
 
-from typing import Optional
-
 from iv_lab.config import LampSettings
 from iv_lab.hardware.errors import HardwareCommandError, HardwareConnectionError
 from iv_lab.hardware.smu.base import BaseSMU
@@ -29,7 +27,7 @@ ORIEL_IDN_PREFIX = "Newport Corporation,LSS-7120"
 class OrielLSS7120Lamp(BaseLamp):
     """Oriel LSS-7120 driven over VISA."""
 
-    def __init__(self, settings: LampSettings, smu: Optional[BaseSMU] = None) -> None:
+    def __init__(self, settings: LampSettings, smu: BaseSMU | None = None) -> None:
         super().__init__(settings, smu=smu)
         if settings.visa_address is None:
             raise ValueError("Oriel LSS-7120 lamp requires a 'visa_address' setting")

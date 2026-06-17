@@ -17,10 +17,9 @@ Defaults for optional fields replicate the legacy defaults set in
 from __future__ import annotations
 
 import json
-import tomllib
 from pathlib import Path
-from typing import Optional, Union
 
+import tomllib
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 #: Default settings filename.  The loader accepts .json and .toml.
@@ -71,13 +70,13 @@ class LampSettings(LegacyCompatibleModel):
     brand: str
     model: str
     emulate: bool
-    display_name: Optional[str] = Field(default=None, alias="display name")
-    lightLevelDict: Optional[dict[float, Union[int, float, str]]] = None
-    visa_address: Optional[str] = None
-    visa_library: Optional[str] = None
+    display_name: str | None = Field(default=None, alias="display name")
+    lightLevelDict: dict[float, int | float | str] | None = None
+    visa_address: str | None = None
+    visa_library: str | None = None
 
     @model_validator(mode="after")
-    def _apply_legacy_rules(self) -> "LampSettings":
+    def _apply_legacy_rules(self) -> LampSettings:
         # Legacy syst_param.__init__ fills in 'display name' if absent.
         if self.display_name is None:
             self.display_name = f"{self.brand} {self.model}"
@@ -110,11 +109,11 @@ class SMUSettings(LegacyCompatibleModel):
     #: Keithley these must match the instrument's front-panel RS-232 settings,
     #: or every read hangs until the VISA timeout.  ``None`` means "use the
     #: driver default" (see ``keithley_2400.py``).
-    baud_rate: Optional[int] = None
-    read_termination: Optional[str] = None
-    write_termination: Optional[str] = None
+    baud_rate: int | None = None
+    read_termination: str | None = None
+    write_termination: str | None = None
     #: VISA read timeout in milliseconds (applies to all interface types).
-    timeout_ms: Optional[float] = None
+    timeout_ms: float | None = None
 
 
 class ArduinoSettings(LegacyCompatibleModel):
@@ -123,7 +122,7 @@ class ArduinoSettings(LegacyCompatibleModel):
     brand: str
     model: str
     visa_address: str
-    visa_library: Optional[str] = None
+    visa_library: str | None = None
     emulate: bool = False
 
 
@@ -134,7 +133,7 @@ class SystemSettings(LegacyCompatibleModel):
     IVsys: IVSystemSettings
     lamp: LampSettings
     SMU: SMUSettings
-    arduino: Optional[ArduinoSettings] = None
+    arduino: ArduinoSettings | None = None
 
 
 def _update_toml_scalars(toml_node, data: dict) -> None:
@@ -154,7 +153,7 @@ def _update_toml_scalars(toml_node, data: dict) -> None:
             toml_node[key] = value
 
 
-def load_settings(path: Union[str, Path]) -> SystemSettings:
+def load_settings(path: str | Path) -> SystemSettings:
     """Load and validate a system settings file (.json or .toml).
 
     The file format is detected from the file extension.  Both formats
@@ -175,7 +174,7 @@ def load_settings(path: Union[str, Path]) -> SystemSettings:
     return SystemSettings.model_validate(raw)
 
 
-def save_settings(path: Union[str, Path], settings: SystemSettings) -> None:
+def save_settings(path: str | Path, settings: SystemSettings) -> None:
     """Write *settings* back to *path*, auto-detecting format by extension.
 
     For ``.json``: full rewrite via ``json.dumps``.

@@ -128,10 +128,10 @@ def test_emulated_iv_curve_is_diode_shaped() -> None:
     # photocurrent at short circuit: i(0) ~ Isc = -full_sun_reference_current
     assert currents[0] == pytest.approx(-0.004, rel=0.02)
     # monotonically increasing diode curve
-    assert all(b > a for a, b in zip(currents, currents[1:]))
+    assert all(b > a for a, b in zip(currents, currents[1:], strict=False))
     # crosses zero at the emulated Voc
     assert min(currents) < 0 < max(currents)
-    zero_crossing = next(v for v, i in zip(voltages, currents) if i >= 0)
+    zero_crossing = next(v for v, i in zip(voltages, currents, strict=False) if i >= 0)
     assert zero_crossing == pytest.approx(EMULATED_VOC, abs=0.05)
 
 

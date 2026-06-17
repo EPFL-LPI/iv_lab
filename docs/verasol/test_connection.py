@@ -9,7 +9,7 @@ as a USB INSTR resource.
 import ctypes
 import struct
 import time
-from ctypes import windll, create_string_buffer, c_ulong, byref
+from ctypes import byref, c_ulong, create_string_buffer, windll
 
 DEVICE_PATH = (
     r"\\?\USB#VID_1FDE&PID_000A&MI_00"

@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import datetime
 import time
-from typing import Callable, Optional
+from collections.abc import Callable
 
 from iv_lab.data import ConstantVoltageResults
 from iv_lab.hardware.smu.base import BaseSMU, SMUChannel
@@ -149,7 +149,7 @@ class ConstantVoltageProtocol(MeasurementProtocol):
 
         self.status("Turning lamp on...")
         self.turn_lamp_on(p["light_int"])
-        light_intensity: Optional[float] = None
+        light_intensity: float | None = None
         try:
             if self.smu.use_reference_diode:
                 light_intensity = self.check_light_level(p["light_int"])

@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from iv_lab.measurements.protocols.iv_curve import IVCurveProtocol
 
 from .base_worker import MeasurementWorker
@@ -14,7 +12,7 @@ class IVCurveWorker(MeasurementWorker):
 
     protocol_class = IVCurveProtocol
 
-    def _progress_from_data(self, data: dict) -> Optional[int]:
+    def _progress_from_data(self, data: dict) -> int | None:
         # progress along the voltage span; unknown for 'Voc' limits
         voltages = data.get("v")
         start = self.params.get("start_V")

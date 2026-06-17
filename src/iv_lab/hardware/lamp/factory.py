@@ -7,8 +7,6 @@ digital output lines (legacy ``lamp(..., smu=self.SMU)``).
 
 from __future__ import annotations
 
-from typing import Optional
-
 from iv_lab.config import LampSettings
 from iv_lab.hardware.smu.base import BaseSMU
 
@@ -16,7 +14,7 @@ from .base import BaseLamp
 from .registry import get_lamp_driver
 
 
-def create_lamp(settings: LampSettings, smu: Optional[BaseSMU] = None) -> BaseLamp:
+def create_lamp(settings: LampSettings, smu: BaseSMU | None = None) -> BaseLamp:
     """Create a lamp driver instance for the given settings.
 
     Returns the emulated driver when ``settings.emulate`` is set;

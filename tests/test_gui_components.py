@@ -1,6 +1,5 @@
 """Headless tests for the GUI building blocks (offscreen platform)."""
 
-import pytest
 
 from iv_lab.data.results import IVResults
 from iv_lab.gui.dialogs.logoff_dialog import LogOffDialog
@@ -13,7 +12,6 @@ from iv_lab.gui.panels.plot_panel import (
     PANEL_MPP,
     PlotPanel,
 )
-
 
 # --- light panel ---
 

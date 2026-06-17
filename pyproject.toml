@@ -12,26 +12,37 @@ license = { text = "GPL-3.0-only" }
 authors = [
     { name = "EPFL LPI" },
 ]
-# Runtime dependencies are added as components are migrated (see docs/MIGRATION.md).
+# Core runtime dependencies. Lower bounds are conservative floors (well below
+# current releases) for reproducibility, not the versions developed against.
 dependencies = [
     "pydantic>=2",
-    "numpy",
-    "pandas",
+    "numpy>=1.24",
+    "pandas>=2.0",
     # JV metrics (Voc, Jsc, FF, PCE); imported lazily in analysis/jv_metrics.py
-    "scipy",
-    # Qt measurement workers and (later) the GUI; QtCore only in workers
-    "PySide6",
+    "scipy>=1.10",
+    # Qt measurement workers and the GUI; QtCore only in workers
+    "PySide6>=6.5",
     # J-V PDF reports; imported lazily in data/pdf_report.py
-    "matplotlib",
+    "matplotlib>=3.7",
     # GUI plotting (legacy used pyqtgraph as well)
-    "pyqtgraph",
+    "pyqtgraph>=0.13",
     # TOML round-trip writer (preserves comments when saving calibration to .toml)
-    "tomlkit",
+    "tomlkit>=0.12",
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest",
+    "ruff",
+]
+# Instrument-control libraries. These are imported lazily inside driver
+# connect() methods, so the app installs and runs in emulation without them.
+# Install the ones your rig needs, e.g. `pip install iv_lab[hardware]`.
+hardware = [
+    "pyvisa>=1.13",
+    "pyvisa-py>=0.7",   # pure-Python VISA backend (no NI-VISA required)
+    "pymeasure>=0.16",  # Keithley 2400/2450 drivers (non-deprecated API)
+    "pytrinamic",       # Trinamic filter-wheel controllers
 ]
 
 [tool.setuptools.packages.find]
@@ -40,3 +51,29 @@ where = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+# Bundled, verbatim copies of legacy instrument libraries are kept as-is for
+# provenance (see CLAUDE.md); they are not maintained to this project's style.
+extend-exclude = [
+    "src/iv_lab/hardware/smu/drivers/_keithley26xx_lib.py",
+    "src/iv_lab/hardware/lamp/drivers/_verasol_lib.py",
+    "src/iv_lab/analysis/jv_analysis.py",
+    "IVLab",
+    "docs",
+]
+
+[tool.ruff.lint]
+# E/W pycodestyle, F pyflakes, I import sorting, UP pyupgrade,
+# B bugbear, C4 comprehensions, SIM simplify.
+select = ["E", "W", "F", "I", "UP", "B", "C4", "SIM"]
+# E501 (line length) is enforced by the formatter, not the linter, to avoid
+# churn on long legacy-derived comments and docstrings.
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+# Test fixtures use dict(...) kwargs for readability (C408), and tests use
+# broad constructs by design.
+"tests/**" = ["C408"]

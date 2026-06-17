@@ -725,7 +725,6 @@ def test_verasol_light_on_below_minimum_raises(fake_verasol_lib) -> None:
 def test_verasol_amplitude_mismatch_raises(fake_verasol_lib) -> None:
     # Fake an instrument that reports a different amplitude than requested.
     fake_verasol_lib._amplitude = 0.5  # will be reported after set_amplitude
-    original_set = FakeVeraSol.set_amplitude
 
     def _bad_set(self, suns):
         pass  # don't update _amplitude — simulate mismatch

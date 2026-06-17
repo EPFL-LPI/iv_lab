@@ -24,7 +24,7 @@ hardware imports (``pyvisa``, ``pytrinamic``) into connection-time code.
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import Any, Optional, Union
+from typing import Any
 
 from iv_lab.config import LampSettings
 from iv_lab.hardware.base import HardwareDevice
@@ -43,7 +43,7 @@ class BaseLamp(HardwareDevice):
     def __init__(
         self,
         settings: LampSettings,
-        smu: Optional[BaseSMU] = None,
+        smu: BaseSMU | None = None,
         name: str = "",
     ) -> None:
         super().__init__(name or settings.display_name or "")
@@ -51,7 +51,7 @@ class BaseLamp(HardwareDevice):
         self.smu = smu
         #: Light level in % sun -> recipe name / wheel angle / filter code
         #: (legacy ``lightLevelDict``; ``None`` only for the manual lamp).
-        self.light_level_dict: Optional[dict[float, Union[int, float, str]]] = (
+        self.light_level_dict: dict[float, int | float | str] | None = (
             settings.lightLevelDict
         )
         #: Whether the light is currently considered on (legacy ``light_is_on``).

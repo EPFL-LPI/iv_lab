@@ -28,7 +28,6 @@ import sys
 import time
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional
 
 try:
     import pyvisa
@@ -41,7 +40,8 @@ except ImportError as exc:  # pragma: no cover
 if sys.platform == "win32":
     import ctypes
     import winreg
-    from ctypes import windll, create_string_buffer, c_ulong, byref as _byref
+    from ctypes import byref as _byref
+    from ctypes import c_ulong, create_string_buffer, windll
     _WIN32_AVAILABLE = True
 else:
     _WIN32_AVAILABLE = False
@@ -188,7 +188,7 @@ class _WinUSBTMC:
         return self.read()
 
 
-def _find_win_usbtmc_device(idn_hint: str = _VERASOL_IDN_HINT) -> Optional[str]:
+def _find_win_usbtmc_device(idn_hint: str = _VERASOL_IDN_HINT) -> str | None:
     """
     Search the Windows device-interface registry for a USBTMC instrument whose
     ``*IDN?`` response contains *idn_hint*.  Returns the Win32 device path on
@@ -253,7 +253,7 @@ class VeraSol:
 
     def __init__(
         self,
-        resource_name: Optional[str] = None,
+        resource_name: str | None = None,
         timeout_ms: int = 10_000,
     ) -> None:
         self._rm = None
@@ -296,7 +296,7 @@ class VeraSol:
     # Context manager
     # ------------------------------------------------------------------
 
-    def __enter__(self) -> "VeraSol":
+    def __enter__(self) -> VeraSol:
         return self
 
     def __exit__(self, *_) -> None:

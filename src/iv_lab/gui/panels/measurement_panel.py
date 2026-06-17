@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import re
 import unicodedata
-from typing import Callable, Optional
+from collections.abc import Callable
 
 from PySide6.QtCore import Signal
 from PySide6.QtGui import QDoubleValidator
@@ -98,7 +98,7 @@ class MeasurementPanel(QWidget):
         self,
         light_level_provider: Callable[[], float],
         cell_name_provider: Callable[[], str],
-        parent: Optional[QWidget] = None,
+        parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
         self._light_level = light_level_provider

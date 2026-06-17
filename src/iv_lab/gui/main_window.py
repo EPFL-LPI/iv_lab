@@ -18,7 +18,6 @@ from __future__ import annotations
 
 import json
 import os
-from typing import Optional
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
@@ -51,7 +50,7 @@ USER_CONFIG_FILENAME = "IVLab_config.json"
 class MainWindow(QMainWindow):
     """IVLab main window wired to the core system."""
 
-    def __init__(self, system: IVLabSystem, parent: Optional[QWidget] = None) -> None:
+    def __init__(self, system: IVLabSystem, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.system = system
         #: Tests set this to avoid modal error dialogs.
@@ -389,7 +388,7 @@ class MainWindow(QMainWindow):
             "sweepDirection": panel.menu_sweep_direction,
         }
 
-    def _user_config_path(self) -> Optional[str]:
+    def _user_config_path(self) -> str | None:
         if self.system.user is None:
             return None
         return os.path.join(
@@ -418,7 +417,7 @@ class MainWindow(QMainWindow):
 
         try:
             os.makedirs(os.path.dirname(path), exist_ok=True)
-            with open(path, "w") as outfile:
+            with open(path, "w", encoding="utf-8") as outfile:
                 json.dump(config, outfile)
         except Exception:
             self._show_error("ERROR: Could not create settings file " + path)
@@ -429,7 +428,7 @@ class MainWindow(QMainWindow):
         if path is None or not os.path.exists(path):
             return
         try:
-            with open(path) as config_file:
+            with open(path, encoding="utf-8") as config_file:
                 config = json.load(config_file)
         except Exception:
             return

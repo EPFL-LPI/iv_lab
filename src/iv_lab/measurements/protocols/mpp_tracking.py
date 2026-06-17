@@ -22,7 +22,6 @@ from __future__ import annotations
 
 import datetime
 import time
-from typing import Optional
 
 from iv_lab.data import MPPResults
 from iv_lab.hardware.smu.base import SMUChannel
@@ -93,7 +92,7 @@ class MPPTrackingProtocol(MeasurementProtocol):
         )
 
         # cell voltage is positive, current negative: maximize -v*i (legacy)
-        p_smu = [v * i * -1 for v, i in zip(v_smu, i_smu)]
+        p_smu = [v * i * -1 for v, i in zip(v_smu, i_smu, strict=False)]
         max_power = max(p_smu)
         return v_smu[p_smu.index(max_power)]
 
@@ -250,7 +249,7 @@ class MPPTrackingProtocol(MeasurementProtocol):
 
         self.status("Turning lamp on...")
         self.turn_lamp_on(p["light_int"])
-        light_intensity: Optional[float] = None
+        light_intensity: float | None = None
         try:
             if self.smu.use_reference_diode:
                 light_intensity = self.check_light_level(p["light_int"])

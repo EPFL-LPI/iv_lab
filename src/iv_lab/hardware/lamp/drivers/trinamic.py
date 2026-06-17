@@ -17,7 +17,6 @@ option for the TMCM-1160 only when homing, not when moving — preserved).
 from __future__ import annotations
 
 import time
-from typing import Optional
 
 from iv_lab.config import LampSettings
 from iv_lab.hardware.errors import HardwareConnectionError, HardwareTimeoutError
@@ -35,7 +34,7 @@ TRINAMIC_MOVE_TIMEOUT = 12.0
 class TrinamicFilterWheelLamp(BaseLamp):
     """Filter wheel on a Trinamic stepper motor module."""
 
-    def __init__(self, settings: LampSettings, smu: Optional[BaseSMU] = None) -> None:
+    def __init__(self, settings: LampSettings, smu: BaseSMU | None = None) -> None:
         super().__init__(settings, smu=smu)
         self.model = settings.model
 
@@ -48,7 +47,7 @@ class TrinamicFilterWheelLamp(BaseLamp):
         # motor parameters; microstep resolution is read from the motor
         # enum on connect (legacy stored MicrostepResolution256Microsteps)
         self.steps_per_revolution = 200
-        self.microstep_resolution: Optional[int] = None
+        self.microstep_resolution: int | None = None
 
         self._connection_manager_cls = None
         self._module_cls = None

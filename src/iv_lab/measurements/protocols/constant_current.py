@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import datetime
 import time
-from typing import Callable
+from collections.abc import Callable
 
 from iv_lab.data import ConstantCurrentResults
 from iv_lab.hardware.smu.base import BaseSMU, SMUChannel

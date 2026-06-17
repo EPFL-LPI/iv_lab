@@ -20,8 +20,6 @@ amplitude in its operating range directly from ``light_int``.
 
 from __future__ import annotations
 
-from typing import Optional
-
 from iv_lab.config import LampSettings
 from iv_lab.hardware.errors import HardwareCommandError, HardwareConnectionError
 from iv_lab.hardware.smu.base import BaseSMU
@@ -37,10 +35,10 @@ _MIN_SUNS = 0.1   # instrument minimum amplitude
 class VeraSolLamp(BaseLamp):
     """Oriel VeraSol LSS-7120 LED solar simulator (USB/USBTMC)."""
 
-    def __init__(self, settings: LampSettings, smu: Optional[BaseSMU] = None) -> None:
+    def __init__(self, settings: LampSettings, smu: BaseSMU | None = None) -> None:
         super().__init__(settings, smu=smu)
         # None / empty string both trigger auto-discovery in _verasol_lib.VeraSol
-        self._visa_address: Optional[str] = settings.visa_address or None
+        self._visa_address: str | None = settings.visa_address or None
         self._lamp = None
 
     # ------------------------------------------------------------------

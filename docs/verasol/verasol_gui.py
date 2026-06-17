@@ -11,34 +11,50 @@ Place verasol.py in the same directory, then run:
 from __future__ import annotations
 
 import sys
-import traceback
-from typing import Optional
 
 from PySide6.QtCore import (
-    Qt, QThread, Signal, QTimer, QObject, Slot,
+    QObject,
+    Qt,
+    QThread,
+    QTimer,
+    Signal,
+    Slot,
 )
-from PySide6.QtGui import QColor, QFont, QPalette, QIcon, QPainter
+from PySide6.QtGui import QColor, QFont, QPainter
 from PySide6.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QGridLayout, QGroupBox, QLabel, QPushButton, QSlider, QDoubleSpinBox,
-    QComboBox, QSpinBox, QTextEdit, QTabWidget, QSplitter, QFrame,
-    QProgressBar, QTableWidget, QTableWidgetItem, QHeaderView,
-    QMessageBox, QStatusBar, QCheckBox, QSizePolicy,
+    QApplication,
+    QComboBox,
+    QDoubleSpinBox,
+    QGroupBox,
+    QHBoxLayout,
+    QHeaderView,
+    QLabel,
+    QMainWindow,
+    QProgressBar,
+    QPushButton,
+    QSlider,
+    QStatusBar,
+    QTableWidget,
+    QTableWidgetItem,
+    QTabWidget,
+    QTextEdit,
+    QVBoxLayout,
+    QWidget,
 )
 
 # ---------------------------------------------------------------------------
 # Try to import the verasol driver; fall back to a stub for UI development
 # ---------------------------------------------------------------------------
 try:
-    from verasol import VeraSol, CalibrationMode, LampStatus, LEDInfo, list_instruments
+    from verasol import CalibrationMode, LampStatus, LEDInfo, VeraSol, list_instruments
     DRIVER_AVAILABLE = True
 except Exception as _import_err:  # noqa: BLE001
     DRIVER_AVAILABLE = False
     _IMPORT_ERROR = str(_import_err)
 
     # ---- Minimal stubs so the GUI can be laid out without hardware ----
-    from enum import Enum
     from dataclasses import dataclass
+    from enum import Enum
 
     class CalibrationMode(str, Enum):
         DEFAULT = "DEFAULT"
@@ -143,7 +159,7 @@ class InstrumentWorker(QObject):
 
     def __init__(self) -> None:
         super().__init__()
-        self._lamp: Optional[VeraSol] = None
+        self._lamp: VeraSol | None = None
 
     # ---- connection ----
 

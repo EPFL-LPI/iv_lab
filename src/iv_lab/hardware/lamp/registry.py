@@ -11,7 +11,8 @@ when ``emulate`` is set.
 
 from __future__ import annotations
 
-from typing import Callable, TypeVar
+from collections.abc import Callable
+from typing import TypeVar
 
 from .base import BaseLamp
 

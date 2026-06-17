@@ -27,9 +27,9 @@ values are runtime state on the SMU).
 
 from __future__ import annotations
 
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Optional, Sequence, Union
 
 from iv_lab.data.results import (
     ConstantCurrentResults,
@@ -58,7 +58,7 @@ class SystemContext:
     #: Formatted date of the last calibration (runtime SMU state).
     calibration_datetime: str
     #: Path of the report logo (legacy EPFL_Logo.png); optional.
-    logo_path: Optional[str] = None
+    logo_path: str | None = None
 
 
 class FileWriter:
@@ -68,7 +68,7 @@ class FileWriter:
         self,
         context: SystemContext,
         *,
-        status_callback: Optional[Callable[[str], None]] = None,
+        status_callback: Callable[[str], None] | None = None,
         generate_pdf: bool = True,
     ) -> None:
         self.context = context
@@ -188,7 +188,10 @@ class FileWriter:
 
         if result.scan_type == "JV":
             for v, i, i_ref in zip(
-                result.voltage, result.current, self._reference_column(result)
+                result.voltage,
+                result.current,
+                self._reference_column(result),
+                strict=False,
             ):
                 line = str(round(v, 12)) + "," + str(round(i, 12))
                 if ctx.use_reference_diode:
@@ -200,6 +203,7 @@ class FileWriter:
                 result.voltage,
                 self._reference_column(result),
                 result.current,
+                strict=False,
             ):
                 line = (
                     str(round(t, 6))
@@ -212,7 +216,9 @@ class FileWriter:
                     line += "," + str(round(self._light_intensity(i_ref), 12))
                 lines.append(line)
         elif result.scan_type == "CC":
-            for t, v, i in zip(result.time, result.voltage, result.current):
+            for t, v, i in zip(
+                result.time, result.voltage, result.current, strict=False
+            ):
                 lines.append(
                     str(round(t, 6))
                     + ","
@@ -226,6 +232,7 @@ class FileWriter:
                 result.voltage,
                 self._reference_column(result),
                 result.current,
+                strict=False,
             ):
                 w = abs(i * v * 1000.0 / result.active_area)
                 line = (
@@ -247,11 +254,9 @@ class FileWriter:
 
     def save(
         self,
-        result: Union[
-            IVResults, ConstantVoltageResults, ConstantCurrentResults, MPPResults
-        ],
+        result: IVResults | ConstantVoltageResults | ConstantCurrentResults | MPPResults,
         username: str,
-    ) -> tuple[Path, Optional[Path]]:
+    ) -> tuple[Path, Path | None]:
         """Write the data file (and the J-V PDF report); returns
         ``(csv_path, pdf_path_or_None)``."""
         ctx = self.context
@@ -285,10 +290,10 @@ class FileWriter:
             file_string += line + "\n"
 
         data_file_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(data_file_path, "w") as f:
+        with open(data_file_path, "w", encoding="utf-8") as f:
             f.write(file_string)
 
-        pdf_path: Optional[Path] = None
+        pdf_path: Path | None = None
         if result.scan_type == "JV" and self.generate_pdf:
             from iv_lab.data.pdf_report import generate_jv_results_pdf
 
@@ -308,7 +313,7 @@ class FileWriter:
                 )
                 sd_file_path = Path(ctx.sd_path) / scrambled_filename
                 sd_file_path.parent.mkdir(parents=True, exist_ok=True)
-                with open(sd_file_path, "w") as s:
+                with open(sd_file_path, "w", encoding="utf-8") as s:
                     s.write(scramble_string(file_string))
             except Exception:
                 pass

@@ -8,7 +8,6 @@ docs/MIGRATION.md).
 from __future__ import annotations
 
 import sys
-from typing import Optional
 
 from PySide6.QtWidgets import QApplication
 
@@ -17,7 +16,7 @@ from iv_lab.core import IVLabSystem
 from iv_lab.gui.main_window import MainWindow
 
 
-def create_application(argv: Optional[list[str]] = None) -> QApplication:
+def create_application(argv: list[str] | None = None) -> QApplication:
     """Return the process-wide ``QApplication`` (created on demand)."""
     app = QApplication.instance()
     if app is None:

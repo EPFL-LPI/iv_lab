@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import datetime
 import time
-from typing import Callable, Optional
+from collections.abc import Callable
 
 from iv_lab.analysis.jv_metrics import JVMetrics, compute_jv_metrics, pce
 from iv_lab.data import IVResults
@@ -168,7 +168,7 @@ class IVCurveProtocol(MeasurementProtocol):
     injectable for headless tests without pandas/bric installed.
     """
 
-    def __init__(self, *args, metrics_function: Optional[MetricsFunction] = None, **kwargs) -> None:
+    def __init__(self, *args, metrics_function: MetricsFunction | None = None, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self._metrics_function = metrics_function or compute_jv_metrics
 
@@ -228,7 +228,7 @@ class IVCurveProtocol(MeasurementProtocol):
 
         self.status("Turning lamp on...")
         self.turn_lamp_on(p["light_int"])
-        light_intensity: Optional[float] = None
+        light_intensity: float | None = None
         try:
             # measure light intensity on the reference diode if configured
             if self.smu.use_reference_diode:

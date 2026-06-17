@@ -19,8 +19,8 @@ injectable for tests.
 from __future__ import annotations
 
 import datetime
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable, Optional, Union
 
 #: Legacy log file name inside ``sdPath``.
 LOG_FILENAME = "ivlablog.txt"
@@ -34,9 +34,9 @@ class Logbook:
 
     def __init__(
         self,
-        sd_path: Union[str, Path, None],
+        sd_path: str | Path | None,
         *,
-        clock: Optional[Callable[[], datetime.datetime]] = None,
+        clock: Callable[[], datetime.datetime] | None = None,
     ) -> None:
         #: Legacy ``computer.sdPath``; empty/None disables the logbook.
         self.sd_path = str(sd_path) if sd_path is not None else ""
@@ -48,7 +48,7 @@ class Logbook:
         return self.sd_path != ""
 
     @property
-    def log_file_path(self) -> Optional[Path]:
+    def log_file_path(self) -> Path | None:
         """Full path of the log file, or None when disabled."""
         if not self.enabled:
             return None
@@ -71,7 +71,7 @@ class Logbook:
 
         # legacy opened with "w" for a new file and "a" otherwise; both
         # create the file, so append covers both cases
-        with open(log_file, "a") as f:
+        with open(log_file, "a", encoding="utf-8") as f:
             f.write(entry + "\n")
 
     def log_login(self, username: str) -> None:
