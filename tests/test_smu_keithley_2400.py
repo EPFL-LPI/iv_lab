@@ -318,7 +318,20 @@ def test_setup_voltage_output_fixed_range_when_autorange_off(fake_pymeasure) -> 
 
     assert ":CURR:RANG:AUTO OFF" in fake.writes()
     assert ":CURR:RANG:AUTO ON" not in fake.writes()
-    assert fake.sets("current_range") == [0.02]
+    assert 0.02 in fake.sets("current_range")
+    # the mode setup must NOT re-enable autorange (doing so drops the current
+    # range to its 100 uA default and clamps the compliance to ~105 uA)
+    assert fake.sets("current_range_auto_enabled") == []
+
+
+def test_setup_current_output_fixed_range_when_autorange_off(fake_pymeasure) -> None:
+    smu, fake = connected_smu(fake_pymeasure, autorange=False)
+
+    smu.setup_current_output(SMUChannel.CELL, 1.0)
+
+    assert 1.0 in fake.sets("voltage_range")
+    # likewise the voltage measurement autorange must not be re-enabled
+    assert fake.sets("voltage_range_auto_enabled") == []
 
 
 def test_setup_current_output_selects_voltage_sense_function(fake_pymeasure) -> None:

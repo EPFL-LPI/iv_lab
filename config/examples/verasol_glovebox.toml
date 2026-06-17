@@ -56,7 +56,11 @@ visa_library = "@py"                  # pyvisa-py backend (no NI-VISA required)
 #   visa_library = "C:\\Windows\\SysWOW64\\visa32.dll"
 emulate = false
 referenceDiodeSenseMode = "2wire"     # "2wire" or "4 wire"
-autorange = true
+# Use a FIXED current range on the Keithley 2400: with autorange the 2400
+# starts on its lowest (100 uA) range and the source current compliance is
+# clamped to ~105 uA, because the measurement cannot range up while the
+# current is being clamped. false fixes the range to the compliance (Imax).
+autorange = false
 useReferenceDiode = false             # glovebox typically has no reference diode
 
 # --- RS-232 serial parameters (only used for ASRL addresses) ---

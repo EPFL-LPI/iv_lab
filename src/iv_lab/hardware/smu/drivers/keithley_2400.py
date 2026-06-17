@@ -294,16 +294,20 @@ class Keithley2400FamilySMU(BaseSMU):
         if state.output:
             self.smu.disable_source()
         self.smu.source_mode = "current"
-        # legacy passed its whole range/autorange dicts here, which are
-        # always truthy: the effective call is nplc=1 with autoranging on.
-        # pymeasure 0.16 deprecated the measure_voltage(nplc, range, auto)
-        # config form; replicate exactly what it wrote, including selecting
-        # the voltage sense function. Without ":SENS:FUNC 'VOLT'" the active
-        # measurement function (and range) is wrong, which clamps the source
-        # compliance to the default range.
+        # Replicate the legacy measure_voltage(nplc=1, range, auto) call that
+        # pymeasure 0.16 deprecated: select the voltage sense function, set
+        # nplc=1, and configure the range. The legacy code always passed a
+        # truthy auto-range flag, but that re-enables autorange even after
+        # setup_*_output deliberately fixed the range — and on the 2400 an
+        # autoranged measurement clamps the source compliance to whatever
+        # range it auto-selects (the 100 uA default at low signal). Honor the
+        # channel's actual autorange state instead: fixed range when off.
         self.smu.write(":SENS:FUNC 'VOLT'")
         self.smu.voltage_nplc = 1
-        self.smu.voltage_range_auto_enabled = True
+        if state.volt_autorange:
+            self.smu.voltage_range_auto_enabled = True
+        else:
+            self.smu.voltage_range = state.v_range
         if state.output:
             self.smu.enable_source()
         state.source_mode = "current"
@@ -317,15 +321,17 @@ class Keithley2400FamilySMU(BaseSMU):
         if state.output:
             self.smu.disable_source()
         self.smu.source_mode = "voltage"
-        # see set_mode_current_source: effectively nplc=1, autorange on.
-        # pymeasure 0.16 deprecated the measure_current(nplc, range, auto)
-        # config form; replicate exactly what it wrote, including selecting
-        # the current sense function. Without ":SENS:FUNC 'CURR'" the current
-        # measurement range stays on its 100 uA default and clamps the source
-        # current compliance to ~105 uA (105 % of range).
+        # see set_mode_current_source: select the current sense function, set
+        # nplc=1, and honor the channel's autorange state. Re-enabling
+        # autorange here (the legacy behavior) drops the current range back to
+        # its 100 uA default, which clamps the source current compliance to
+        # ~105 uA -- so when autorange is off, apply the fixed range instead.
         self.smu.write(":SENS:FUNC 'CURR'")
         self.smu.current_nplc = 1
-        self.smu.current_range_auto_enabled = True
+        if state.curr_autorange:
+            self.smu.current_range_auto_enabled = True
+        else:
+            self.smu.current_range = state.i_range
         if state.output:
             self.smu.enable_source()
         state.source_mode = "voltage"
