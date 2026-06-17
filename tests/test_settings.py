@@ -148,6 +148,31 @@ def test_non_manual_lamp_requires_light_level_dict(tmp_path: Path) -> None:
     assert "lightLevelDict" in str(excinfo.value)
 
 
+def test_verasol_lamp_does_not_require_light_level_dict(tmp_path: Path) -> None:
+    data = json.loads(json.dumps(MINIMAL_SETTINGS))
+    data["lamp"] = {
+        "brand": "VeraSol",
+        "model": "LSS-7120",
+        "emulate": False,
+        "display name": "Oriel VeraSol LSS-7120",
+    }
+
+    settings = load_settings(write_settings(tmp_path, data))
+
+    assert settings.lamp.brand == "VeraSol"
+    assert settings.lamp.lightLevelDict is None
+
+
+def test_verasol_lamp_visa_address_optional(tmp_path: Path) -> None:
+    # visa_address omitted — driver auto-discovers the instrument.
+    data = json.loads(json.dumps(MINIMAL_SETTINGS))
+    data["lamp"] = {"brand": "VeraSol", "model": "LSS-7120", "emulate": False}
+
+    settings = load_settings(write_settings(tmp_path, data))
+
+    assert settings.lamp.visa_address is None
+
+
 def test_arduino_section_is_parsed_when_present(tmp_path: Path) -> None:
     data = json.loads(json.dumps(MINIMAL_SETTINGS))
     data["arduino"] = {
@@ -281,6 +306,7 @@ def test_toml_unsupported_extension_raises(tmp_path: Path) -> None:
         "dell.toml",
         "fte.toml",
         "old_iv.toml",
+        "verasol_glovebox.toml",
     ],
 )
 def test_committed_toml_examples_load(example: str) -> None:

@@ -1,0 +1,70 @@
+# VeraSol Glovebox — EPFL LPI glovebox IV station
+# Hardware: Oriel VeraSol LSS-7120 LED solar simulator (USB/USBTMC)
+#           Keithley 2400 SMU (RS-232, COM4)
+#
+# To use: copy to config/system_settings.toml and adjust paths and calibration values.
+#
+# Dependencies:
+#   pip install pyvisa pyvisa-py pymeasure
+# No NI-VISA driver installation required.
+
+[computer]
+hardware = "VerasolGlovebox"          # free label, used in log files
+os = "Windows 11"
+basePath = "C:\\Data"                  # root directory for measurement data
+sdPath = ""                            # scrambled backup copy directory; set "" to disable
+
+[IVsys]
+sysName = "IVLab"
+# fullSunReferenceCurrent is updated automatically each time you run a calibration.
+fullSunReferenceCurrent = 0.006129    # amps — reference diode current at 1 sun
+calibrationDateTime = ""
+referenceDiodeImax = 0.01             # amps — current compliance for reference diode channel
+saveDataAutomatic = false             # true = auto-save after each scan; false = prompt
+checkVOCBeforeScan = true             # measure Voc before each scan to verify illumination
+firstPointDwellTime = 5.0             # seconds — settling time at first voltage point
+MPPVoltageStepInitial = 0.002         # volts — initial MPP tracker step
+MPPVoltageStepMax = 0.002             # volts — maximum MPP tracker step
+MPPVoltageStepMin = 0.001             # volts — minimum MPP tracker step
+
+[lamp]
+brand = "VeraSol"
+model = "LSS-7120"                    # 19-channel LED solar simulator, USB/USBTMC
+"display name" = "Oriel VeraSol LSS-7120"
+emulate = false
+# visa_address: leave unset (or "") for automatic USB detection.
+# Set explicitly only if you have multiple USB instruments connected:
+# visa_address = ""
+visa_address = "USB0::0x1FDE::0x000A::71201042::INSTR"
+
+# Light levels offered in the GUI drop-down.
+# Keys = % sun shown to the user; values are unused by the VeraSol driver
+# (it converts the selected % directly to an amplitude in suns).
+[lamp.lightLevelDict]
+"100.0" = 1.0   # 1.0 sun  — AM1.5G standard
+"50.0"  = 0.5
+"20.0"  = 0.2
+"10.0"  = 0.1
+"0.0"   = 0     # Dark — turns output off
+
+[SMU]
+brand = "Keithley"
+model = "2400"                        # 2400 | 2401 | 2450 — pymeasure driver
+visa_address = "ASRL4::INSTR"         # serial port COM4 (pyvisa ASRL format)
+visa_library = "@py"                  # pyvisa-py backend (no NI-VISA required)
+# If you have NI-VISA installed, use the path to visa32.dll instead:
+#   visa_library = "C:\\Windows\\SysWOW64\\visa32.dll"
+emulate = false
+referenceDiodeSenseMode = "2wire"     # "2wire" or "4 wire"
+autorange = true
+useReferenceDiode = false             # glovebox typically has no reference diode
+
+# --- RS-232 serial parameters (only used for ASRL addresses) ---
+# These MUST match the Keithley's front-panel RS-232 settings, or every read
+# hangs until the timeout (VI_ERROR_TMO). Defaults: 9600 baud, CR terminators.
+# If you still get timeouts, check the instrument's COMM / RS-232 menu and set
+# the values below to match (common terminators: "\r", "\n", or "\r\n").
+baud_rate = 9600                      # instrument COMM menu: BAUD
+read_termination = "\n"               # instrument COMM menu: TERMINATOR <LF>
+write_termination = "\n"              # instrument COMM menu: TERMINATOR <LF>
+timeout_ms = 5000                     # VISA read timeout in milliseconds
