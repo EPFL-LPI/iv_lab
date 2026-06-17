@@ -93,5 +93,5 @@ class LightLevelPanel(QGroupBox):
     def update_measured_intensity(self, intensity: float) -> None:
         """Legacy ``updateMeasuredLightIntensity``."""
         self.label_measured_intensity.setText(
-            "Measured Light Intensity: " + "{:6.2f}".format(intensity) + "% sun"
+            "Measured Light Intensity: " + f"{intensity:6.2f}" + "% sun"
         )

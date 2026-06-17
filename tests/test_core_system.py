@@ -284,7 +284,7 @@ def test_dark_jv_scan_via_core(tmp_path: Path) -> None:
     # dark scan: no metrics computation, so no analysis libraries needed
     system = make_system(tmp_path)
     system.hardware_init()
-    records = Records(system)
+    _records = Records(system)  # kept alive to receive signals during the run
 
     params = {
         "light_int": 0.0,

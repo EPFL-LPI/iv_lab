@@ -80,7 +80,7 @@ class CalibrationPanel(QWidget):
     def set_reference_current(self, current_ma: float) -> None:
         """Show the derived current (legacy ``setCalibrationReferenceCurrent``,
         ``{:5.3f}`` in mA)."""
-        self.field_reference_cell_current.setText("{:5.3f}".format(current_ma))
+        self.field_reference_cell_current.setText(f"{current_ma:5.3f}")
 
     def reference_current_a(self) -> float:
         """Field value converted to A (legacy ``saveCalibration``)."""

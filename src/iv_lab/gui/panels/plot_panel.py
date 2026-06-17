@@ -13,8 +13,6 @@ automatic start scan).
 
 from __future__ import annotations
 
-from typing import Optional
-
 import pyqtgraph as pg
 from PySide6.QtWidgets import (
     QGridLayout,
@@ -97,7 +95,7 @@ class _ResultField(QHBoxLayout):
 class PlotPanel(QWidget):
     """Stacked measurement plots plus the J-V results grid."""
 
-    def __init__(self, parent: Optional[QWidget] = None) -> None:
+    def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.stack = QStackedWidget()
 
@@ -222,7 +220,7 @@ class PlotPanel(QWidget):
 
     # --- J-V results grid (legacy updateIVResults) ---
 
-    def update_iv_results(self, result: Optional[IVResults]) -> None:
+    def update_iv_results(self, result: IVResults | None) -> None:
         def fmt(value, spec):
             return spec.format(value) if value is not None else "-----"
 

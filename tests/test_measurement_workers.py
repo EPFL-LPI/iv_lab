@@ -34,8 +34,8 @@ from iv_lab.measurements.workers import (
     ConstantCurrentWorker,
     ConstantVoltageWorker,
     IVCurveWorker,
-    MPPTrackingWorker,
     MeasurementWorker,
+    MPPTrackingWorker,
 )
 
 # QtCore needs an application object; create one for the whole module

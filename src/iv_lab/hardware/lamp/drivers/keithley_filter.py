@@ -15,7 +15,6 @@ time for the wheel to reach position (11 s after ``light_on``, 7 s after
 from __future__ import annotations
 
 import time
-from typing import Optional
 
 from iv_lab.config import LampSettings
 from iv_lab.hardware.errors import HardwareConnectionError
@@ -33,7 +32,7 @@ LIGHT_OFF_WAIT = 7.0
 class KeithleyFilterWheelLamp(BaseLamp):
     """Filter wheel driven by the SMU's digital output lines."""
 
-    def __init__(self, settings: LampSettings, smu: Optional[BaseSMU] = None) -> None:
+    def __init__(self, settings: LampSettings, smu: BaseSMU | None = None) -> None:
         super().__init__(settings, smu=smu)
         self.light_on_wait = LIGHT_ON_WAIT
         self.light_off_wait = LIGHT_OFF_WAIT

@@ -33,7 +33,6 @@ import json
 import random
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Union
 
 #: Machine-specific live users file (gitignored; takes priority if it exists).
 USERS_FILENAME = "config/users.txt"
@@ -82,7 +81,7 @@ def scramble_string(text: str) -> str:
     for i, b in enumerate(bytename):
         hashed_bytes.append((hashed_bytes[i] + b) % 256)
 
-    return "".join("{:02x}".format(b) for b in hashed_bytes)
+    return "".join(f"{b:02x}" for b in hashed_bytes)
 
 
 def unscramble_string(text: str) -> str:
@@ -104,7 +103,7 @@ def unscramble_string(text: str) -> str:
     return bytearray(reversed(unhashed_reversed)).decode()
 
 
-def load_users(path: Union[str, Path]) -> dict[str, str]:
+def load_users(path: str | Path) -> dict[str, str]:
     """Load the scrambled JSON user table (legacy ``system.__init__``).
 
     Returns a username -> password mapping with lowercase usernames.
@@ -112,7 +111,7 @@ def load_users(path: Union[str, Path]) -> dict[str, str]:
     is missing or cannot be decoded.
     """
     try:
-        scrambled = Path(path).read_text()
+        scrambled = Path(path).read_text(encoding="utf-8")
         users_raw = json.loads(unscramble_string(scrambled))
         # force all usernames to be lowercase (legacy)
         return {key.lower(): value for key, value in users_raw.items()}
@@ -120,13 +119,13 @@ def load_users(path: Union[str, Path]) -> dict[str, str]:
         raise UserTableError(USER_TABLE_ERROR_MESSAGE) from exc
 
 
-def write_users(path: Union[str, Path], users: dict[str, str]) -> None:
+def write_users(path: str | Path, users: dict[str, str]) -> None:
     """Write a user table in the legacy scrambled-JSON format.
 
     The legacy application never writes ``users.txt`` (it is prepared by
     an administrator); this helper exists for tests and admin tooling.
     """
-    Path(path).write_text(scramble_string(json.dumps(users)))
+    Path(path).write_text(scramble_string(json.dumps(users)), encoding="utf-8")
 
 
 class Authenticator:

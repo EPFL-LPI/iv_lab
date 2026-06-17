@@ -11,8 +11,8 @@ consistent with the deferred-import policy for heavy scientific dependencies.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Sequence
 
 
 @dataclass
@@ -41,6 +41,7 @@ def compute_jv_metrics(
     """
     import numpy as np
     import pandas as pd
+
     from . import jv_analysis
 
     j_density = np.array(current) / active_area  # A/cm²

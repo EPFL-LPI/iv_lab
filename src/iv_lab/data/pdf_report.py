@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
 
 from iv_lab.data.results import IVResults
 
@@ -53,9 +53,9 @@ def wrap_data_file_name(data_file_name: str) -> list[tuple[str, str, str]]:
 def generate_jv_results_pdf(
     result: IVResults,
     username: str,
-    context: "SystemContext",
+    context: SystemContext,
     data_file_name: str,
-    pdf_file_path: Union[str, Path],
+    pdf_file_path: str | Path,
 ) -> Path:
     """Render the legacy J-V report PDF; returns the written path."""
     # deferred import: matplotlib is optional at package import time
@@ -109,7 +109,7 @@ def generate_jv_results_pdf(
         params_text.append(
             (
                 "Reference Calibration",
-                "{:6.4f}".format(context.full_sun_reference_current * 1000.0),
+                f"{context.full_sun_reference_current * 1000.0:6.4f}",
                 " mA",
             )
         )
@@ -137,22 +137,22 @@ def generate_jv_results_pdf(
     ]
     if result.light_int_meas is not None:
         results_text.append(
-            ("Measured Intensity", "{:6.2f}".format(result.light_int_meas), "% sun")
+            ("Measured Intensity", f"{result.light_int_meas:6.2f}", "% sun")
         )
     if result.Jsc is not None:
-        results_text.append(("Jsc", "{:5.3f}".format(result.Jsc), " mA/$cm^2$"))
+        results_text.append(("Jsc", f"{result.Jsc:5.3f}", " mA/$cm^2$"))
     if result.Voc is not None:
-        results_text.append(("Voc", "{:6.4f}".format(result.Voc), "V"))
+        results_text.append(("Voc", f"{result.Voc:6.4f}", "V"))
     if result.FF is not None:
-        results_text.append(("FF", "{:6.4f}".format(result.FF), ""))
+        results_text.append(("FF", f"{result.FF:6.4f}", ""))
     if result.PCE is not None:
-        results_text.append(("PCE", "{:5.2f}".format(result.PCE), "%"))
+        results_text.append(("PCE", f"{result.PCE:5.2f}", "%"))
     if result.Jmpp is not None:
-        results_text.append(("Jmpp", "{:5.3f}".format(result.Jmpp), " mA/$cm^2$"))
+        results_text.append(("Jmpp", f"{result.Jmpp:5.3f}", " mA/$cm^2$"))
     if result.Vmpp is not None:
-        results_text.append(("Vmpp", "{:6.4f}".format(result.Vmpp), "V"))
+        results_text.append(("Vmpp", f"{result.Vmpp:6.4f}", "V"))
     if result.Pmpp is not None:
-        results_text.append(("Pmpp", "{:7.3f}".format(result.Pmpp), " mW/$cm^2$"))
+        results_text.append(("Pmpp", f"{result.Pmpp:7.3f}", " mW/$cm^2$"))
 
     for label, value, units in results_text:
         fig.text(rt_x1, rt_y, label, fontsize=10, ha="left")

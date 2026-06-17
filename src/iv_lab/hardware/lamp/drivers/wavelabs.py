@@ -20,7 +20,6 @@ optional hardware dependency.
 from __future__ import annotations
 
 import socket
-from typing import Optional
 
 from iv_lab.config import LampSettings
 from iv_lab.hardware.errors import HardwareCommandError
@@ -37,7 +36,7 @@ WAVELABS_ADDRESS = ("127.0.0.1", 55555)
 class WavelabsLamp(BaseLamp):
     """Wavelabs Sinus70 driven through its WLRC TCP protocol."""
 
-    def __init__(self, settings: LampSettings, smu: Optional[BaseSMU] = None) -> None:
+    def __init__(self, settings: LampSettings, smu: BaseSMU | None = None) -> None:
         super().__init__(settings, smu=smu)
         self.connection_open = False
         self.seq_num = 0

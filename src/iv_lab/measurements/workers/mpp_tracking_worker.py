@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from iv_lab.measurements.protocols.mpp_tracking import MPPTrackingProtocol
 
 from .base_worker import MeasurementWorker
@@ -16,7 +14,7 @@ class MPPTrackingWorker(MeasurementWorker):
 
     protocol_class = MPPTrackingProtocol
 
-    def _progress_from_data(self, data: dict) -> Optional[int]:
+    def _progress_from_data(self, data: dict) -> int | None:
         # the auto-start J-V scan emits {'v','j'} dicts with no time axis;
         # report indeterminate progress for those
         return self._time_progress(data)

@@ -28,7 +28,6 @@ to the constructor), never write files, and import QtCore only.
 from __future__ import annotations
 
 import threading
-from typing import Optional
 
 from PySide6.QtCore import QObject, Signal, Slot
 
@@ -54,7 +53,7 @@ class MeasurementWorker(QObject):
         self,
         protocol: MeasurementProtocol,
         params: dict,
-        parent: Optional[QObject] = None,
+        parent: QObject | None = None,
     ) -> None:
         super().__init__(parent)
         if not isinstance(protocol, self.protocol_class):
@@ -119,7 +118,7 @@ class MeasurementWorker(QObject):
 
     # --- progress derivation ---
 
-    def _progress_from_data(self, data: dict) -> Optional[int]:
+    def _progress_from_data(self, data: dict) -> int | None:
         """Derive percent complete from a live data dict; None = unknown.
 
         Overridden by concrete workers. Time-based measurements derive
@@ -133,7 +132,7 @@ class MeasurementWorker(QObject):
         if progress is not None:
             self.progress_update.emit(max(0, min(100, int(progress))))
 
-    def _time_progress(self, data: dict) -> Optional[int]:
+    def _time_progress(self, data: dict) -> int | None:
         """Progress for duration-based protocols from the time axis."""
         times = data.get("t")
         duration = self.params.get("duration")

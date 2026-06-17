@@ -31,7 +31,8 @@ from __future__ import annotations
 
 import time
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Optional, Union
+from collections.abc import Callable
+from typing import Any
 
 from iv_lab.hardware.arduino.base import BaseArduino
 from iv_lab.hardware.lamp.base import BaseLamp
@@ -42,7 +43,7 @@ class VocPolarityError(Exception):
     """Wrong Voc polarity detected before a scan (legacy abort case)."""
 
 
-def _nwire_value(nwire: Union[int, str]) -> int:
+def _nwire_value(nwire: int | str) -> int:
     """Map the legacy ``Nwire`` parameter to 2 or 4.
 
     The legacy GUI passes ``'2 wire'`` / ``'4 wire'`` strings; the legacy
@@ -70,14 +71,14 @@ class MeasurementProtocol(ABC):
         self,
         smu: BaseSMU,
         lamp: BaseLamp,
-        arduino: Optional[BaseArduino] = None,
+        arduino: BaseArduino | None = None,
         *,
         system_name: str = "",
         check_voc_before_scan: bool = True,
-        status_callback: Optional[Callable[[str], None]] = None,
-        warning_callback: Optional[Callable[[str], None]] = None,
-        data_callback: Optional[Callable[[dict], None]] = None,
-        cancel_callback: Optional[Callable[[], bool]] = None,
+        status_callback: Callable[[str], None] | None = None,
+        warning_callback: Callable[[str], None] | None = None,
+        data_callback: Callable[[dict], None] | None = None,
+        cancel_callback: Callable[[], bool] | None = None,
     ) -> None:
         self.smu = smu
         self.lamp = lamp
@@ -90,7 +91,7 @@ class MeasurementProtocol(ABC):
         self._warning_callback = warning_callback
         self._data_callback = data_callback
         self._cancel_callback = cancel_callback
-        self._confirm_callback: Optional[Callable[[str, float], bool]] = None
+        self._confirm_callback: Callable[[str, float], bool] | None = None
 
         #: Legacy ``system.measure_light_intensity`` measured for 5 s.
         self.light_intensity_measure_time = 5.0
@@ -105,11 +106,11 @@ class MeasurementProtocol(ABC):
     def set_callbacks(
         self,
         *,
-        status: Optional[Callable[[str], None]] = None,
-        warning: Optional[Callable[[str], None]] = None,
-        data: Optional[Callable[[dict], None]] = None,
-        cancel: Optional[Callable[[], bool]] = None,
-        confirm: Optional[Callable[[str, float], bool]] = None,
+        status: Callable[[str], None] | None = None,
+        warning: Callable[[str], None] | None = None,
+        data: Callable[[dict], None] | None = None,
+        cancel: Callable[[], bool] | None = None,
+        confirm: Callable[[str, float], bool] | None = None,
     ) -> None:
         """Attach or replace the interaction callbacks.
 

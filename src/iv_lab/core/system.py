@@ -28,10 +28,10 @@ module imports QtCore only.
 
 from __future__ import annotations
 
+import contextlib
 import datetime
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, Union
 
 from PySide6.QtCore import QObject, QThread, Signal
 
@@ -80,9 +80,9 @@ class _MeasurementSpec:
     protocol_cls: type
     worker_cls: type
     #: Result store key ('JV', 'CV', 'CC', 'MPP'); None for calibration.
-    scan_key: Optional[str]
+    scan_key: str | None
     #: Legacy error message when saving without data.
-    no_data_message: Optional[str] = None
+    no_data_message: str | None = None
 
 
 #: Legacy scan-type labels (GUI measurement menu / system.saveData).
@@ -151,11 +151,11 @@ class IVLabSystem(QObject):
         self,
         settings: SystemSettings,
         *,
-        settings_file: Union[str, Path] = SETTINGS_FILENAME,
-        users_file: Union[str, Path] = USERS_FILENAME,
-        logo_path: Optional[Union[str, Path]] = None,
+        settings_file: str | Path = SETTINGS_FILENAME,
+        users_file: str | Path = USERS_FILENAME,
+        logo_path: str | Path | None = None,
         threaded: bool = True,
-        parent: Optional[QObject] = None,
+        parent: QObject | None = None,
     ) -> None:
         super().__init__(parent)
         self.settings = settings
@@ -169,15 +169,15 @@ class IVLabSystem(QObject):
         self.save_data_automatic = settings.IVsys.saveDataAutomatic
 
         # user table (legacy: failure is reported, login stays impossible)
-        self.authenticator: Optional[Authenticator] = None
-        self.user_table_error: Optional[str] = None
+        self.authenticator: Authenticator | None = None
+        self.user_table_error: str | None = None
         try:
             self.authenticator = Authenticator(load_users(users_file))
         except UserTableError as exc:
             self.user_table_error = str(exc)
 
         self.logbook = Logbook(settings.computer.sdPath)
-        self.user: Optional[AuthenticatedUser] = None
+        self.user: AuthenticatedUser | None = None
 
         # hardware through the factories (legacy system.__init__)
         self.smu = create_smu(settings.SMU)
@@ -194,7 +194,7 @@ class IVLabSystem(QObject):
 
         self.lamp = create_lamp(settings.lamp, smu=self.smu)
 
-        self.arduino: Optional[BaseArduino] = None
+        self.arduino: BaseArduino | None = None
         if settings.IVsys.sysName == "IV_Old":
             if settings.arduino is None:
                 raise ValueError(
@@ -207,8 +207,8 @@ class IVLabSystem(QObject):
         #: data_IV/IV_Results etc.
         self.results: dict[str, MeasurementResult] = {}
 
-        self._worker: Optional[MeasurementWorker] = None
-        self._thread: Optional[QThread] = None
+        self._worker: MeasurementWorker | None = None
+        self._thread: QThread | None = None
         self._running = False
 
     # --- hardware (legacy hardware_init) ---
@@ -278,10 +278,8 @@ class IVLabSystem(QObject):
         for device in (self.smu, self.lamp, self.arduino):
             if device is None:
                 continue
-            try:
+            with contextlib.suppress(Exception):
                 device.disconnect()
-            except Exception:
-                pass
 
     # --- authentication and logbook (legacy user_login / user_logout) ---
 
@@ -510,8 +508,6 @@ class IVLabSystem(QObject):
     def shutdown(self) -> None:
         """Abort any run, make the hardware safe, and disconnect."""
         self.abort_run()
-        try:
+        with contextlib.suppress(Exception):
             self.turn_off()
-        except Exception:
-            pass
         self.disconnect_hardware()

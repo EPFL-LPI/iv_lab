@@ -64,10 +64,7 @@ class CalibrationProtocol(MeasurementProtocol):
         smu.set_voltage_limit(SMUChannel.CELL, p["Vmax"])
         smu.set_current_limit(SMUChannel.CELL, p["Imax"])
 
-        if smu.reference_diode_parallel:
-            channel_list = ["BOTH"]
-        else:
-            channel_list = ["A", "B"]
+        channel_list = ["BOTH"] if smu.reference_diode_parallel else ["A", "B"]
 
         for channel in channel_list:
             if abs(p["set_voltage"]) > abs(p["Vmax"]):
@@ -84,7 +81,7 @@ class CalibrationProtocol(MeasurementProtocol):
                 smu.setup_reference_diode()
                 smu.enable_output(SMUChannel.REFERENCE)
 
-            def measure() -> tuple:
+            def measure(channel: str = channel) -> tuple:
                 if channel == "A":
                     return (smu.measure_current(SMUChannel.CELL), None)
                 if channel == "B":

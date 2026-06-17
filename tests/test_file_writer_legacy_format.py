@@ -289,3 +289,33 @@ def test_data_rows_parse_as_numbers(tmp_path: Path) -> None:
     for line in lines[n_header:]:
         values = [float(x) for x in line.split(",")]
         assert len(values) == 3
+
+
+def test_data_file_is_written_as_utf8(tmp_path: Path) -> None:
+    # A non-ASCII header value (here in the light-source name) must be encoded
+    # as UTF-8, not the platform default (cp1252 on Windows). The micro sign
+    # U+00B5 is b"\xc2\xb5" in UTF-8 but b"\xb5" in cp1252, so checking the raw
+    # bytes catches a regression to the locale encoding on any platform.
+    writer = make_writer(tmp_path, lamp_display_name="µ-cell lamp")
+
+    csv_path, _ = writer.save(iv_result(), "felix")
+    raw = csv_path.read_bytes()
+
+    # UTF-8 encodes µ (U+00B5) as the two bytes 0xC2 0xB5; cp1252 would emit a
+    # lone 0xB5, which is an invalid UTF-8 start byte. So the presence of the
+    # two-byte sequence AND a clean UTF-8 decode together prove the codec.
+    assert b"\xc2\xb5-cell lamp" in raw
+    assert "Light Source,µ-cell lamp" in raw.decode("utf-8")
+
+
+def test_scrambled_duplicate_is_written_as_utf8(tmp_path: Path) -> None:
+    # The sdPath copy holds scrambled (hex) content + a hex filename, so its
+    # bytes are ASCII; the regression guard is simply that it is created and
+    # readable as UTF-8 without raising.
+    writer = make_writer(tmp_path)
+    writer.save(iv_result(), "felix")
+
+    sd_files = list(Path(writer.context.sd_path).glob("*"))
+    assert sd_files, "expected a scrambled duplicate file under sd_path"
+    # readable as UTF-8 (would raise if written/read with a mismatched codec)
+    sd_files[0].read_text(encoding="utf-8")

@@ -9,8 +9,6 @@ same for any configured brand.
 
 from __future__ import annotations
 
-from typing import Optional
-
 from iv_lab.config import LampSettings
 from iv_lab.hardware.smu.base import BaseSMU
 
@@ -20,7 +18,7 @@ from ..base import BaseLamp
 class EmulatedLamp(BaseLamp):
     """In-memory lamp tracking light level and on/off state."""
 
-    def __init__(self, settings: LampSettings, smu: Optional[BaseSMU] = None) -> None:
+    def __init__(self, settings: LampSettings, smu: BaseSMU | None = None) -> None:
         super().__init__(settings, smu=smu, name=f"Emulated {settings.display_name}")
 
     def _open(self) -> None:

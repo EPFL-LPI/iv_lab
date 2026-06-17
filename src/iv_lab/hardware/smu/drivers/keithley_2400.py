@@ -31,6 +31,7 @@ Preserved legacy quirks:
 
 from __future__ import annotations
 
+import contextlib
 from dataclasses import dataclass
 
 from iv_lab.config import SMUSettings
@@ -176,10 +177,8 @@ class Keithley2400FamilySMU(BaseSMU):
         # no explicit disconnect in pymeasure; disable the output in case
         # it is enabled, then close the adapter (legacy disconnect)
         self.smu.disable_source()
-        try:
+        with contextlib.suppress(Exception):
             self.smu.adapter.close()
-        except Exception:
-            pass
 
     # --- channel switching (legacy toggle_output_2400) ---
 

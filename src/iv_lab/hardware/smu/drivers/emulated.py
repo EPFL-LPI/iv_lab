@@ -24,7 +24,6 @@ import math
 import random
 import time
 from dataclasses import dataclass
-from typing import Optional
 
 from iv_lab.config import SMUSettings
 
@@ -53,11 +52,12 @@ class _ChannelState:
 class EmulatedSMU(BaseSMU):
     """In-memory SMU presenting a diode-shaped solar cell on both channels."""
 
-    def __init__(self, settings: Optional[SMUSettings] = None) -> None:
-        if settings is None:
-            name = "Emulated SMU"
-        else:
-            name = f"Emulated {settings.brand} {settings.model}"
+    def __init__(self, settings: SMUSettings | None = None) -> None:
+        name = (
+            "Emulated SMU"
+            if settings is None
+            else f"Emulated {settings.brand} {settings.model}"
+        )
         super().__init__(name)
 
         self.settings = settings

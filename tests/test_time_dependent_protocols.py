@@ -86,7 +86,7 @@ def test_constant_voltage_returns_plausible_currents() -> None:
     assert result.current[0] == pytest.approx(-0.00397, rel=0.05)
     # time axis starts at zero and increases
     assert result.time[0] == pytest.approx(0.0, abs=0.01)
-    assert all(b > a for a, b in zip(result.time, result.time[1:]))
+    assert all(b > a for a, b in zip(result.time, result.time[1:], strict=False))
     assert result.set_voltage == 0.2
 
 
