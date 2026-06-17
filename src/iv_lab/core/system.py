@@ -33,7 +33,7 @@ import datetime
 from dataclasses import dataclass
 from pathlib import Path
 
-from PySide6.QtCore import QObject, QThread, Signal
+from PySide6.QtCore import QObject, QThread, Signal, Slot
 
 from iv_lab.config import SystemSettings, save_settings
 from iv_lab.data import FileWriter, SystemContext
@@ -127,6 +127,30 @@ MEASUREMENTS = {
 }
 
 
+class _HardwareInitWorker(QObject):
+    """Runs ``IVLabSystem.hardware_init()`` on a worker thread.
+
+    Hardware connection involves blocking VISA calls that can take seconds
+    (or hang on a mis-wired instrument); running them here keeps the GUI
+    responsive. ``hardware_init`` reports through the system's own signals,
+    so this worker only needs to signal when it is done (so the thread can
+    quit). ``hardware_init`` handles its own errors and never raises.
+    """
+
+    done = Signal()
+
+    def __init__(self, system: IVLabSystem) -> None:
+        super().__init__()
+        self._system = system
+
+    @Slot()
+    def run(self) -> None:
+        try:
+            self._system.hardware_init()
+        finally:
+            self.done.emit()
+
+
 class IVLabSystem(QObject):
     """Coordinates hardware, measurements, data, and services."""
 
@@ -211,6 +235,10 @@ class IVLabSystem(QObject):
         self._thread: QThread | None = None
         self._running = False
 
+        # background hardware-initialization thread (keeps the GUI responsive)
+        self._init_worker: _HardwareInitWorker | None = None
+        self._init_thread: QThread | None = None
+
     # --- hardware (legacy hardware_init) ---
 
     def hardware_init(self) -> bool:
@@ -260,6 +288,40 @@ class IVLabSystem(QObject):
         self.status_message.emit("Hardware initialized")
         self.hardware_ready.emit(True)
         return True
+
+    def start_hardware_init(self) -> None:
+        """Connect hardware without blocking the caller.
+
+        In threaded mode (the GUI) the connection runs on a worker thread so
+        a slow or hanging instrument cannot freeze the UI; progress and the
+        final ``hardware_ready`` are reported through the usual signals. In
+        non-threaded mode (tests/scripting) it runs synchronously. A second
+        call while an initialization is already running is ignored.
+        """
+        if not self.threaded:
+            self.hardware_init()
+            return
+        if self._init_thread is not None and self._init_thread.isRunning():
+            return
+
+        worker = _HardwareInitWorker(self)
+        thread = QThread(self)
+        worker.moveToThread(thread)
+        thread.started.connect(worker.run)
+        worker.done.connect(thread.quit)
+        thread.finished.connect(self._cleanup_init_thread)
+        self._init_worker = worker
+        self._init_thread = thread
+        thread.start()
+
+    def _cleanup_init_thread(self) -> None:
+        # runs in the main thread after the init thread finished; drop the
+        # worker reference and reclaim the thread object (mirrors
+        # _cleanup_worker)
+        self._init_worker = None
+        if self._init_thread is not None:
+            self._init_thread.deleteLater()
+            self._init_thread = None
 
     def turn_off(self) -> None:
         """Bring the hardware into a safe state.
