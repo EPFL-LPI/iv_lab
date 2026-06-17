@@ -193,7 +193,7 @@ class MainWindow(QMainWindow):
         system.data_updated.connect(self.plot_panel.update_live_data)
         system.measurement_finished.connect(self._on_measurement_finished)
         system.calibration_ready.connect(self._on_calibration_ready)
-        system.hardware_ready.connect(self._set_hardware_active)
+        system.hardware_ready.connect(self._on_hardware_ready)
         system.user_logged_in.connect(self._on_logged_in)
         system.user_logged_out.connect(self._on_logged_out)
 
@@ -308,7 +308,16 @@ class MainWindow(QMainWindow):
     # --- hardware (legacy initializeHardware / setHardwareActive) ---
 
     def _initialize_hardware(self) -> None:
-        self.system.hardware_init()
+        # disable the button so the connection cannot be re-triggered while it
+        # runs; the work happens off the GUI thread so the window stays
+        # responsive (re-enabled in _on_hardware_ready).
+        self.button_initialize.setEnabled(False)
+        self.system.start_hardware_init()
+
+    def _on_hardware_ready(self, active: bool) -> None:
+        # re-enable so the user can retry after a failed initialization
+        self.button_initialize.setEnabled(True)
+        self._set_hardware_active(active)
 
     def _set_hardware_active(self, active: bool) -> None:
         self.light_panel.setEnabled(active)

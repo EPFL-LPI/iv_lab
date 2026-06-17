@@ -1,6 +1,8 @@
 """Tests for the core system orchestrator (headless, emulated hardware)."""
 
 import json
+import threading
+import time
 from pathlib import Path
 
 import pytest
@@ -180,6 +182,50 @@ def test_hardware_init_failure_emits_legacy_message(tmp_path: Path) -> None:
     assert records.hardware == [False]
     assert "Error initializing keithley sourcemeter" in records.errors[0]
     assert "no VISA resource" in records.errors[0]
+
+
+def test_start_hardware_init_synchronous_when_not_threaded(tmp_path: Path) -> None:
+    system = make_system(tmp_path)  # make_system defaults to threaded=False
+    records = Records(system)
+
+    system.start_hardware_init()
+
+    # ran inline: connected and reported without spawning a thread
+    assert system.smu.is_connected()
+    assert system.lamp.is_connected()
+    assert records.hardware == [True]
+    assert system._init_thread is None
+
+
+def test_start_hardware_init_runs_off_the_main_thread(tmp_path: Path) -> None:
+    system = make_system(tmp_path, threaded=True)
+    records = Records(system)
+
+    main_ident = threading.get_ident()
+    ran_on: dict = {}
+    original = system.hardware_init
+
+    def spy() -> bool:
+        ran_on["ident"] = threading.get_ident()
+        return original()
+
+    system.hardware_init = spy
+
+    system.start_hardware_init()
+    # control returned immediately; the work happens on a worker thread
+    wait_for(system.hardware_ready)
+
+    assert records.hardware == [True]
+    assert system.smu.is_connected()
+    # the blocking connection ran off the GUI/main thread, so it could not
+    # have frozen the UI
+    assert ran_on["ident"] != main_ident
+
+    # let the init thread wind down and clean up before the next test
+    deadline = time.monotonic() + 5.0
+    while system._init_thread is not None and time.monotonic() < deadline:
+        QCoreApplication.processEvents()
+    assert system._init_thread is None
 
 
 # --- login / logout ---
