@@ -113,7 +113,13 @@ class Keithley2400FamilySMU(BaseSMU):
         termination characters or every read hangs until the VISA timeout
         (GPIB/USB signal end-of-message on the bus, so they need none). The
         defaults come from ``_SERIAL_DEFAULTS`` and can be overridden per
-        machine via the settings file. A read ``timeout`` is always applied.
+        machine via the settings file.
+
+        A ``timeout`` is always applied. On serial it bounds writes as well
+        as reads -- pyvisa-py maps the VISA timeout onto pyserial's
+        ``write_timeout`` and NI-VISA uses a single timeout for both -- so a
+        write blocked by an RS-232 flow-control mismatch fails after the
+        timeout instead of hanging the connection indefinitely.
         """
         kwargs: dict = {}
         timeout = self.settings.timeout_ms
