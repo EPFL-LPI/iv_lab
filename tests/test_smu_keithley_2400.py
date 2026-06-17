@@ -299,9 +299,11 @@ def test_setup_voltage_output_replicates_legacy_sequence(fake_pymeasure) -> None
     assert fake.sets("compliance_current") == [0.02]
     # autorange on (settings default autorange=True)
     assert ":CURR:RANG:AUTO ON" in fake.writes()
-    # voltage source mode with measure_current configured (nplc=1, autorange)
+    # voltage source mode with current measurement configured (nplc=1, autorange);
+    # pymeasure 0.16 replaced measure_current(nplc, range, auto) with explicit props
     assert fake.sets("source_mode") == ["voltage"]
-    assert fake.calls("measure_current")[0][2] == 1
+    assert 1 in fake.sets("current_nplc")
+    assert fake.sets("current_range_auto_enabled") == [True]
     # current display (legacy SYST:KEY 22, non-2450 only)
     assert "SYST:KEY 22" in fake.writes()
 

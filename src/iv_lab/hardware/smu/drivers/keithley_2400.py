@@ -290,8 +290,11 @@ class Keithley2400FamilySMU(BaseSMU):
             self.smu.disable_source()
         self.smu.source_mode = "current"
         # legacy passed its whole range/autorange dicts here, which are
-        # always truthy: the effective call is nplc=1 with autoranging on
-        self.smu.measure_voltage(1, state.v_range, True)
+        # always truthy: the effective call is nplc=1 with autoranging on.
+        # pymeasure 0.16 deprecated the measure_voltage(nplc, range, auto)
+        # config form; configure the equivalent explicitly instead.
+        self.smu.voltage_nplc = 1
+        self.smu.voltage_range_auto_enabled = True
         if state.output:
             self.smu.enable_source()
         state.source_mode = "current"
@@ -305,8 +308,11 @@ class Keithley2400FamilySMU(BaseSMU):
         if state.output:
             self.smu.disable_source()
         self.smu.source_mode = "voltage"
-        # see set_mode_current_source: effectively nplc=1, autorange on
-        self.smu.measure_current(1, state.i_range, True)
+        # see set_mode_current_source: effectively nplc=1, autorange on.
+        # pymeasure 0.16 deprecated the measure_current(nplc, range, auto)
+        # config form; configure the equivalent explicitly instead.
+        self.smu.current_nplc = 1
+        self.smu.current_range_auto_enabled = True
         if state.output:
             self.smu.enable_source()
         state.source_mode = "voltage"
