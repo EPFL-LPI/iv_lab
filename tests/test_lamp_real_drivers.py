@@ -1,5 +1,5 @@
 """Tests for the real lamp drivers (Wavelabs, Oriel, Trinamic, Keithley
-filter wheel).
+filter wheel, VeraSol).
 
 No hardware library is required: pyvisa and pytrinamic are faked via
 ``sys.modules`` injection, the Wavelabs socket is faked by patching the
@@ -22,6 +22,7 @@ from iv_lab.hardware.lamp import create_lamp, get_lamp_driver
 from iv_lab.hardware.lamp.drivers.keithley_filter import KeithleyFilterWheelLamp
 from iv_lab.hardware.lamp.drivers.oriel import OrielLSS7120Lamp
 from iv_lab.hardware.lamp.drivers.trinamic import TrinamicFilterWheelLamp
+from iv_lab.hardware.lamp.drivers.verasol import VeraSolLamp
 from iv_lab.hardware.lamp.drivers.wavelabs import WavelabsLamp
 from iv_lab.hardware.smu.base import SMUChannel
 from iv_lab.hardware.smu.drivers.emulated import EmulatedSMU
@@ -41,6 +42,7 @@ def lamp_settings(brand, model, light_levels, **overrides) -> LampSettings:
 def test_real_drivers_are_registered() -> None:
     assert get_lamp_driver("Wavelabs", "Sinus70") is WavelabsLamp
     assert get_lamp_driver("Oriel", "LSS-7120") is OrielLSS7120Lamp
+    assert get_lamp_driver("VeraSol", "LSS-7120") is VeraSolLamp
     assert get_lamp_driver("keithley", "filter wheel") is KeithleyFilterWheelLamp
     for model in ("TMCM-1260", "TMCM-1160", "TMCM-3110"):
         assert get_lamp_driver("Trinamic", model) is TrinamicFilterWheelLamp
@@ -582,3 +584,310 @@ def test_factory_passes_smu_to_keithley_filter() -> None:
     assert lamp.smu is smu
     # sanity: the dummy SMU still behaves like a BaseSMU
     assert smu.measure_current(SMUChannel.CELL) is not None
+
+
+# --- VeraSol LSS-7120 ---
+
+
+class FakeVeraSol:
+    """Stand-in for _verasol_lib.VeraSol used in tests."""
+
+    def __init__(self, resource_name=None, timeout_ms=10_000) -> None:
+        self.resource_name = resource_name
+        self._amplitude: float = 1.0
+        self._output: bool = False
+        self.idn_str: str = "Newport Corporation,LSS-7120,sn123,rev1"
+        self.closed: bool = False
+
+    def identify(self) -> str:
+        return self.idn_str
+
+    def set_amplitude(self, suns: float) -> None:
+        self._amplitude = suns
+
+    def get_amplitude(self) -> float:
+        return self._amplitude
+
+    def set_output(self, on: bool) -> None:
+        self._output = on
+
+    def get_output(self) -> bool:
+        return self._output
+
+    def set_spectrum_am15g(self) -> None:
+        pass
+
+    def close(self) -> None:
+        self.closed = True
+
+
+@pytest.fixture
+def fake_verasol_lib(monkeypatch):
+    instance = FakeVeraSol()
+
+    def _make(resource_name=None, timeout_ms=10_000):
+        instance.resource_name = resource_name
+        return instance
+
+    module = types.ModuleType("iv_lab.hardware.lamp.drivers._verasol_lib")
+    module.VeraSol = _make
+    monkeypatch.setitem(
+        sys.modules, "iv_lab.hardware.lamp.drivers._verasol_lib", module
+    )
+    return instance
+
+
+def make_verasol(**overrides) -> VeraSolLamp:
+    data = {"brand": "VeraSol", "model": "LSS-7120", "emulate": False}
+    data.update(overrides)
+    settings = LampSettings(**data)
+    return VeraSolLamp(settings)
+
+
+def test_verasol_connect_checks_idn(fake_verasol_lib) -> None:
+    lamp = make_verasol()
+    lamp.connect()
+
+    assert lamp.is_connected()
+
+
+def test_verasol_bad_idn_raises(fake_verasol_lib) -> None:
+    fake_verasol_lib.idn_str = "Some Other Device,XYZ,000"
+    lamp = make_verasol()
+
+    with pytest.raises(HardwareConnectionError, match="IDN check failed"):
+        lamp.connect()
+
+    assert not lamp.is_connected()
+
+
+def test_verasol_connect_missing_pyvisa_raises(monkeypatch) -> None:
+    module = types.ModuleType("iv_lab.hardware.lamp.drivers._verasol_lib")
+
+    def _raise(*args, **kwargs):
+        raise ImportError("No module named 'pyvisa'")
+
+    module.VeraSol = _raise
+    monkeypatch.setitem(
+        sys.modules, "iv_lab.hardware.lamp.drivers._verasol_lib", module
+    )
+    lamp = make_verasol()
+
+    with pytest.raises(HardwareConnectionError, match="pyvisa"):
+        lamp.connect()
+
+
+def test_verasol_light_on_sets_amplitude_and_output(fake_verasol_lib) -> None:
+    lamp = make_verasol()
+    lamp.connect()
+
+    lamp.light_on(100.0)
+
+    assert lamp.light_is_on
+    assert lamp.light_int == 100.0
+    assert fake_verasol_lib._amplitude == pytest.approx(1.0)
+    assert fake_verasol_lib._output is True
+
+
+def test_verasol_light_on_50_percent(fake_verasol_lib) -> None:
+    lamp = make_verasol()
+    lamp.connect()
+
+    lamp.light_on(50.0)
+
+    assert lamp.light_is_on
+    assert fake_verasol_lib._amplitude == pytest.approx(0.5)
+    assert fake_verasol_lib._output is True
+
+
+def test_verasol_light_on_zero_turns_output_off(fake_verasol_lib) -> None:
+    lamp = make_verasol()
+    lamp.connect()
+    fake_verasol_lib._output = True   # simulate output was on
+
+    lamp.light_on(0.0)
+
+    assert lamp.light_is_on          # legacy: still counts as "on"
+    assert lamp.light_int == 0.0
+    assert fake_verasol_lib._output is False
+
+
+def test_verasol_light_on_below_minimum_raises(fake_verasol_lib) -> None:
+    lamp = make_verasol()
+    lamp.connect()
+
+    with pytest.raises(HardwareCommandError, match="minimum amplitude"):
+        lamp.light_on(5.0)
+
+    assert not lamp.light_is_on
+
+
+def test_verasol_amplitude_mismatch_raises(fake_verasol_lib) -> None:
+    # Fake an instrument that reports a different amplitude than requested.
+    fake_verasol_lib._amplitude = 0.5  # will be reported after set_amplitude
+    original_set = FakeVeraSol.set_amplitude
+
+    def _bad_set(self, suns):
+        pass  # don't update _amplitude — simulate mismatch
+
+    fake_verasol_lib.set_amplitude = _bad_set.__get__(fake_verasol_lib, FakeVeraSol)
+
+    lamp = make_verasol()
+    lamp.connect()
+
+    with pytest.raises(HardwareCommandError, match="amplitude mismatch"):
+        lamp.light_on(100.0)
+
+    assert not lamp.light_is_on
+
+
+def test_verasol_light_off_turns_output_off(fake_verasol_lib) -> None:
+    lamp = make_verasol()
+    lamp.connect()
+    lamp.light_on(100.0)
+
+    lamp.light_off()
+
+    assert not lamp.light_is_on
+    assert fake_verasol_lib._output is False
+
+
+def test_verasol_light_off_safe_when_already_off(fake_verasol_lib) -> None:
+    lamp = make_verasol()
+    lamp.connect()
+
+    lamp.light_off()   # must not raise
+
+    assert not lamp.light_is_on
+
+
+def test_verasol_disconnect_closes_lib(fake_verasol_lib) -> None:
+    lamp = make_verasol()
+    lamp.connect()
+    lamp.disconnect()
+
+    assert fake_verasol_lib.closed
+    assert not lamp.is_connected()
+
+
+def test_verasol_settings_without_light_level_dict() -> None:
+    # VeraSol does not require lightLevelDict in its settings.
+    settings = LampSettings(brand="VeraSol", model="LSS-7120", emulate=False)
+
+    assert settings.lightLevelDict is None
+
+
+def test_verasol_auto_discover_passes_none_resource(fake_verasol_lib) -> None:
+    # When visa_address is omitted from settings, the driver passes None
+    # to _verasol_lib.VeraSol so it auto-discovers the instrument.
+    lamp = make_verasol()   # no visa_address keyword
+    lamp.connect()
+
+    assert fake_verasol_lib.resource_name is None
+
+
+def test_verasol_explicit_visa_address_is_forwarded(fake_verasol_lib) -> None:
+    lamp = make_verasol(visa_address="USB0::0x1028::0x0001::71201234::INSTR")
+    lamp.connect()
+
+    assert fake_verasol_lib.resource_name == "USB0::0x1028::0x0001::71201234::INSTR"
+
+
+# --- _write() protocol tests (NI-VISA vs _WinUSBTMC acknowledgement encoding) ---
+#
+# The VeraSol acknowledges write commands with a 0-byte USB END (EOM) message.
+# _WinUSBTMC translates this to the string "Ready"; NI-VISA returns "".
+# Both must be accepted.  A non-empty unexpected string must raise RuntimeError.
+#
+# These tests load _verasol_lib with a *fake* pyvisa so the real pyvisa library
+# never enters sys.modules (which would break test_smu_emulation isolation checks).
+
+
+@pytest.fixture
+def verasol_cls(monkeypatch):
+    """Provide the VeraSol class loaded against a fake pyvisa.
+
+    Uses monkeypatch to inject a fake pyvisa module before importing
+    _verasol_lib, then cleans up _verasol_lib from sys.modules at teardown.
+    Real pyvisa is never loaded, preserving sys.modules isolation for other tests.
+    """
+    import importlib
+
+    fake_pyvisa = types.ModuleType("pyvisa")
+    fake_pyvisa.errors = types.SimpleNamespace(VisaIOError=OSError)
+    # monkeypatch records "pyvisa was absent" and will delete it at teardown
+    monkeypatch.setitem(sys.modules, "pyvisa", fake_pyvisa)
+
+    _key = "iv_lab.hardware.lamp.drivers._verasol_lib"
+    sys.modules.pop(_key, None)           # remove any cached copy with real pyvisa
+    lib = importlib.import_module(_key)   # fresh import against fake pyvisa
+
+    yield lib.VeraSol
+
+    sys.modules.pop(_key, None)           # remove so no live reference to fake pyvisa
+
+
+class _FakeInstr:
+    """Minimal pyvisa-resource stand-in: records writes and returns a preset ack."""
+
+    def __init__(self, ack: str) -> None:
+        self._ack = ack
+        self.written: list[str] = []
+        self.read_termination = "\n"   # default; __init__ should change this to ""
+        self.write_termination = "\n"
+        self.timeout = 10_000
+
+    def write(self, cmd: str) -> None:
+        self.written.append(cmd)
+
+    def read(self) -> str:
+        return self._ack
+
+    def close(self) -> None:
+        pass
+
+
+def _make_write_obj(VeraSol, ack: str):
+    """Create a VeraSol instance via object.__new__ with a preset fake _instr.
+
+    Bypasses __init__ so no VISA connection is attempted.
+    """
+    obj = object.__new__(VeraSol)
+    obj._instr = _FakeInstr(ack)
+    return obj, obj._instr
+
+
+def test_write_accepts_empty_ack_ni_visa(verasol_cls) -> None:
+    # NI-VISA returns "" for the 0-byte EOM acknowledgement — must not raise.
+    lamp, _ = _make_write_obj(verasol_cls, ack="")
+    lamp._write("AMPLITUDE 1.000")
+
+
+def test_write_accepts_ready_ack_winusbtmc(verasol_cls) -> None:
+    # _WinUSBTMC returns "Ready" for the 0-byte EOM acknowledgement — must not raise.
+    lamp, _ = _make_write_obj(verasol_cls, ack="Ready")
+    lamp._write("OUTPUT ON")
+
+
+def test_write_rejects_unexpected_ack(verasol_cls) -> None:
+    # Any non-empty string that is not "ready" signals an instrument fault.
+    lamp, _ = _make_write_obj(verasol_cls, ack="ERROR: invalid command")
+
+    with pytest.raises(RuntimeError, match="Unexpected acknowledgement"):
+        lamp._write("AMPLITUDE 1.000")
+
+
+def test_read_termination_is_empty_on_ni_visa_path(verasol_cls, monkeypatch) -> None:
+    # Verify that VeraSol.__init__ sets read_termination="" on the pyvisa resource,
+    # so NI-VISA terminates reads on the USB END bit rather than waiting for "\n".
+    fake_res = _FakeInstr(ack="")   # read_termination starts as "\n"
+    fake_rm = types.SimpleNamespace(
+        list_resources=lambda _: ["USB0::fake::INSTR"],
+        open_resource=lambda _: fake_res,
+        close=lambda: None,
+    )
+    sys.modules["pyvisa"].ResourceManager = lambda: fake_rm
+
+    lamp = verasol_cls(resource_name="USB0::fake::INSTR")
+
+    assert lamp._instr.read_termination == ""

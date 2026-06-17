@@ -83,7 +83,10 @@ class LampSettings(LegacyCompatibleModel):
             self.display_name = f"{self.brand} {self.model}"
         # Legacy lamp.__init__ reads lightLevelDict for every brand except
         # 'manual' (case-sensitive comparison, as in the legacy code).
-        if self.brand != "manual" and self.lightLevelDict is None:
+        # 'VeraSol' also skips the requirement: it accepts continuous amplitude
+        # directly from light_int and does not need a lookup table.
+        _no_dict_brands = {"manual", "verasol"}
+        if self.brand.lower() not in _no_dict_brands and self.lightLevelDict is None:
             raise ValueError(
                 f"lamp brand {self.brand!r} requires a 'lightLevelDict' entry"
             )
@@ -102,6 +105,16 @@ class SMUSettings(LegacyCompatibleModel):
     autorange: bool = True
     measSpeed: str = "normal"
     useReferenceDiode: bool = True
+    #: Serial (RS-232 / ``ASRL``) connection parameters.  Ignored for GPIB/USB
+    #: addresses, where termination is handled by the bus (EOI).  For a serial
+    #: Keithley these must match the instrument's front-panel RS-232 settings,
+    #: or every read hangs until the VISA timeout.  ``None`` means "use the
+    #: driver default" (see ``keithley_2400.py``).
+    baud_rate: Optional[int] = None
+    read_termination: Optional[str] = None
+    write_termination: Optional[str] = None
+    #: VISA read timeout in milliseconds (applies to all interface types).
+    timeout_ms: Optional[float] = None
 
 
 class ArduinoSettings(LegacyCompatibleModel):

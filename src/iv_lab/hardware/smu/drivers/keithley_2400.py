@@ -39,6 +39,20 @@ from iv_lab.hardware.errors import HardwareCommandError
 from ..base import BaseSMU, SMUChannel
 from ..registry import register_smu_driver
 
+# Default RS-232 parameters for a serial Keithley 2400.  These must match the
+# instrument's front-panel RS-232 settings; override per-machine via the
+# ``baud_rate`` / ``read_termination`` / ``write_termination`` settings keys.
+# Over GPIB/USB the bus signals end-of-message (EOI), so no termination
+# character is needed and these defaults are not applied.
+_SERIAL_DEFAULTS = {
+    "baud_rate": 9600,
+    "read_termination": "\n",   # Keithley COMM menu TERMINATOR <LF> (SCPI default)
+    "write_termination": "\n",
+}
+#: Default VISA read timeout (ms).  Serial reads are slower than GPIB; a too
+#: short timeout turns a slow-but-valid read into a spurious VI_ERROR_TMO.
+_DEFAULT_TIMEOUT_MS = 5000.0
+
 
 @dataclass
 class _ChannelState:
@@ -91,19 +105,40 @@ class Keithley2400FamilySMU(BaseSMU):
 
     # --- connection (legacy connect/disconnect, 2400-family branch) ---
 
+    def _connection_kwargs(self) -> dict:
+        """Build the pyvisa connection kwargs for the pymeasure adapter.
+
+        For serial (``ASRL``) addresses, RS-232 needs explicit baud rate and
+        termination characters or every read hangs until the VISA timeout
+        (GPIB/USB signal end-of-message on the bus, so they need none). The
+        defaults come from ``_SERIAL_DEFAULTS`` and can be overridden per
+        machine via the settings file. A read ``timeout`` is always applied.
+        """
+        kwargs: dict = {}
+        timeout = self.settings.timeout_ms
+        kwargs["timeout"] = _DEFAULT_TIMEOUT_MS if timeout is None else timeout
+
+        if str(self.visa_address)[:4].upper() == "ASRL":
+            for key, default in _SERIAL_DEFAULTS.items():
+                override = getattr(self.settings, key, None)
+                kwargs[key] = default if override is None else override
+        return kwargs
+
     def _open(self) -> None:
+        kwargs = self._connection_kwargs()
+
         # deferred import: must not be loaded at package import time
         if self.model == "2450":
             from pymeasure.instruments.keithley import Keithley2450
 
-            self.smu = Keithley2450(self.visa_address)
+            self.smu = Keithley2450(self.visa_address, **kwargs)
         else:
             from pymeasure.instruments.keithley import Keithley2400
 
-            self.smu = Keithley2400(self.visa_address)
+            self.smu = Keithley2400(self.visa_address, **kwargs)
 
         self.smu.reset()
-        self.smu.use_front_terminals()
+        self.smu.front_terminals_enabled = True
         self._current_channel = SMUChannel.CELL
 
         self.smu.wires = 4 if self.sense_mode_a == "4 wire" else 2
@@ -163,10 +198,10 @@ class Keithley2400FamilySMU(BaseSMU):
 
         # front terminals are the cell, rear terminals the reference diode
         if channel == SMUChannel.CELL:
-            self.smu.use_front_terminals()
+            self.smu.front_terminals_enabled = True
             sense_mode = self.sense_mode_a
         else:
-            self.smu.use_rear_terminals()
+            self.smu.front_terminals_enabled = False
             sense_mode = self.sense_mode_b
         self.smu.wires = 4 if sense_mode == "4 wire" else 2
 
@@ -255,8 +290,11 @@ class Keithley2400FamilySMU(BaseSMU):
             self.smu.disable_source()
         self.smu.source_mode = "current"
         # legacy passed its whole range/autorange dicts here, which are
-        # always truthy: the effective call is nplc=1 with autoranging on
-        self.smu.measure_voltage(1, state.v_range, True)
+        # always truthy: the effective call is nplc=1 with autoranging on.
+        # pymeasure 0.16 deprecated the measure_voltage(nplc, range, auto)
+        # config form; configure the equivalent explicitly instead.
+        self.smu.voltage_nplc = 1
+        self.smu.voltage_range_auto_enabled = True
         if state.output:
             self.smu.enable_source()
         state.source_mode = "current"
@@ -270,8 +308,11 @@ class Keithley2400FamilySMU(BaseSMU):
         if state.output:
             self.smu.disable_source()
         self.smu.source_mode = "voltage"
-        # see set_mode_current_source: effectively nplc=1, autorange on
-        self.smu.measure_current(1, state.i_range, True)
+        # see set_mode_current_source: effectively nplc=1, autorange on.
+        # pymeasure 0.16 deprecated the measure_current(nplc, range, auto)
+        # config form; configure the equivalent explicitly instead.
+        self.smu.current_nplc = 1
+        self.smu.current_range_auto_enabled = True
         if state.output:
             self.smu.enable_source()
         state.source_mode = "voltage"

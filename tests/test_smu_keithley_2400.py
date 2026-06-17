@@ -44,9 +44,10 @@ class FakeKeithley:
     instances: list = []
     fail_on_init = False
 
-    def __init__(self, visa_address: str) -> None:
+    def __init__(self, visa_address: str, **kwargs) -> None:
         object.__setattr__(self, "log", [])
         object.__setattr__(self, "visa_address", visa_address)
+        object.__setattr__(self, "init_kwargs", dict(kwargs))
         object.__setattr__(self, "adapter", FakeAdapter())
         object.__setattr__(self, "voltage_reading", 0.42)
         object.__setattr__(self, "current_reading", -0.0033)
@@ -179,7 +180,7 @@ def test_connect_imports_pymeasure_and_configures_instrument(fake_pymeasure) -> 
 
     # legacy connect sequence
     assert fake.calls("reset")
-    assert fake.calls("use_front_terminals")
+    assert True in fake.sets("front_terminals_enabled")
     assert fake.sets("wires") == [2]
     assert fake.sets("voltage_nplc") == [1]
     assert fake.sets("current_nplc") == [1]
@@ -209,6 +210,52 @@ def test_serial_interface_measurement_period(fake_pymeasure) -> None:
     smu.connect()
 
     assert smu.meas_period_min == pytest.approx(1 / 6)
+
+
+def test_serial_address_passes_rs232_connection_kwargs(fake_pymeasure) -> None:
+    # ASRL (serial) addresses need baud rate + termination or reads hang;
+    # the driver supplies RS-232 defaults plus a read timeout.
+    smu = Keithley2400FamilySMU(make_settings(visa_address="ASRL4::INSTR"))
+    smu.connect()
+
+    kwargs = fake_pymeasure.Keithley2400.instances[0].init_kwargs
+    assert kwargs["baud_rate"] == 9600
+    assert kwargs["read_termination"] == "\n"
+    assert kwargs["write_termination"] == "\n"
+    assert kwargs["timeout"] == 5000.0
+
+
+def test_serial_kwargs_overridden_from_settings(fake_pymeasure) -> None:
+    # Per-machine settings override the RS-232 defaults.
+    smu = Keithley2400FamilySMU(
+        make_settings(
+            visa_address="ASRL4::INSTR",
+            baud_rate=19200,
+            read_termination="\n",
+            write_termination="\n",
+            timeout_ms=8000,
+        )
+    )
+    smu.connect()
+
+    kwargs = fake_pymeasure.Keithley2400.instances[0].init_kwargs
+    assert kwargs["baud_rate"] == 19200
+    assert kwargs["read_termination"] == "\n"
+    assert kwargs["write_termination"] == "\n"
+    assert kwargs["timeout"] == 8000
+
+
+def test_gpib_address_gets_no_serial_kwargs(fake_pymeasure) -> None:
+    # Over GPIB the bus signals end-of-message; no termination/baud is sent,
+    # only the read timeout.
+    smu = Keithley2400FamilySMU(make_settings(visa_address="GPIB0::24::INSTR"))
+    smu.connect()
+
+    kwargs = fake_pymeasure.Keithley2400.instances[0].init_kwargs
+    assert "baud_rate" not in kwargs
+    assert "read_termination" not in kwargs
+    assert "write_termination" not in kwargs
+    assert kwargs["timeout"] == 5000.0
 
 
 def test_fast_meas_speed_sets_nplc(fake_pymeasure) -> None:
@@ -252,9 +299,11 @@ def test_setup_voltage_output_replicates_legacy_sequence(fake_pymeasure) -> None
     assert fake.sets("compliance_current") == [0.02]
     # autorange on (settings default autorange=True)
     assert ":CURR:RANG:AUTO ON" in fake.writes()
-    # voltage source mode with measure_current configured (nplc=1, autorange)
+    # voltage source mode with current measurement configured (nplc=1, autorange);
+    # pymeasure 0.16 replaced measure_current(nplc, range, auto) with explicit props
     assert fake.sets("source_mode") == ["voltage"]
-    assert fake.calls("measure_current")[0][2] == 1
+    assert 1 in fake.sets("current_nplc")
+    assert fake.sets("current_range_auto_enabled") == [True]
     # current display (legacy SYST:KEY 22, non-2450 only)
     assert "SYST:KEY 22" in fake.writes()
 
@@ -348,7 +397,7 @@ def test_reference_channel_switches_to_rear_terminals(fake_pymeasure) -> None:
 
     # output disabled first, then rear terminals selected
     assert fake.log[0] == ("call", "disable_source")
-    assert fake.calls("use_rear_terminals")
+    assert False in fake.sets("front_terminals_enabled")
     # reference diode sense mode (settings default "2wire" -> 2)
     assert 2 in fake.sets("wires")
 
@@ -359,8 +408,8 @@ def test_same_channel_operations_do_not_toggle(fake_pymeasure) -> None:
     smu.set_voltage(SMUChannel.CELL, 0.1)
     smu.set_voltage(SMUChannel.CELL, 0.2)
 
-    assert not fake.calls("use_rear_terminals")
-    assert not fake.calls("use_front_terminals")
+    assert False not in fake.sets("front_terminals_enabled")
+    assert True not in fake.sets("front_terminals_enabled")
 
 
 def test_switching_back_restores_cell_channel_state(fake_pymeasure) -> None:
@@ -372,7 +421,7 @@ def test_switching_back_restores_cell_channel_state(fake_pymeasure) -> None:
 
     smu.set_voltage(SMUChannel.CELL, 0.6)  # triggers toggle back to front
 
-    assert fake.calls("use_front_terminals")
+    assert True in fake.sets("front_terminals_enabled")
     # the cached cell set-voltage is replayed during the toggle
     assert 0.6 in fake.sets("source_voltage")
 
