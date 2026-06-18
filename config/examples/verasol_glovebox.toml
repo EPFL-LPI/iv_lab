@@ -12,14 +12,14 @@
 hardware = "VerasolGlovebox"          # free label, used in log files
 os = "Windows 11"
 basePath = "C:\\Data"                  # root directory for measurement data
-sdPath = ""                            # scrambled backup copy directory; set "" to disable
+sdPath = "C:\\sd"                     # scrambled backup copy directory; set "" to disable
 
 [IVsys]
 sysName = "IVLab"
 # fullSunReferenceCurrent is updated automatically each time you run a calibration.
-fullSunReferenceCurrent = 0.006129    # amps — reference diode current at 1 sun
-calibrationDateTime = ""
-referenceDiodeImax = 0.01             # amps — current compliance for reference diode channel
+fullSunReferenceCurrent = 0.0021880000000000003    # amps — reference diode current at 1 sun
+calibrationDateTime = "Wed Jun 17 16:34:53 2026"
+referenceDiodeImax = 0.5             # amps — current compliance for reference diode channel
 saveDataAutomatic = false             # true = auto-save after each scan; false = prompt
 checkVOCBeforeScan = true             # measure Voc before each scan to verify illumination
 firstPointDwellTime = 5.0             # seconds — settling time at first voltage point
@@ -65,7 +65,7 @@ referenceDiodeSenseMode = "2wire"     # "2wire" or "4 wire"
 # clamped to ~105 uA, because the measurement cannot range up while the
 # current is being clamped. false fixes the range to the compliance (Imax).
 autorange = false
-useReferenceDiode = false             # glovebox typically has no reference diode
+useReferenceDiode = true              # measure reference diode on channel B during scans
 
 # --- RS-232 serial parameters (only used for ASRL addresses) ---
 # These MUST match the Keithley's front-panel RS-232 settings, or every read
