@@ -30,6 +30,12 @@ dependencies = [
     "tomlkit>=0.12",
 ]
 
+# Console command installed on the PATH. After `pip install iv_lab` you can run
+# the GUI with `iv-lab` (equivalent to `python -m iv_lab.main`); both accept the
+# same flags, e.g. `iv-lab --emulate --settings config/system_settings_example.json`.
+[project.scripts]
+iv-lab = "iv_lab.main:main"
+
 [project.optional-dependencies]
 dev = [
     "pytest",
