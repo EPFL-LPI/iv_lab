@@ -20,7 +20,9 @@ import argparse
 import sys
 from pathlib import Path
 
-from iv_lab.config import DEFAULT_SETTINGS_FILENAME, load_settings
+from iv_lab.config import resolve_settings_file, user_config_dir
+from iv_lab.config.discovery import SETTINGS_ENV_VAR
+from iv_lab.config.settings import DEFAULT_SETTINGS_FILENAME, load_settings
 from iv_lab.services.auth import USERS_FILENAME, USERS_GENERIC_FILENAME
 
 #: Legacy report logo file (in the working directory, as in legacy).
@@ -30,13 +32,17 @@ DEFAULT_LOGO_FILENAME = "EPFL_Logo.png"
 def resolve_users_file(explicit: str | None) -> Path:
     """Return the users file to load, applying the fallback chain.
 
-    Priority: explicit --users arg → config/users.txt (if exists) → config/users_generic.txt
+    Priority: explicit --users arg → config/users.txt (working dir) →
+    <user config dir>/users.txt → config/users_generic.txt
     """
     if explicit is not None:
         return Path(explicit)
     primary = Path(USERS_FILENAME)
     if primary.exists():
         return primary
+    user = user_config_dir() / Path(USERS_FILENAME).name
+    if user.exists():
+        return user
     return Path(USERS_GENERIC_FILENAME)
 
 
@@ -47,8 +53,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument(
         "--settings",
-        default=DEFAULT_SETTINGS_FILENAME,
-        help="system settings file (default: %(default)s in the working directory)",
+        default=None,
+        help=(
+            "system settings file; if omitted the app looks at "
+            f"${SETTINGS_ENV_VAR}, then ./{DEFAULT_SETTINGS_FILENAME}, then the "
+            "per-user config directory"
+        ),
     )
     parser.add_argument(
         "--users",
@@ -78,10 +88,16 @@ def main(argv: list[str] | None = None, *, exec_app: bool = True) -> int:
     """
     args = parse_args(argv)
 
+    settings_path = resolve_settings_file(args.settings)
     try:
-        settings = load_settings(args.settings)
+        settings = load_settings(settings_path)
     except FileNotFoundError:
-        print(f"ERROR: settings file not found: {args.settings}", file=sys.stderr)
+        print(f"ERROR: settings file not found: {settings_path}", file=sys.stderr)
+        print(
+            f"Provide one with --settings PATH, set {SETTINGS_ENV_VAR}, or place it at "
+            f"{user_config_dir() / Path(DEFAULT_SETTINGS_FILENAME).name}",
+            file=sys.stderr,
+        )
         return 1
     except Exception as exc:
         print(f"ERROR: could not load settings: {exc}", file=sys.stderr)
@@ -99,7 +115,7 @@ def main(argv: list[str] | None = None, *, exec_app: bool = True) -> int:
 
     app, window = launch(
         settings,
-        settings_file=args.settings,
+        settings_file=settings_path,
         users_file=users_file,
         logo_path=args.logo,
     )
