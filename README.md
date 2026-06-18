@@ -26,6 +26,103 @@ python -m iv_lab.main
 
 ---
 
+## Installing as a package (pip)
+
+The Quick start above runs the app from a checkout of this repository. You can
+also install `iv_lab` as a normal Python package and launch it from anywhere
+with the `iv-lab` command. Because the package ships **no** machine-specific
+files (settings, users, logo), there are a few one-time setup steps.
+
+### 1. Install
+
+```powershell
+# From a clone of this repository:
+pip install .
+
+# …or straight from GitHub (no clone needed):
+pip install "git+https://github.com/EPFL-LPI/iv_lab.git"
+
+# Add the instrument-control libraries for real hardware (omit for emulation):
+pip install ".[hardware]"
+```
+
+This puts an **`iv-lab`** command on your PATH — equivalent to
+`python -m iv_lab.main`, with the same options.
+
+### 2. Pick where your config lives
+
+When you run `iv-lab` **without** `--settings`, it looks for the settings file
+in this order:
+
+1. the `IV_LAB_SETTINGS` environment variable (a full path to the file),
+2. `./config/system_settings.toml` in the current working directory,
+3. the per-user config directory:
+   - **Windows:** `%APPDATA%\iv_lab\system_settings.toml`
+   - **Linux/macOS:** `~/.config/iv_lab/system_settings.toml` (honours `$XDG_CONFIG_HOME`).
+
+The **per-user directory is recommended** for an installed app: it survives
+package upgrades and works no matter which folder you launch from. Create it:
+
+```powershell
+# Windows
+mkdir "$env:APPDATA\iv_lab"
+```
+
+### 3. Add your settings file
+
+Copy the example that matches your hardware (from this repo's
+[`config/examples/`](config/examples/)) into that directory as
+`system_settings.toml`, then edit it:
+
+```powershell
+copy config\examples\oriel_iv.toml "$env:APPDATA\iv_lab\system_settings.toml"
+notepad "$env:APPDATA\iv_lab\system_settings.toml"
+```
+
+Edit at least `basePath`, `sdPath`, and the SMU `visa_address` — see
+[System settings](#system-settings) for the key fields. If you installed
+without cloning, download an example from
+[`config/examples/`](config/examples/) on GitHub first.
+
+### 4. Add a users file
+
+Login requires a users table, and the package ships none — without one the app
+reports *"User table corrupted or absent."* Create a `users.txt` in the **same
+per-user directory** with at least the generic account, using the
+[`write_users` snippet](#adding-named-users) but pointing the path at, e.g.,
+`%APPDATA%\iv_lab\users.txt` and including `"user": "123456"`. `iv-lab` finds
+`users.txt` there automatically (same search order as the settings file).
+
+The generic login (blank username, or `user` / `123456`) then works out of the
+box; add named accounts as described under [User management](#user-management).
+
+### 5. (Optional) report logo
+
+PDF reports look for `EPFL_Logo.png` in the directory you launch from, or use
+`--logo PATH`. Reports render fine without it.
+
+### 6. Run it
+
+```powershell
+# Emulation (no instruments; still uses the settings file from step 3):
+iv-lab --emulate
+
+# Real hardware:
+iv-lab
+```
+
+To pin the settings file regardless of the working directory, set the
+environment variable once (then `iv-lab` needs no flags from any folder):
+
+```powershell
+setx IV_LAB_SETTINGS "%APPDATA%\iv_lab\system_settings.toml"
+```
+
+Calibration values you set in the app are written back into this same
+`system_settings.toml` automatically.
+
+---
+
 ## System settings
 
 Machine-specific configuration lives in `config/system_settings.toml` (gitignored).  
