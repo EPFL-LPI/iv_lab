@@ -318,20 +318,7 @@ def test_setup_voltage_output_fixed_range_when_autorange_off(fake_pymeasure) -> 
 
     assert ":CURR:RANG:AUTO OFF" in fake.writes()
     assert ":CURR:RANG:AUTO ON" not in fake.writes()
-    assert 0.02 in fake.sets("current_range")
-    # the mode setup must NOT re-enable autorange (doing so drops the current
-    # range to its 100 uA default and clamps the compliance to ~105 uA)
-    assert fake.sets("current_range_auto_enabled") == []
-
-
-def test_setup_current_output_fixed_range_when_autorange_off(fake_pymeasure) -> None:
-    smu, fake = connected_smu(fake_pymeasure, autorange=False)
-
-    smu.setup_current_output(SMUChannel.CELL, 1.0)
-
-    assert 1.0 in fake.sets("voltage_range")
-    # likewise the voltage measurement autorange must not be re-enabled
-    assert fake.sets("voltage_range_auto_enabled") == []
+    assert fake.sets("current_range") == [0.02]
 
 
 def test_setup_current_output_selects_voltage_sense_function(fake_pymeasure) -> None:
@@ -345,7 +332,42 @@ def test_setup_current_output_selects_voltage_sense_function(fake_pymeasure) -> 
     assert fake.sets("source_mode") == ["current"]
     assert ":SENS:FUNC 'VOLT'" in fake.writes()
     assert 1 in fake.sets("voltage_nplc")
+    # a normal 2400 (no serial flag) autoranges
     assert fake.sets("voltage_range_auto_enabled") == [True]
+
+
+# --- per-unit fixed-range workaround (serial-flagged 2400) ---
+
+
+def test_flagged_serial_uses_fixed_current_range(fake_pymeasure) -> None:
+    # the specific unit with unreliable autorange uses a fixed current range
+    # (= the compliance limit) instead of re-enabling autorange
+    smu, fake = connected_smu(fake_pymeasure, serial_number="0683014")
+
+    smu.setup_voltage_output(SMUChannel.CELL, 0.02)
+
+    assert smu._fixed_range_workaround is True
+    assert fake.sets("current_range") == [0.02]          # = compliance / Imax
+    assert fake.sets("current_range_auto_enabled") == []  # autorange NOT used
+
+
+def test_flagged_serial_uses_fixed_voltage_range(fake_pymeasure) -> None:
+    smu, fake = connected_smu(fake_pymeasure, serial_number="0683014")
+
+    smu.setup_current_output(SMUChannel.CELL, 1.0)
+
+    assert fake.sets("voltage_range") == [1.0]            # = voltage compliance
+    assert fake.sets("voltage_range_auto_enabled") == []
+
+
+def test_unflagged_serial_keeps_autorange(fake_pymeasure) -> None:
+    # any other serial number is unaffected: normal autorange
+    smu, fake = connected_smu(fake_pymeasure, serial_number="9999999")
+
+    smu.setup_voltage_output(SMUChannel.CELL, 0.02)
+
+    assert smu._fixed_range_workaround is False
+    assert fake.sets("current_range_auto_enabled") == [True]
 
 
 def test_set_voltage_and_measure_current(fake_pymeasure) -> None:

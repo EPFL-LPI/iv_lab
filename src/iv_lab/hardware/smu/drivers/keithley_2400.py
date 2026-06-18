@@ -54,6 +54,14 @@ _SERIAL_DEFAULTS = {
 #: short timeout turns a slow-but-valid read into a spurious VI_ERROR_TMO.
 _DEFAULT_TIMEOUT_MS = 5000.0
 
+#: Serial numbers of individual Keithley 2400 units whose current/voltage
+#: measurement autorange is unreliable: at low signal the range sits on its
+#: lowest setting and clamps the source compliance (e.g. ~105 uA on the 100 uA
+#: range), and it cannot range up because the signal is already clamped. These
+#: units fall back to a fixed measurement range (= the compliance limit). All
+#: other 2400s keep normal autorange. Matched against ``SMUSettings.serial_number``.
+_FIXED_RANGE_SERIALS = frozenset({"0683014"})
+
 
 @dataclass
 class _ChannelState:
@@ -89,6 +97,12 @@ class Keithley2400FamilySMU(BaseSMU):
         self.autorange = settings.autorange
         self.meas_speed = settings.measSpeed
         self.use_reference_diode = settings.useReferenceDiode
+        #: Per-unit workaround: this specific instrument has unreliable
+        #: measurement autorange, so it uses a fixed range (= compliance).
+        #: Other 2400s keep normal autorange behavior.
+        self._fixed_range_workaround = (
+            (settings.serial_number or "").strip() in _FIXED_RANGE_SERIALS
+        )
         #: Sense mode of the cell channel (legacy ``senseModeA``; the legacy
         #: code never overrides its '2 wire' default from the settings file).
         self.sense_mode_a: str = "2 wire"
@@ -294,20 +308,17 @@ class Keithley2400FamilySMU(BaseSMU):
         if state.output:
             self.smu.disable_source()
         self.smu.source_mode = "current"
-        # Replicate the legacy measure_voltage(nplc=1, range, auto) call that
-        # pymeasure 0.16 deprecated: select the voltage sense function, set
-        # nplc=1, and configure the range. The legacy code always passed a
-        # truthy auto-range flag, but that re-enables autorange even after
-        # setup_*_output deliberately fixed the range — and on the 2400 an
-        # autoranged measurement clamps the source compliance to whatever
-        # range it auto-selects (the 100 uA default at low signal). Honor the
-        # channel's actual autorange state instead: fixed range when off.
+        # Select the voltage sense function and nplc=1, replicating the legacy
+        # measure_voltage(nplc, range, auto) call that pymeasure 0.16 deprecated.
+        # For most 2400s the range autoranges (legacy behavior). On the specific
+        # unit(s) flagged by serial number, autorange is unreliable and clamps
+        # the source compliance, so use a fixed range = the compliance limit.
         self.smu.write(":SENS:FUNC 'VOLT'")
         self.smu.voltage_nplc = 1
-        if state.volt_autorange:
-            self.smu.voltage_range_auto_enabled = True
+        if self._fixed_range_workaround:
+            self.smu.voltage_range = state.v_limit
         else:
-            self.smu.voltage_range = state.v_range
+            self.smu.voltage_range_auto_enabled = True
         if state.output:
             self.smu.enable_source()
         state.source_mode = "current"
@@ -321,17 +332,17 @@ class Keithley2400FamilySMU(BaseSMU):
         if state.output:
             self.smu.disable_source()
         self.smu.source_mode = "voltage"
-        # see set_mode_current_source: select the current sense function, set
-        # nplc=1, and honor the channel's autorange state. Re-enabling
-        # autorange here (the legacy behavior) drops the current range back to
-        # its 100 uA default, which clamps the source current compliance to
-        # ~105 uA -- so when autorange is off, apply the fixed range instead.
+        # see set_mode_current_source: select the current sense function and
+        # nplc=1. Most 2400s autorange the current measurement (legacy). The
+        # serial-flagged unit instead uses a fixed range = the compliance
+        # limit, because its autorange clamps the source compliance to ~105 uA
+        # (the 100 uA range) and cannot range up.
         self.smu.write(":SENS:FUNC 'CURR'")
         self.smu.current_nplc = 1
-        if state.curr_autorange:
-            self.smu.current_range_auto_enabled = True
+        if self._fixed_range_workaround:
+            self.smu.current_range = state.i_limit
         else:
-            self.smu.current_range = state.i_range
+            self.smu.current_range_auto_enabled = True
         if state.output:
             self.smu.enable_source()
         state.source_mode = "voltage"

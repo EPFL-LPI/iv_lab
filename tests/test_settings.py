@@ -74,6 +74,17 @@ def test_smu_legacy_defaults(tmp_path: Path) -> None:
     assert settings.SMU.autorange is True
     assert settings.SMU.measSpeed == "normal"
     assert settings.SMU.useReferenceDiode is True
+    # optional per-unit serial number is absent by default
+    assert settings.SMU.serial_number is None
+
+
+def test_smu_serial_number_is_parsed(tmp_path: Path) -> None:
+    data = json.loads(json.dumps(MINIMAL_SETTINGS))
+    data["SMU"]["serial_number"] = "0683014"
+
+    settings = load_settings(write_settings(tmp_path, data))
+
+    assert settings.SMU.serial_number == "0683014"
 
 
 def test_extra_legacy_fields_are_allowed(tmp_path: Path) -> None:

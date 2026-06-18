@@ -50,17 +50,18 @@ visa_address = "USB0::0x1FDE::0x000A::71201042::INSTR"
 [SMU]
 brand = "Keithley"
 model = "2400"                        # 2400 | 2401 | 2450 — pymeasure driver
+# serial_number: *IDN? field 3. Optional. A few specific 2400 units have
+# unreliable measurement autorange that clamps the source compliance to
+# ~105 uA; the driver detects those by serial and uses a fixed range instead.
+# Set this to your instrument's serial only if it is one of them.
+serial_number = "0683014"
 visa_address = "ASRL4::INSTR"         # serial port COM4 (pyvisa ASRL format)
 visa_library = "@py"                  # pyvisa-py backend (no NI-VISA required)
 # If you have NI-VISA installed, use the path to visa32.dll instead:
 #   visa_library = "C:\\Windows\\SysWOW64\\visa32.dll"
 emulate = false
 referenceDiodeSenseMode = "2wire"     # "2wire" or "4 wire"
-# Use a FIXED current range on the Keithley 2400: with autorange the 2400
-# starts on its lowest (100 uA) range and the source current compliance is
-# clamped to ~105 uA, because the measurement cannot range up while the
-# current is being clamped. false fixes the range to the compliance (Imax).
-autorange = false
+autorange = true
 useReferenceDiode = false             # glovebox typically has no reference diode
 
 # --- RS-232 serial parameters (only used for ASRL addresses) ---

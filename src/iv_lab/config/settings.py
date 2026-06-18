@@ -104,6 +104,11 @@ class SMUSettings(LegacyCompatibleModel):
     autorange: bool = True
     measSpeed: str = "normal"
     useReferenceDiode: bool = True
+    #: Instrument serial number (the 3rd field of ``*IDN?``).  Optional; used
+    #: to apply per-unit workarounds — e.g. a specific Keithley 2400 whose
+    #: current autorange is unreliable falls back to a fixed range (see
+    #: ``keithley_2400.py``).
+    serial_number: str | None = None
     #: Serial (RS-232 / ``ASRL``) connection parameters.  Ignored for GPIB/USB
     #: addresses, where termination is handled by the bus (EOI).  For a serial
     #: Keithley these must match the instrument's front-panel RS-232 settings,
