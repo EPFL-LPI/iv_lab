@@ -1,0 +1,49 @@
+# iv_lab starter configuration (created by `iv-lab --init`).
+#
+# This file is EMULATION-READY: every device has emulate = true, so `iv-lab`
+# runs without any instruments connected. To drive real hardware, set the
+# emulate flags to false and fill in the real addresses below.
+#
+# Ready-made per-system templates (Wavelabs, Oriel, Trinamic, VeraSol, …) live
+# in the config/examples/ folder of the iv_lab repository on GitHub.
+
+[computer]
+hardware = "iv_lab"                   # free label, used in log files
+os = "Windows 11"
+basePath = "C:\\Data"                  # root directory for measurement data
+sdPath = ""                            # scrambled backup copy directory; "" disables
+
+[IVsys]
+sysName = "IVLab"
+# fullSunReferenceCurrent is updated automatically each time you run a calibration.
+fullSunReferenceCurrent = 0.006129    # amps — reference diode current at 1 sun
+calibrationDateTime = ""
+referenceDiodeImax = 0.01             # amps — current compliance for reference diode channel
+saveDataAutomatic = false             # true = auto-save after each scan; false = prompt
+checkVOCBeforeScan = true             # measure Voc before each scan to verify illumination
+firstPointDwellTime = 5.0             # seconds — settling time at first voltage point
+MPPVoltageStepInitial = 0.002         # volts — initial MPP tracker step
+MPPVoltageStepMax = 0.002             # volts — maximum MPP tracker step
+MPPVoltageStepMin = 0.001             # volts — minimum MPP tracker step
+
+# Calibration (control) diodes offered in the calibration panel drop-down.
+# Keys = name shown in the dropdown; values = certified Iref in mA.
+# Pick "Manual value" in the GUI to type an Iref by hand instead.
+[IVsys.calibrationDiodes]
+"Si1812" = 1.541
+
+[lamp]
+brand = "manual"                      # "manual", "Wavelabs", "Oriel", "Trinamic", "VeraSol", …
+model = "manual"
+"display name" = "Manual lamp"
+emulate = true                        # set false to drive a real lamp
+
+[SMU]
+brand = "Keithley"
+model = "2400"                        # 2400 | 2401 | 2450 | 2602 …
+visa_address = "GPIB0::24::INSTR"     # adjust to your instrument (e.g. ASRL4::INSTR for COM4)
+visa_library = "@py"                  # pyvisa-py backend; or path to visa32.dll for NI-VISA
+emulate = true                        # set false to drive a real SMU
+referenceDiodeSenseMode = "2wire"     # "2wire" or "4 wire"
+autorange = true
+useReferenceDiode = true              # measure reference diode on channel B during scans

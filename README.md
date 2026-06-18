@@ -49,7 +49,25 @@ pip install ".[hardware]"
 This puts an **`iv-lab`** command on your PATH — equivalent to
 `python -m iv_lab.main`, with the same options.
 
-### 2. Pick where your config lives
+### 2. Scaffold your config (recommended)
+
+```powershell
+iv-lab --init
+```
+
+This creates the per-user config directory and seeds it with:
+
+- an **emulation-ready** `system_settings.toml` (so `iv-lab` runs immediately
+  without instruments — edit it for your hardware),
+- a starter `users.txt` with the generic `user` / `123456` login.
+
+It never overwrites existing files, so re-running it is safe. It prints the
+exact directory it used; you can then jump to step 6 to run the app, and edit
+the settings file when you connect real hardware. The manual steps 2–4 below
+explain what `--init` sets up if you prefer to do it by hand or start from one
+of the per-system examples.
+
+### 2b. (Manual alternative) Pick where your config lives
 
 When you run `iv-lab` **without** `--settings`, it looks for the settings file
 in this order:

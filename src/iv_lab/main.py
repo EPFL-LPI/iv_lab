@@ -78,6 +78,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="force emulation of all hardware, regardless of the settings file",
     )
+    parser.add_argument(
+        "--init",
+        action="store_true",
+        help=(
+            "create a starter system_settings.toml and users.txt in the per-user "
+            "config directory, then exit (does not overwrite existing files)"
+        ),
+    )
     return parser.parse_args(argv)
 
 
@@ -87,6 +95,13 @@ def main(argv: list[str] | None = None, *, exec_app: bool = True) -> int:
     ``exec_app=False`` skips the Qt event loop (used by tests).
     """
     args = parse_args(argv)
+
+    if args.init:
+        from iv_lab.scaffold import scaffold_user_config
+
+        for line in scaffold_user_config():
+            print(line)
+        return 0
 
     settings_path = resolve_settings_file(args.settings)
     try:
