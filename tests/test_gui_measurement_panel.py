@@ -174,6 +174,67 @@ def test_calibration_params_and_save() -> None:
     assert recorder.calibration_saves[0]["reference_current"] == pytest.approx(0.00412)
 
 
+def test_calibration_diode_dropdown_si1812() -> None:
+    panel = make_panel()
+    cal = panel.calibration_panel
+
+    # defaults to the first named diode (Si1812): Iref filled and locked
+    assert cal.combo_diode_type.currentText() == "Si1812"
+    assert cal.field_diode_reference_current.text() == "1.541"
+    assert cal.field_diode_reference_current.isReadOnly()
+
+
+def test_calibration_diode_dropdown_manual_unlocks() -> None:
+    panel = make_panel()
+    cal = panel.calibration_panel
+
+    cal.combo_diode_type.setCurrentText(cal.MANUAL_LABEL)
+    assert not cal.field_diode_reference_current.isReadOnly()
+
+    # a manually entered value flows through to the calibration run
+    cal.field_diode_reference_current.setText("2.00")
+    cal.combo_diode_type.setCurrentText("Si1812")  # re-locks and overrides
+    assert cal.field_diode_reference_current.text() == "1.541"
+    assert cal.field_diode_reference_current.isReadOnly()
+
+
+def test_calibration_set_diode_list_from_settings() -> None:
+    panel = make_panel()
+    cal = panel.calibration_panel
+
+    cal.set_diode_list({"Si1812": 1.541, "KG3-7": 2.20})
+
+    items = [cal.combo_diode_type.itemText(i) for i in range(cal.combo_diode_type.count())]
+    assert items == ["Si1812", "KG3-7", cal.MANUAL_LABEL]
+    # first configured diode is applied and locked
+    assert cal.combo_diode_type.currentText() == "Si1812"
+    assert cal.field_diode_reference_current.text() == "1.541"
+
+    cal.combo_diode_type.setCurrentText("KG3-7")
+    assert cal.field_diode_reference_current.text() == "2.200"
+    assert cal.field_diode_reference_current.isReadOnly()
+
+
+def test_calibration_set_diode_list_empty_keeps_default() -> None:
+    panel = make_panel()
+    cal = panel.calibration_panel
+
+    cal.set_diode_list({})  # no diodes configured -> built-in default
+
+    assert cal.combo_diode_type.currentText() == "Si1812"
+    assert cal.field_diode_reference_current.text() == "1.541"
+
+
+def test_calibration_si1812_drives_reference_current() -> None:
+    panel = make_panel()
+    recorder = Recorder(panel)
+
+    panel._run_calibration()  # Si1812 selected by default
+
+    _, params = recorder.runs[0]
+    assert params["reference_current"] == pytest.approx(0.001541)  # 1.541 mA -> A
+
+
 def test_calibration_menu_entry_toggles() -> None:
     panel = make_panel()
 
