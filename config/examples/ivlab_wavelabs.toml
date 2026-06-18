@@ -19,6 +19,12 @@ MPPVoltageStepInitial = 0.002
 MPPVoltageStepMax = 0.002
 MPPVoltageStepMin = 0.001
 
+# Calibration (control) diodes offered in the calibration panel drop-down.
+# Keys = name shown in the dropdown; values = certified Iref in mA.
+# Pick "Manual value" in the GUI to type an Iref by hand instead.
+[IVsys.calibrationDiodes]
+"Si1812" = 1.541
+
 [lamp]
 brand = "Wavelabs"
 model = "Sinus70"
