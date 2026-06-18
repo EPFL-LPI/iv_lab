@@ -170,6 +170,7 @@ class MainWindow(QMainWindow):
         self._connect_panels()
         self._connect_system()
         self._configure_light_panel()
+        self._configure_calibration_diodes()
         self._register_config_fields()
 
     # --- wiring ---
@@ -212,6 +213,12 @@ class MainWindow(QMainWindow):
             else:
                 light_levels[f"{level:4.1f} % Sun"] = level
         self.light_panel.set_light_level_list(light_levels)
+
+    def _configure_calibration_diodes(self) -> None:
+        """Load selectable calibration diodes (name -> Iref in mA) from the
+        ``IVsys.calibrationDiodes`` settings; empty keeps the panel default."""
+        diodes = self.system.settings.IVsys.calibrationDiodes or {}
+        self.measurement_panel.calibration_panel.set_diode_list(diodes)
 
     # --- error / warning display (legacy showErrorMessage / error_window) ---
 

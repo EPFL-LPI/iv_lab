@@ -89,6 +89,21 @@ def test_extra_legacy_fields_are_allowed(tmp_path: Path) -> None:
     assert settings.futureSection == {"a": 1}
 
 
+def test_calibration_diodes_are_parsed(tmp_path: Path) -> None:
+    data = json.loads(json.dumps(MINIMAL_SETTINGS))
+    data["IVsys"]["calibrationDiodes"] = {"Si1812": 1.541, "KG3-7": 2.2}
+
+    settings = load_settings(write_settings(tmp_path, data))
+
+    assert settings.IVsys.calibrationDiodes == {"Si1812": 1.541, "KG3-7": 2.2}
+
+
+def test_calibration_diodes_optional(tmp_path: Path) -> None:
+    settings = load_settings(write_settings(tmp_path, MINIMAL_SETTINGS))
+
+    assert settings.IVsys.calibrationDiodes is None
+
+
 def test_missing_required_field_gives_useful_error(tmp_path: Path) -> None:
     data = json.loads(json.dumps(MINIMAL_SETTINGS))
     del data["IVsys"]["fullSunReferenceCurrent"]

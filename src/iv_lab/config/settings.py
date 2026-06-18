@@ -55,6 +55,10 @@ class IVSystemSettings(LegacyCompatibleModel):
     MPPVoltageStepInitial: float = 0.002
     MPPVoltageStepMax: float = 0.002
     MPPVoltageStepMin: float = 0.001
+    #: Calibration (control) diodes selectable in the GUI calibration panel:
+    #: name -> certified Iref in mA. Optional; the panel falls back to a
+    #: built-in default when absent.
+    calibrationDiodes: dict[str, float] | None = None
 
 
 class LampSettings(LegacyCompatibleModel):

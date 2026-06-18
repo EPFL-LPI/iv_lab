@@ -6,6 +6,7 @@ from __future__ import annotations
 from PySide6.QtCore import Signal
 from PySide6.QtGui import QDoubleValidator
 from PySide6.QtWidgets import (
+    QComboBox,
     QGridLayout,
     QLabel,
     QLineEdit,
@@ -28,12 +29,28 @@ class CalibrationPanel(QWidget):
     abort_clicked = Signal()
     save_clicked = Signal()
 
+    #: Built-in fallback calibration diodes (name -> certified Iref in mA), used
+    #: when the settings file provides none. Selecting a diode fills the Iref
+    #: field and locks it; ``MANUAL_LABEL`` unlocks it for typing. Replace the
+    #: list at runtime from settings via :meth:`set_diode_list`.
+    DEFAULT_DIODES = {"Si1812": 1.541}
+    MANUAL_LABEL = "Manual value"
+
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setMaximumWidth(300)
 
+        #: Calibration diode selector: a named diode applies its certified Iref,
+        #: "Manual value" lets the user enter Iref by hand.
+        self.combo_diode_type = QComboBox()
+        #: Selectable diodes (name -> certified Iref in mA); set_diode_list()
+        #: replaces this from the settings file.
+        self.diode_dict: dict[str, float] = dict(self.DEFAULT_DIODES)
+
         #: Certified current of the calibration (control) diode in mA.
         self.field_diode_reference_current = _double_field("1.00")
+        self.combo_diode_type.currentTextChanged.connect(self._on_diode_type_changed)
+        self._populate_diode_combo()
         self.field_stabilization_time = _double_field("5.0")
         self.field_interval = _double_field("0.50")
         self.field_duration = _double_field("60.0")
@@ -51,18 +68,20 @@ class CalibrationPanel(QWidget):
         self.button_save.setEnabled(False)
 
         fields = QGridLayout()
-        fields.addWidget(QLabel("Calibration Diode Iref"), 0, 0)
-        fields.addWidget(self.field_diode_reference_current, 0, 1)
-        fields.addWidget(QLabel("mA"), 0, 2)
-        fields.addWidget(QLabel("Stabilization Time"), 1, 0)
-        fields.addWidget(self.field_stabilization_time, 1, 1)
-        fields.addWidget(QLabel("sec"), 1, 2)
-        fields.addWidget(QLabel("Meas Interval"), 2, 0)
-        fields.addWidget(self.field_interval, 2, 1)
+        fields.addWidget(QLabel("Calibration Diode"), 0, 0)
+        fields.addWidget(self.combo_diode_type, 0, 1, 1, 2)
+        fields.addWidget(QLabel("Calibration Diode Iref"), 1, 0)
+        fields.addWidget(self.field_diode_reference_current, 1, 1)
+        fields.addWidget(QLabel("mA"), 1, 2)
+        fields.addWidget(QLabel("Stabilization Time"), 2, 0)
+        fields.addWidget(self.field_stabilization_time, 2, 1)
         fields.addWidget(QLabel("sec"), 2, 2)
-        fields.addWidget(QLabel("Meas Duration"), 3, 0)
-        fields.addWidget(self.field_duration, 3, 1)
+        fields.addWidget(QLabel("Meas Interval"), 3, 0)
+        fields.addWidget(self.field_interval, 3, 1)
         fields.addWidget(QLabel("sec"), 3, 2)
+        fields.addWidget(QLabel("Meas Duration"), 4, 0)
+        fields.addWidget(self.field_duration, 4, 1)
+        fields.addWidget(QLabel("sec"), 4, 2)
 
         reference = QGridLayout()
         reference.addWidget(QLabel("Reference Diode Iref"), 0, 0)
@@ -76,6 +95,29 @@ class CalibrationPanel(QWidget):
         layout.addLayout(reference)
         layout.addWidget(self.button_save)
         self.setLayout(layout)
+
+    def set_diode_list(self, diodes: dict[str, float]) -> None:
+        """Populate the diode dropdown from the settings file (name -> certified
+        Iref in mA). An empty mapping keeps the built-in default."""
+        if diodes:
+            self.diode_dict = dict(diodes)
+        self._populate_diode_combo()
+
+    def _populate_diode_combo(self) -> None:
+        """Rebuild the dropdown from ``diode_dict`` and apply the selection."""
+        self.combo_diode_type.blockSignals(True)
+        self.combo_diode_type.clear()
+        self.combo_diode_type.addItems([*self.diode_dict, self.MANUAL_LABEL])
+        self.combo_diode_type.blockSignals(False)
+        self._on_diode_type_changed(self.combo_diode_type.currentText())
+
+    def _on_diode_type_changed(self, name: str) -> None:
+        """Apply the selected diode: a known diode fills Iref (mA) and locks the
+        field; "Manual value" unlocks it for hand entry."""
+        certified = self.diode_dict.get(name)
+        if certified is not None:
+            self.field_diode_reference_current.setText(f"{certified:.3f}")
+        self.field_diode_reference_current.setReadOnly(certified is not None)
 
     def set_reference_current(self, current_ma: float) -> None:
         """Show the derived current (legacy ``setCalibrationReferenceCurrent``,

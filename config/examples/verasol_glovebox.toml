@@ -27,6 +27,12 @@ MPPVoltageStepInitial = 0.002         # volts — initial MPP tracker step
 MPPVoltageStepMax = 0.002             # volts — maximum MPP tracker step
 MPPVoltageStepMin = 0.001             # volts — minimum MPP tracker step
 
+# Calibration (control) diodes offered in the calibration panel drop-down.
+# Keys = name shown in the dropdown; values = certified Iref in mA.
+# Pick "Manual value" in the GUI to type an Iref by hand instead.
+[IVsys.calibrationDiodes]
+"Si1812" = 1.541
+
 [lamp]
 brand = "VeraSol"
 model = "LSS-7120"                    # 19-channel LED solar simulator, USB/USBTMC
