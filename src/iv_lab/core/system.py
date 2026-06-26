@@ -162,6 +162,9 @@ class IVLabSystem(QObject):
     warning_confirmation_needed = Signal(str, float)
     error_message = Signal(str)
     data_updated = Signal(dict)
+    #: Measured light intensity in % sun, emitted right after the reference
+    #: diode reading and before the electrical measurement begins.
+    light_intensity_measured = Signal(float)
     progress_updated = Signal(int)
     measurement_started = Signal(str)  # scan-type label
     measurement_finished = Signal(object)  # result dataclass
@@ -422,6 +425,7 @@ class IVLabSystem(QObject):
         worker.status_update.connect(self.status_message)
         worker.warning_update.connect(self.warning_message)
         worker.data_ready.connect(self.data_updated)
+        worker.light_intensity_ready.connect(self.light_intensity_measured)
         worker.progress_update.connect(self.progress_updated)
         worker.finished.connect(
             lambda result, spec=spec: self._on_worker_finished(spec, result)
