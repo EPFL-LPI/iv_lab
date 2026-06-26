@@ -42,6 +42,9 @@ class MeasurementWorker(QObject):
     #: Emitted when the protocol needs user confirmation; (message, adjusted_dv_V).
     warning_confirmation_needed = Signal(str, float)
     data_ready = Signal(dict)
+    #: Measured light intensity in % sun, emitted as soon as the reference
+    #: diode reading is done (before the electrical measurement begins).
+    light_intensity_ready = Signal(float)
     progress_update = Signal(int)
     finished = Signal(object)
     error = Signal(str)
@@ -71,6 +74,7 @@ class MeasurementWorker(QObject):
             status=self.status_update.emit,
             warning=self.warning_update.emit,
             data=self._on_data,
+            light_intensity=self.light_intensity_ready.emit,
             cancel=self.is_stop_requested,
             # confirm is wired separately via enable_blocking_confirmations()
             # so that non-threaded (test) use auto-proceeds without blocking

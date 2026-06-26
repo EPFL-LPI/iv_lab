@@ -192,6 +192,9 @@ class MainWindow(QMainWindow):
         system.warning_message.connect(self._show_warning)
         system.warning_confirmation_needed.connect(self._show_warning_confirmation)
         system.data_updated.connect(self.plot_panel.update_live_data)
+        system.light_intensity_measured.connect(
+            self.light_panel.update_measured_intensity
+        )
         system.measurement_finished.connect(self._on_measurement_finished)
         system.calibration_ready.connect(self._on_calibration_ready)
         system.hardware_ready.connect(self._on_hardware_ready)

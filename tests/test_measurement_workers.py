@@ -49,6 +49,7 @@ class SignalRecorder:
         self.status: list[str] = []
         self.warnings: list[str] = []
         self.data: list[dict] = []
+        self.light_intensity: list[float] = []
         self.progress: list[int] = []
         self.results: list[object] = []
         self.errors: list[str] = []
@@ -56,6 +57,7 @@ class SignalRecorder:
         worker.status_update.connect(self.status.append)
         worker.warning_update.connect(self.warnings.append)
         worker.data_ready.connect(self.data.append)
+        worker.light_intensity_ready.connect(self.light_intensity.append)
         worker.progress_update.connect(self.progress.append)
         worker.finished.connect(self.results.append)
         worker.error.connect(self.errors.append)
@@ -191,6 +193,41 @@ def test_worker_runs_and_emits_signals(
     assert recorder.status  # status messages flowed
     assert recorder.data  # live data flowed
     assert "Turning lamp off..." in recorder.status
+
+
+def test_light_intensity_emitted_before_scan_data() -> None:
+    # with a reference diode the measured light level is reported as soon as
+    # the reading is done, before any electrical (data_ready) sample flows
+    smu = make_smu(useReferenceDiode=True)
+    protocol = make_protocol(IVCurveProtocol, smu)
+
+    worker = IVCurveWorker(protocol, iv_params())
+
+    order: list[str] = []
+    worker.light_intensity_ready.connect(lambda _v: order.append("light"))
+    worker.data_ready.connect(lambda _d: order.append("data"))
+    recorder = SignalRecorder(worker)
+
+    worker.run()
+
+    assert recorder.errors == []
+    assert len(recorder.light_intensity) == 1
+    assert recorder.light_intensity[0] >= 0.0
+    # emitted once, ahead of the first scan sample
+    assert order[0] == "light"
+    assert "data" in order
+
+
+def test_no_light_intensity_signal_without_reference_diode() -> None:
+    # default SMU has no reference diode: nothing to report before the scan
+    protocol = make_protocol(IVCurveProtocol)
+    worker = IVCurveWorker(protocol, iv_params())
+    recorder = SignalRecorder(worker)
+
+    worker.run()
+
+    assert recorder.errors == []
+    assert recorder.light_intensity == []
 
 
 def test_progress_is_derived_and_bounded() -> None:

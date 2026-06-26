@@ -79,6 +79,7 @@ class MeasurementProtocol(ABC):
         warning_callback: Callable[[str], None] | None = None,
         data_callback: Callable[[dict], None] | None = None,
         cancel_callback: Callable[[], bool] | None = None,
+        light_intensity_callback: Callable[[float], None] | None = None,
     ) -> None:
         self.smu = smu
         self.lamp = lamp
@@ -91,6 +92,7 @@ class MeasurementProtocol(ABC):
         self._warning_callback = warning_callback
         self._data_callback = data_callback
         self._cancel_callback = cancel_callback
+        self._light_intensity_callback = light_intensity_callback
         self._confirm_callback: Callable[[str, float], bool] | None = None
 
         #: Legacy ``system.measure_light_intensity`` measured for 5 s.
@@ -111,6 +113,7 @@ class MeasurementProtocol(ABC):
         data: Callable[[dict], None] | None = None,
         cancel: Callable[[], bool] | None = None,
         confirm: Callable[[str, float], bool] | None = None,
+        light_intensity: Callable[[float], None] | None = None,
     ) -> None:
         """Attach or replace the interaction callbacks.
 
@@ -128,6 +131,8 @@ class MeasurementProtocol(ABC):
             self._cancel_callback = cancel
         if confirm is not None:
             self._confirm_callback = confirm
+        if light_intensity is not None:
+            self._light_intensity_callback = light_intensity
 
     def status(self, message: str) -> None:
         """Report a status message (legacy ``show_status``)."""
@@ -157,6 +162,16 @@ class MeasurementProtocol(ABC):
         """Report live data for plotting (legacy ``updatePlot*``)."""
         if self._data_callback is not None:
             self._data_callback(data)
+
+    def report_light_intensity(self, light_level: float) -> None:
+        """Report the measured light intensity in % sun.
+
+        Lets the GUI show the measured value as soon as the reference
+        diode reading is done, before the electrical measurement begins
+        (the final result still carries ``light_int_meas``).
+        """
+        if self._light_intensity_callback is not None:
+            self._light_intensity_callback(light_level)
 
     def cancelled(self) -> bool:
         """Whether cancellation was requested (legacy ``abortRunFlag``)."""
@@ -231,6 +246,8 @@ class MeasurementProtocol(ABC):
         light_level = self.measure_light_intensity()
         if self.cancelled():
             return light_level
+        # surface the measured value immediately, before the electrical scan
+        self.report_light_intensity(light_level)
         if light_int > 1.0 and abs((light_level - light_int) / light_int) > 0.1:
             self.warn(
                 "WARNING: Light level measured by reference diode is more "
